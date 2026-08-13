@@ -1,7 +1,7 @@
 {
-  "name": "gamemaster",
-  "version": "0.1.0",
-  "description": "博弈大师 - 融合博弈论与强化学习的六边形攻防策略小游戏",
+  "name": "shadow-legion",
+  "version": "1.0.0",
+  "description": "暗影军团 - 俯视角动作生存游戏",
   "type": "module",
   "scripts": {
     "dev": "vite",

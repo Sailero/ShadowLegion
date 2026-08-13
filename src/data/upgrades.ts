@@ -1,0 +1,43 @@
+export interface UpgradeDef {
+  id: string;
+  name: string;
+  desc: string;
+  category: 'attack' | 'defense' | 'mobility' | 'special';
+  rarity: 'common' | 'rare' | 'epic';
+  maxStacks: number;
+}
+
+export const WAVE_UPGRADES: UpgradeDef[] = [
+  { id: 'atk_up',       name: '强化弹药',    desc: '攻击力 +15%',          category: 'attack',   rarity: 'common', maxStacks: 5 },
+  { id: 'atkspd_up',    name: '速射装置',    desc: '攻速 +20%',            category: 'attack',   rarity: 'common', maxStacks: 5 },
+  { id: 'bulletspd_up', name: '加速弹头',    desc: '弹速 +25%',            category: 'attack',   rarity: 'common', maxStacks: 4 },
+  { id: 'scatter',      name: '散射',        desc: '同时发射3颗子弹',      category: 'attack',   rarity: 'rare',   maxStacks: 1 },
+  { id: 'pierce',       name: '穿透弹',      desc: '子弹穿透敌人',          category: 'attack',   rarity: 'rare',   maxStacks: 1 },
+  { id: 'homing',       name: '追踪弹',      desc: '子弹缓慢追踪敌人',      category: 'attack',   rarity: 'epic',   maxStacks: 1 },
+
+  { id: 'hp_up',        name: '生命强化',    desc: '最大HP +25',            category: 'defense',  rarity: 'common', maxStacks: 5 },
+  { id: 'heal',         name: '急救包',      desc: '恢复 30% HP',           category: 'defense',  rarity: 'common', maxStacks: 99 },
+  { id: 'shield',       name: '能量护盾',    desc: '抵挡下一次伤害',         category: 'defense',  rarity: 'rare',   maxStacks: 1 },
+
+  { id: 'spd_up',       name: '轻量护甲',    desc: '移速 +12%',             category: 'mobility', rarity: 'common', maxStacks: 4 },
+  { id: 'dash_cd',      name: '闪避强化',    desc: '闪避冷却 -30%',         category: 'mobility', rarity: 'rare',   maxStacks: 2 },
+  { id: 'dash_dmg',     name: '冲刺打击',    desc: '闪避时对路径敌人造成伤害', category: 'mobility', rarity: 'rare',   maxStacks: 1 },
+
+  { id: 'magnet',       name: '磁力装置',    desc: '拾取范围 +50%',          category: 'special',  rarity: 'common', maxStacks: 3 },
+  { id: 'charge_up',    name: '能量回收',    desc: '击杀充能 +50%',          category: 'special',  rarity: 'common', maxStacks: 3 },
+  { id: 'blast_up',     name: '爆裂强化',    desc: '蓄力技能范围和伤害 +30%', category: 'special',  rarity: 'rare',   maxStacks: 3 },
+];
+
+export const LEVEL_UPGRADES: UpgradeDef[] = [
+  { id: 'perm_atk',     name: '武器改造',    desc: '永久攻击力 +5',          category: 'attack',   rarity: 'epic', maxStacks: 99 },
+  { id: 'perm_hp',      name: '体质强化',    desc: '永久最大HP +20',         category: 'defense',  rarity: 'epic', maxStacks: 99 },
+  { id: 'perm_spd',     name: '动力核心',    desc: '永久移速 +8%',           category: 'mobility', rarity: 'epic', maxStacks: 99 },
+  { id: 'perm_charge',  name: '蓄能核心',    desc: '蓄力技能伤害 +20',       category: 'special',  rarity: 'epic', maxStacks: 99 },
+];
+
+export const CATEGORY_COLORS: Record<string, number> = {
+  attack: 0xef4444,
+  defense: 0x22c55e,
+  mobility: 0x3b82f6,
+  special: 0xfbbf24,
+};

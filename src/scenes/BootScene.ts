@@ -1,35 +1,36 @@
 import Phaser from 'phaser';
+import { SpriteFactory } from '../utils/SpriteFactory';
+import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
 
 export class BootScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'BootScene' });
-  }
+  constructor() { super('BootScene'); }
 
-  preload(): void {
-    const { width, height } = this.cameras.main;
-    const barW = 300, barH = 20;
-    const barX = (width - barW) / 2;
-    const barY = height / 2;
+  create() {
+    SpriteFactory.createAll(this);
 
-    const bg = this.add.graphics();
-    bg.fillStyle(0x222222, 1);
-    bg.fillRect(barX, barY, barW, barH);
+    const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bg);
+    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, 'SHADOW LEGION', {
+      fontSize: '40px', fontFamily: 'Arial', fontStyle: 'bold', color: '#fbbf24',
+      stroke: '#000', strokeThickness: 4,
+    }).setOrigin(0.5).setAlpha(0);
 
-    const fill = this.add.graphics();
+    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, '暗影军团', {
+      fontSize: '18px', fontFamily: 'Arial', color: '#9ca3af',
+    }).setOrigin(0.5).setAlpha(0);
 
-    this.load.on('progress', (value: number) => {
-      fill.clear();
-      fill.fillStyle(0x4a9eff, 1);
-      fill.fillRect(barX + 2, barY + 2, (barW - 4) * value, barH - 4);
+    this.tweens.add({
+      targets: [title, sub],
+      alpha: 1,
+      duration: 600,
+      onComplete: () => {
+        this.tweens.add({
+          targets: [title, sub, bg],
+          alpha: 0,
+          delay: 800,
+          duration: 400,
+          onComplete: () => this.scene.start('MenuScene'),
+        });
+      },
     });
-
-    this.load.on('complete', () => {
-      bg.destroy();
-      fill.destroy();
-    });
-  }
-
-  create(): void {
-    this.scene.start('MenuScene');
   }
 }
