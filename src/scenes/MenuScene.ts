@@ -1,96 +1,102 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
+import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
+import { SoundManager } from '../systems/SoundManager';
+import { ScoreManager } from '../systems/ScoreManager';
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('MenuScene'); }
 
   create() {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bg);
+    const snd = SoundManager.get();
+    this.cameras.main.setBackgroundColor(0x080c14);
 
-    // decorative grid
-    const dg = this.add.graphics();
-    dg.lineStyle(1, 0x1e293b, 0.3);
-    for (let x = 0; x <= GAME_WIDTH; x += 40) dg.lineBetween(x, 0, x, GAME_HEIGHT);
-    for (let y = 0; y <= GAME_HEIGHT; y += 40) dg.lineBetween(0, y, GAME_WIDTH, y);
+    const glow = this.add.graphics();
+    for (let r = 280; r > 0; r -= 30) {
+      glow.fillStyle(0x0d2040, 0.02);
+      glow.fillCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, r);
+    }
 
-    this.add.text(GAME_WIDTH / 2, 55, 'SHADOW LEGION', {
-      fontSize: '42px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fbbf24',
-      stroke: '#000', strokeThickness: 5,
-    }).setOrigin(0.5);
+    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.22, 'SHADOW LEGION', {
+      fontSize: '36px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
+      stroke: '#000', strokeThickness: 4,
+    }).setOrigin(0.5).setAlpha(0);
 
-    this.add.text(GAME_WIDTH / 2, 95, '暗 影 军 团', {
-      fontSize: '16px', fontFamily: 'monospace', color: '#9ca3af', letterSpacing: 8,
-    }).setOrigin(0.5);
+    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.22 + 42, '暗影军团', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#475569',
+    }).setOrigin(0.5).setAlpha(0);
 
-    // animated subtitle line
-    const line = this.add.rectangle(GAME_WIDTH / 2, 112, 180, 2, 0x3b82f6, 0.4).setOrigin(0.5);
-    this.tweens.add({ targets: line, scaleX: { from: 0, to: 1 }, duration: 600, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: title, alpha: 1, y: title.y - 10, duration: 600, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: sub, alpha: 1, y: sub.y - 10, duration: 600, ease: 'Cubic.easeOut', delay: 150 });
 
-    // Start button
-    const btnW = 200, btnH = 48;
-    const btnY = 150;
-    const btn = this.add.graphics();
-    this.drawMenuBtn(btn, btnW, btnH, btnY, 0x3b82f6);
-    const btnText = this.add.text(GAME_WIDTH / 2, btnY + btnH / 2, '▸  开始游戏', {
-      fontSize: '18px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff',
-    }).setOrigin(0.5);
+    const line = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.22 + 62, 60, 1, 0x3b82f6, 0.5).setOrigin(0.5);
+    this.tweens.add({ targets: line, scaleX: { from: 0, to: 1 }, duration: 500, delay: 300 });
 
-    const hitArea = this.add.rectangle(GAME_WIDTH / 2, btnY + btnH / 2, btnW, btnH, 0xffffff, 0)
-      .setInteractive({ useHandCursor: true });
+    const high = ScoreManager.getHighScore();
+    if (high > 0) {
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.38, `最高分 ${ScoreManager.formatScore(high)}`, {
+        fontSize: '13px', fontFamily: 'monospace', color: '#fbbf24',
+      }).setOrigin(0.5);
+    }
 
-    hitArea.on('pointerover', () => { this.drawMenuBtn(btn, btnW, btnH, btnY, 0x60a5fa); btnText.setColor('#fbbf24'); });
-    hitArea.on('pointerout', () => { this.drawMenuBtn(btn, btnW, btnH, btnY, 0x3b82f6); btnText.setColor('#ffffff'); });
-    hitArea.on('pointerdown', () => this.scene.start('ArenaScene', { level: 1 }));
+    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.48, '开始游戏', false, snd, () => {
+      this.scene.start('ArenaScene', { level: 1 });
+    });
 
-    // Instructions in columns
-    const colLeft = GAME_WIDTH * 0.3, colRight = GAME_WIDTH * 0.7;
-    this.drawSection(colLeft, 225, '操作', [
-      'WASD — 移动',
-      '鼠标 — 瞄准',
-      '左键按住 — 射击',
-      'Shift/右键 — 闪避',
-      'Space — 蓄力技能',
-    ]);
-    this.drawSection(colRight, 225, '规则', [
-      '每关10波 + Boss',
-      '波间选择升级',
-      '击杀获得XP宝石',
-      '3关通关即胜利',
-      '连杀获得额外分数',
-    ]);
-    this.drawSection(colLeft, 405, '敌人', [
-      '● 史莱姆 — 直线追踪',
-      '● 蝙蝠 — 高速变向',
-      '● 弓箭手 — 远程射击',
-      '● 重甲 — 缓慢高伤',
-    ]);
-    this.drawSection(colRight, 405, '提示', [
-      '注意右下角小地图',
-      '屏幕边缘有敌人指示',
-      '蓄力满时立刻释放',
-      '闪避中完全无敌',
-    ]);
+    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.48 + 52, '无尽模式', true, snd, () => {
+      this.scene.start('ArenaScene', { level: 1, endless: true });
+    });
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 14, 'v1.0 — Phase 1 Demo', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#374151',
-    }).setOrigin(0.5);
-  }
-
-  private drawMenuBtn(g: Phaser.GameObjects.Graphics, w: number, h: number, y: number, color: number): void {
-    g.clear();
-    g.fillStyle(color); g.fillRoundedRect(GAME_WIDTH / 2 - w / 2, y, w, h, 8);
-    g.lineStyle(1, 0x93c5fd, 0.3); g.strokeRoundedRect(GAME_WIDTH / 2 - w / 2, y, w, h, 8);
-  }
-
-  private drawSection(cx: number, startY: number, title: string, lines: string[]): void {
-    this.add.text(cx, startY, title, {
-      fontSize: '14px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fbbf24',
-    }).setOrigin(0.5);
-    const divider = this.add.rectangle(cx, startY + 14, 80, 1, 0x374151).setOrigin(0.5);
-    lines.forEach((line, i) => {
-      this.add.text(cx, startY + 26 + i * 18, line, {
-        fontSize: '11px', fontFamily: 'monospace', color: '#9ca3af',
+    const hints = [
+      'WASD 移动  |  鼠标 瞄准  |  左键 射击',
+      'Shift 闪避  |  Space 技能  |  Q 切换技能',
+    ];
+    hints.forEach((h, i) => {
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.78 + i * 20, h, {
+        fontSize: '11px', fontFamily: 'monospace', color: '#374151',
       }).setOrigin(0.5);
     });
+
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 16, 'v1.0', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#1e293b',
+    }).setOrigin(0.5);
+  }
+
+  private makeBtn(
+    x: number, y: number, label: string, secondary: boolean,
+    snd: SoundManager, cb: () => void,
+  ): void {
+    const w = 180, h = 42;
+    const g = this.add.graphics();
+    const draw = (hover: boolean) => {
+      g.clear();
+      if (secondary) {
+        g.fillStyle(hover ? 0x1e293b : 0x0f172a);
+        g.lineStyle(1, hover ? 0x475569 : 0x1e293b, 0.6);
+      } else {
+        g.fillStyle(hover ? 0x1d4ed8 : 0x1e293b);
+        g.lineStyle(1, hover ? 0x60a5fa : 0x334155, 0.6);
+      }
+      g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 6);
+      g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 6);
+    };
+    draw(false);
+
+    const txt = this.add.text(x, y, label, {
+      fontSize: secondary ? '13px' : '16px',
+      fontFamily: 'monospace', fontStyle: 'bold',
+      color: secondary ? '#94a3b8' : '#e2e8f0',
+    }).setOrigin(0.5);
+
+    const hit = this.add.rectangle(x, y, w, h, 0, 0).setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => {
+      draw(true);
+      txt.setColor('#fbbf24');
+      snd.buttonHover();
+    });
+    hit.on('pointerout', () => {
+      draw(false);
+      txt.setColor(secondary ? '#94a3b8' : '#e2e8f0');
+    });
+    hit.on('pointerdown', () => { snd.buttonClick(); cb(); });
   }
 }

@@ -4,10 +4,10 @@ export const ARENA_WIDTH = 1600;
 export const ARENA_HEIGHT = 1200;
 
 export const COLORS = {
-  bg: 0x0a0e17,
-  arenaBg: 0x111827,
-  arenaGrid: 0x1a2232,
-  arenaBorder: 0x374151,
+  bg: 0x080c14,
+  arenaBg: 0x0a0f1a,
+  arenaGrid: 0x131d2e,
+  arenaBorder: 0x1e3a5f,
 
   hero: 0x3b82f6,
   heroLight: 0x93c5fd,
@@ -35,37 +35,35 @@ export const COLORS = {
   chargeBar: 0xfbbf24,
   dashBar: 0x60a5fa,
 
-  uiText: '#ffffff',
-  uiDim: '#9ca3af',
+  uiText: '#e2e8f0',
+  uiDim: '#64748b',
   uiAccent: '#fbbf24',
-  cardBg: 0x1e293b,
-  cardBorder: 0x475569,
-  cardHover: 0x334155,
+  cardBg: 0x111827,
+  cardBorder: 0x1e3a5f,
+  cardHover: 0x1e293b,
   overlay: 0x000000,
 };
 
 export const HERO_CFG = {
-  maxHp: 100,
-  speed: 170,
-  accel: 900,
-  decel: 700,
+  maxHp: 120,
+  speed: 180,
+  accel: 1000,
+  decel: 800,
   bodyRadius: 10,
 
-  fireRate: 200,
-  bulletSpeed: 520,
-  bulletDamage: 12,
+  fireRate: 180,
+  bulletSpeed: 550,
+  bulletDamage: 10,
 
-  dashSpeed: 500,
-  dashDuration: 180,
-  dashCooldown: 1200,
+  dashSpeed: 520,
+  dashDuration: 160,
+  dashCooldown: 1000,
 
   chargeMax: 100,
-  chargePerKill: 12,
-  chargeBlastRadius: 140,
-  chargeBlastDamage: 50,
+  chargePerKill: 15,
 
-  invincibleMs: 350,
-  magnetRadius: 110,
+  invincibleMs: 400,
+  magnetRadius: 120,
 };
 
 export interface EnemyType {
@@ -90,43 +88,43 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
   slime: {
     key: 'slime', name: '史莱姆',
     color: 0x22c55e, colorDark: 0x16a34a,
-    hp: 35, speed: 75, damage: 15, bodyRadius: 12,
+    hp: 25, speed: 65, damage: 12, bodyRadius: 12,
     xp: 5, score: 10,
   },
   bat: {
     key: 'bat', name: '蝙蝠',
     color: 0xa855f7, colorDark: 0x7c3aed,
-    hp: 22, speed: 140, damage: 12, bodyRadius: 8,
+    hp: 16, speed: 120, damage: 10, bodyRadius: 8,
     xp: 4, score: 8,
   },
   archer: {
     key: 'archer', name: '弓箭手',
     color: 0xf97316, colorDark: 0xea580c,
-    hp: 50, speed: 55, damage: 10, bodyRadius: 10,
+    hp: 40, speed: 50, damage: 8, bodyRadius: 10,
     xp: 8, score: 15,
-    ranged: true, fireRate: 1400, bulletSpeed: 300, bulletDamage: 18,
-    keepDistance: 220,
+    ranged: true, fireRate: 1800, bulletSpeed: 260, bulletDamage: 14,
+    keepDistance: 200,
   },
   tank: {
     key: 'tank', name: '重甲',
     color: 0x6b7280, colorDark: 0x4b5563,
-    hp: 180, speed: 38, damage: 28, bodyRadius: 16,
+    hp: 140, speed: 35, damage: 22, bodyRadius: 16,
     xp: 15, score: 25,
   },
 };
 
-export const ELITE = { hp: 2.2, speed: 1.35, damage: 1.6, xp: 3, score: 3 };
+export const ELITE = { hp: 2.0, speed: 1.25, damage: 1.4, xp: 3, score: 3 };
 
 export const WAVE_CFG = {
   perLevel: 10,
   levels: 3,
-  spawnMargin: 100,
-  delayMs: 1500,
-  spawnInterval: 100,
-  bossHp: 7,
-  bossSize: 1.8,
-  bossDmg: 2.5,
-  bossSpeed: 0.9,
+  spawnMargin: 120,
+  delayMs: 2000,
+  spawnInterval: 120,
+  bossHp: 6,
+  bossSize: 1.7,
+  bossDmg: 2.0,
+  bossSpeed: 0.85,
 };
 
 export interface BehaviorRecordingConfig {

@@ -17,12 +17,16 @@ export class WaveManager {
   private betweenWaves = false;
   private nextWaveAt = 0;
   allWavesDone = false;
+  endlessScale = 1.0;
 
   constructor(scene: Phaser.Scene, level: number, enemies: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.level = Math.min(level, WAVE_CFG.levels) - 1;
     this.waves = LEVEL_WAVES[this.level] || LEVEL_WAVES[0];
     this.enemies = enemies;
+    if (level > WAVE_CFG.levels) {
+      this.endlessScale = 1 + (level - WAVE_CFG.levels) * 0.15;
+    }
   }
 
   startNextWave(): void {
@@ -98,6 +102,14 @@ export class WaveManager {
 
     const pos = this.getSpawnPos();
     const enemy = new Enemy(this.scene, pos.x, pos.y, cfg, elite, boss);
+    if (this.endlessScale > 1) {
+      enemy.hp = Math.round(enemy.hp * this.endlessScale);
+      enemy.maxHp = enemy.hp;
+      enemy.dmg = Math.round(enemy.dmg * (1 + (this.endlessScale - 1) * 0.5));
+    }
+    if (type === 'slime' && (elite || this.endlessScale > 1.2)) {
+      enemy.canSplit = true;
+    }
     this.enemies.add(enemy);
   }
 

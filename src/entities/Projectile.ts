@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ARENA_WIDTH, ARENA_HEIGHT } from '../config/gameConfig';
 
 export interface BulletOpts {
   x: number;
@@ -12,36 +13,42 @@ export interface BulletOpts {
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
-  damage: number;
-  piercing: boolean;
-  homing: boolean;
-  owner: 'player' | 'enemy';
-  spd: number;
-  private born: number;
+  damage = 0;
+  piercing = false;
+  homing = false;
+  owner: 'player' | 'enemy' = 'player';
+  spd = 0;
+  private born = 0;
   private lifespan = 3000;
-  private launchAngle: number;
+  private launchAngle = 0;
   hitSet = new Set<Phaser.GameObjects.GameObject>();
 
-  constructor(scene: Phaser.Scene, opts: BulletOpts) {
-    const tex = opts.owner === 'player' ? 'bullet_player' : 'bullet_enemy';
-    super(scene, opts.x, opts.y, tex);
+  constructor(scene: Phaser.Scene, x: number, y: number, tex: string) {
+    super(scene, x, y, tex);
     scene.add.existing(this);
+    this.setDepth(8);
+  }
 
+  fire(opts: BulletOpts): void {
+    this.setPosition(opts.x, opts.y);
+    this.setActive(true).setVisible(true);
     this.damage = opts.damage;
     this.piercing = opts.piercing ?? false;
     this.homing = opts.homing ?? false;
     this.owner = opts.owner;
     this.spd = opts.speed;
-    this.born = scene.time.now;
+    this.born = this.scene.time.now;
     this.launchAngle = opts.angle;
     this.rotation = opts.angle;
-    this.setDepth(8);
+    this.hitSet.clear();
+    this.setTexture(opts.owner === 'player' ? 'bullet_player' : 'bullet_enemy');
   }
 
   launch(): void {
     const b = this.body as Phaser.Physics.Arcade.Body;
     if (!b) return;
     b.setCircle(3, 2, 2);
+    b.enable = true;
     b.setVelocity(
       Math.cos(this.launchAngle) * this.spd,
       Math.sin(this.launchAngle) * this.spd,
@@ -52,10 +59,20 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     if (!this.active) return;
 
     if (time - this.born > this.lifespan ||
-        this.x < -50 || this.x > 1650 || this.y < -50 || this.y > 1250) {
-      this.destroy();
+        this.x < -50 || this.x > ARENA_WIDTH + 50 || this.y < -50 || this.y > ARENA_HEIGHT + 50) {
+      this.recycle();
       return;
     }
+  }
+
+  recycle(): void {
+    this.setActive(false).setVisible(false);
+    const b = this.body as Phaser.Physics.Arcade.Body;
+    if (b) {
+      b.setVelocity(0, 0);
+      b.enable = false;
+    }
+    this.hitSet.clear();
   }
 
   homeToward(tx: number, ty: number): void {

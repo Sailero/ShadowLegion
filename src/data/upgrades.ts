@@ -2,7 +2,7 @@ export interface UpgradeDef {
   id: string;
   name: string;
   desc: string;
-  category: 'attack' | 'defense' | 'mobility' | 'special';
+  category: 'attack' | 'defense' | 'mobility' | 'special' | 'skill';
   rarity: 'common' | 'rare' | 'epic';
   maxStacks: number;
 }
@@ -25,14 +25,20 @@ export const WAVE_UPGRADES: UpgradeDef[] = [
 
   { id: 'magnet',       name: '磁力装置',    desc: '拾取范围 +50%',          category: 'special',  rarity: 'common', maxStacks: 3 },
   { id: 'charge_up',    name: '能量回收',    desc: '击杀充能 +50%',          category: 'special',  rarity: 'common', maxStacks: 3 },
-  { id: 'blast_up',     name: '爆裂强化',    desc: '蓄力技能范围和伤害 +30%', category: 'special',  rarity: 'rare',   maxStacks: 3 },
+
+  // Skill upgrades
+  { id: 'skill_burst_up',   name: '爆发强化',  desc: '能量爆发等级 +1',     category: 'skill', rarity: 'rare',  maxStacks: 2 },
+  { id: 'skill_barrage',    name: '解锁：弹幕风暴', desc: '解锁弹幕风暴技能', category: 'skill', rarity: 'epic',  maxStacks: 1 },
+  { id: 'skill_barrage_up', name: '弹幕强化',  desc: '弹幕风暴等级 +1',     category: 'skill', rarity: 'rare',  maxStacks: 2 },
+  { id: 'skill_timerift',   name: '解锁：时空裂隙', desc: '解锁时空裂隙技能', category: 'skill', rarity: 'epic',  maxStacks: 1 },
+  { id: 'skill_timerift_up', name: '裂隙强化', desc: '时空裂隙等级 +1',     category: 'skill', rarity: 'rare',  maxStacks: 2 },
 ];
 
 export const LEVEL_UPGRADES: UpgradeDef[] = [
   { id: 'perm_atk',     name: '武器改造',    desc: '永久攻击力 +5',          category: 'attack',   rarity: 'epic', maxStacks: 99 },
   { id: 'perm_hp',      name: '体质强化',    desc: '永久最大HP +20',         category: 'defense',  rarity: 'epic', maxStacks: 99 },
   { id: 'perm_spd',     name: '动力核心',    desc: '永久移速 +8%',           category: 'mobility', rarity: 'epic', maxStacks: 99 },
-  { id: 'perm_charge',  name: '蓄能核心',    desc: '蓄力技能伤害 +20',       category: 'special',  rarity: 'epic', maxStacks: 99 },
+  { id: 'perm_charge',  name: '蓄能核心',    desc: '击杀充能 +30%',          category: 'special',  rarity: 'epic', maxStacks: 99 },
 ];
 
 export const CATEGORY_COLORS: Record<string, number> = {
@@ -40,4 +46,5 @@ export const CATEGORY_COLORS: Record<string, number> = {
   defense: 0x22c55e,
   mobility: 0x3b82f6,
   special: 0xfbbf24,
+  skill: 0xa855f7,
 };

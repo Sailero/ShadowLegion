@@ -22,6 +22,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private bossCharging = false;
   private bossChargeEnd = 0;
 
+  canSplit = false;
+  private splitDone = false;
+
   constructor(
     scene: Phaser.Scene, x: number, y: number,
     cfg: EnemyType, elite = false, boss = false,
@@ -99,14 +102,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   private batAI(time: number, hx: number, hy: number): void {
+    const dist = Phaser.Math.Distance.Between(this.x, this.y, hx, hy);
+
     if (time > this.changeDirTime) {
-      this.offsetAngle = (Math.random() - 0.5) * 1.8;
-      this.changeDirTime = time + 400 + Math.random() * 600;
+      this.offsetAngle = (Math.random() - 0.5) * 2.0;
+      this.changeDirTime = time + 300 + Math.random() * 500;
     }
-    const a = Phaser.Math.Angle.Between(this.x, this.y, hx, hy) + this.offsetAngle;
+
+    const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, hx, hy);
     const b = this.body as Phaser.Physics.Arcade.Body;
-    b.setVelocity(Math.cos(a) * this.spd, Math.sin(a) * this.spd);
-    this.rotation = a;
+
+    if (dist < 60) {
+      const orbitAngle = baseAngle + Math.PI / 2 + this.offsetAngle * 0.3;
+      b.setVelocity(Math.cos(orbitAngle) * this.spd * 1.2, Math.sin(orbitAngle) * this.spd * 1.2);
+    } else {
+      const a = baseAngle + this.offsetAngle;
+      b.setVelocity(Math.cos(a) * this.spd, Math.sin(a) * this.spd);
+    }
+    this.rotation = baseAngle;
   }
 
   private archerAI(time: number, hx: number, hy: number): void {
@@ -175,19 +188,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount: number): boolean {
+    if (!this.active) return false;
     this.hp -= amount;
-    this.setTintFill(0xffffff);
-    this.scene.time.delayedCall(50, () => {
-      if (this.active) this.clearTint();
-      if (this.isElite || this.isBoss) {
-        if (this.active) this.setTint(0xffffff);
-      }
-    });
+
+    if (this.canSplit && !this.splitDone && this.hp <= this.maxHp * 0.4) {
+      this.splitDone = true;
+      this.scene.events.emit('enemySplit', {
+        x: this.x, y: this.y, type: this.cfg.key, parentHp: this.hp,
+      });
+    }
 
     if (this.hp <= 0) {
       this.die();
       return true;
     }
+
+    this.setTintFill(0xffffff);
+    this.scene.time.delayedCall(50, () => {
+      if (this.active && this.scene) {
+        this.clearTint();
+        if (this.isElite || this.isBoss) this.setTint(0xffffff);
+      }
+    });
     return false;
   }
 

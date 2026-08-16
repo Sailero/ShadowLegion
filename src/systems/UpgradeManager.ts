@@ -6,11 +6,18 @@ export class UpgradeManager {
   private stacks = new Map<string, number>();
   private appliedIds: string[] = [];
 
-  pickThree(pool: 'wave' | 'level'): UpgradeDef[] {
+  pickThree(pool: 'wave' | 'level', hero?: Hero): UpgradeDef[] {
     const source = pool === 'wave' ? WAVE_UPGRADES : LEVEL_UPGRADES;
     const available = source.filter(u => {
       const cur = this.stacks.get(u.id) || 0;
-      return cur < u.maxStacks;
+      if (cur >= u.maxStacks) return false;
+      if (hero) {
+        if (u.id === 'skill_barrage' && hero.unlockedSkills.includes('barrage')) return false;
+        if (u.id === 'skill_timerift' && hero.unlockedSkills.includes('timerift')) return false;
+        if (u.id === 'skill_barrage_up' && !hero.unlockedSkills.includes('barrage')) return false;
+        if (u.id === 'skill_timerift_up' && !hero.unlockedSkills.includes('timerift')) return false;
+      }
+      return true;
     });
 
     const result: UpgradeDef[] = [];
@@ -57,14 +64,30 @@ export class UpgradeManager {
       case 'dash_dmg':     hero.dashDamage = hero.bulletDamage * hero.damageMult * 2; break;
       case 'magnet':       hero.magnetRadius *= 1.5; break;
       case 'charge_up':    hero.chargePerKill = Math.round(hero.chargePerKill * 1.5); break;
-      case 'blast_up':
-        hero.chargeBlastRadius = Math.round(hero.chargeBlastRadius * 1.3);
-        hero.chargeBlastDamage = Math.round(hero.chargeBlastDamage * 1.3);
+
+      // Skill upgrades
+      case 'skill_burst_up':
+        hero.skillLevels['burst'] = Math.min((hero.skillLevels['burst'] || 1) + 1, 3);
         break;
+      case 'skill_barrage':
+        hero.unlockedSkills.push('barrage');
+        hero.skillLevels['barrage'] = 1;
+        break;
+      case 'skill_barrage_up':
+        hero.skillLevels['barrage'] = Math.min((hero.skillLevels['barrage'] || 1) + 1, 3);
+        break;
+      case 'skill_timerift':
+        hero.unlockedSkills.push('timerift');
+        hero.skillLevels['timerift'] = 1;
+        break;
+      case 'skill_timerift_up':
+        hero.skillLevels['timerift'] = Math.min((hero.skillLevels['timerift'] || 1) + 1, 3);
+        break;
+
       case 'perm_atk':     hero.bulletDamage += 5; break;
       case 'perm_hp':      hero.maxHp += 20; hero.hp = Math.min(hero.hp + 20, hero.maxHp); break;
       case 'perm_spd':     hero.speedMult *= 1.08; break;
-      case 'perm_charge':  hero.chargeBlastDamage += 20; break;
+      case 'perm_charge':  hero.chargePerKill = Math.round(hero.chargePerKill * 1.3); break;
     }
   }
 

@@ -1,62 +1,117 @@
 import Phaser from 'phaser';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
+import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
+import { SoundManager } from '../systems/SoundManager';
+import { ScoreManager } from '../systems/ScoreManager';
 
 export class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOverScene'); }
 
-  create(data: { score?: number; kills?: number; wave?: number; level?: number; victory?: boolean }) {
-    const { score = 0, kills = 0, wave = 0, level = 1, victory = false } = data;
+  create(data: {
+    score?: number; kills?: number; wave?: number;
+    level?: number; victory?: boolean; endless?: boolean;
+  }) {
+    const { score = 0, kills = 0, wave = 0, level = 1, victory = false, endless = false } = data;
+    const snd = SoundManager.get();
+    this.cameras.main.setBackgroundColor(0x080c14);
 
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bg);
+    const isNew = ScoreManager.isNewHighScore(score);
 
-    // decorative grid
-    const dg = this.add.graphics();
-    dg.lineStyle(1, 0x1e293b, 0.2);
-    for (let x = 0; x <= GAME_WIDTH; x += 40) dg.lineBetween(x, 0, x, GAME_HEIGHT);
-    for (let y = 0; y <= GAME_HEIGHT; y += 40) dg.lineBetween(0, y, GAME_WIDTH, y);
+    const glow = this.add.graphics();
+    for (let r = 180; r > 0; r -= 25) {
+      glow.fillStyle(victory ? 0x0a2a1a : 0x2a0a0a, 0.025);
+      glow.fillCircle(GAME_WIDTH / 2, 110, r);
+    }
 
-    const titleColor = victory ? '#22c55e' : '#ef4444';
-    const titleStr = victory ? '胜利！' : '阵亡';
-
-    const title = this.add.text(GAME_WIDTH / 2, 70, titleStr, {
-      fontSize: '48px', fontFamily: 'monospace', fontStyle: 'bold', color: titleColor,
+    const titleStr = victory ? '胜 利' : '阵 亡';
+    const titleColor = victory ? '#4ade80' : '#f87171';
+    const title = this.add.text(GAME_WIDTH / 2, 90, titleStr, {
+      fontSize: '44px', fontFamily: 'monospace', fontStyle: 'bold', color: titleColor,
       stroke: '#000', strokeThickness: 5,
     }).setOrigin(0.5).setAlpha(0).setScale(0.5);
+    this.tweens.add({
+      targets: title, alpha: 1, scaleX: 1, scaleY: 1,
+      duration: 500, ease: 'Back.easeOut',
+    });
 
-    this.tweens.add({ targets: title, alpha: 1, scaleX: 1, scaleY: 1, duration: 400, ease: 'Back.easeOut' });
-
-    // Stats box
-    const boxY = 130, boxH = 130, boxW = 300;
-    const box = this.add.graphics();
-    box.fillStyle(0x1e293b, 0.6); box.fillRoundedRect(GAME_WIDTH / 2 - boxW / 2, boxY, boxW, boxH, 8);
-    box.lineStyle(1, 0x374151); box.strokeRoundedRect(GAME_WIDTH / 2 - boxW / 2, boxY, boxW, boxH, 8);
+    if (isNew && score > 0) {
+      const badge = this.add.text(GAME_WIDTH / 2, 130, '🏆 新纪录!', {
+        fontSize: '14px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fbbf24',
+      }).setOrigin(0.5).setAlpha(0);
+      this.tweens.add({
+        targets: badge, alpha: 1, y: 128, duration: 400,
+        delay: 500, ease: 'Cubic.easeOut',
+      });
+      this.tweens.add({
+        targets: badge, alpha: { from: 1, to: 0.6 },
+        duration: 800, yoyo: true, repeat: -1, delay: 1000,
+      });
+    }
 
     const stats = [
-      { label: '最终分数', value: `${score}`, color: '#fbbf24' },
-      { label: '击杀数', value: `${kills}`, color: '#22c55e' },
-      { label: '到达', value: `关卡 ${level} - 波次 ${wave}`, color: '#60a5fa' },
+      { label: '分数', value: ScoreManager.formatScore(score), color: '#fbbf24' },
+      { label: '击杀', value: `${kills}`, color: '#4ade80' },
+      { label: '进度', value: endless ? `∞-${level}` : `${level}-${wave}`, color: '#60a5fa' },
     ];
 
+    const statsY = 175;
+    const gap = 100;
+    const startX = GAME_WIDTH / 2 - gap;
+
     stats.forEach((s, i) => {
-      const y = boxY + 24 + i * 36;
-      this.add.text(GAME_WIDTH / 2 - 80, y, s.label, {
-        fontSize: '14px', fontFamily: 'monospace', color: '#9ca3af',
-      }).setOrigin(0, 0.5);
-      this.add.text(GAME_WIDTH / 2 + 80, y, s.value, {
-        fontSize: '16px', fontFamily: 'monospace', fontStyle: 'bold', color: s.color,
-      }).setOrigin(1, 0.5);
+      const sx = startX + i * gap;
+      const val = this.add.text(sx, statsY, s.value, {
+        fontSize: '26px', fontFamily: 'monospace', fontStyle: 'bold', color: s.color,
+      }).setOrigin(0.5).setAlpha(0);
+      this.add.text(sx, statsY + 26, s.label, {
+        fontSize: '10px', fontFamily: 'monospace', color: '#64748b',
+      }).setOrigin(0.5);
+      this.tweens.add({
+        targets: val, alpha: 1, y: statsY - 2,
+        duration: 350, delay: 300 + i * 120, ease: 'Cubic.easeOut',
+      });
     });
 
-    this.makeBtn(GAME_WIDTH / 2, 310, '▸  再来一次', 0x3b82f6, () => {
+    this.add.rectangle(GAME_WIDTH / 2, statsY + 46, 200, 1, 0x1e293b).setOrigin(0.5);
+
+    const scores = ScoreManager.getScores();
+    if (scores.length > 1) {
+      const boardY = statsY + 64;
+      this.add.text(GAME_WIDTH / 2, boardY, '排行榜', {
+        fontSize: '11px', fontFamily: 'monospace', color: '#475569',
+      }).setOrigin(0.5);
+      const top5 = scores.slice(0, 5);
+      top5.forEach((entry, i) => {
+        const ey = boardY + 18 + i * 16;
+        const isThisRun = entry.score === score && entry.kills === kills;
+        this.add.text(GAME_WIDTH / 2 - 80, ey, `${i + 1}.`, {
+          fontSize: '10px', fontFamily: 'monospace',
+          color: isThisRun ? '#fbbf24' : '#475569',
+        });
+        this.add.text(GAME_WIDTH / 2 - 60, ey, ScoreManager.formatScore(entry.score), {
+          fontSize: '10px', fontFamily: 'monospace', fontStyle: 'bold',
+          color: isThisRun ? '#fbbf24' : '#94a3b8',
+        });
+        this.add.text(GAME_WIDTH / 2 + 40, ey, `L${entry.level}`, {
+          fontSize: '10px', fontFamily: 'monospace',
+          color: '#475569',
+        });
+        this.add.text(GAME_WIDTH / 2 + 70, ey, `${entry.kills}K`, {
+          fontSize: '10px', fontFamily: 'monospace',
+          color: '#475569',
+        });
+      });
+    }
+
+    const btnY = scores.length > 1 ? 460 : 320;
+    this.makeBtn(GAME_WIDTH / 2, btnY, '再来一次', false, snd, () => {
       this.scene.start('ArenaScene', { level: 1 });
     });
-
-    this.makeBtn(GAME_WIDTH / 2, 370, '返回菜单', 0x475569, () => {
+    this.makeBtn(GAME_WIDTH / 2, btnY + 48, '返回菜单', true, snd, () => {
       this.scene.start('MenuScene');
     });
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 18, '按 R 快速重试', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#4b5563',
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 20, '按 R 快速重试', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#1e293b',
     }).setOrigin(0.5);
 
     this.input.keyboard!.on('keydown-R', () => {
@@ -64,31 +119,28 @@ export class GameOverScene extends Phaser.Scene {
     });
   }
 
-  private makeBtn(x: number, y: number, label: string, color: number, cb: () => void): void {
-    const w = 180, h = 44;
+  private makeBtn(
+    x: number, y: number, label: string, dim: boolean,
+    snd: SoundManager, cb: () => void,
+  ): void {
+    const w = 160, h = 40;
+    const bg = dim ? 0x111827 : 0x1d4ed8;
+    const hov = dim ? 0x1e293b : 0x2563eb;
     const g = this.add.graphics();
-    g.fillStyle(color); g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 8);
-    g.lineStyle(1, 0x6b7280, 0.3); g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 8);
-
+    const draw = (c: number) => {
+      g.clear();
+      g.fillStyle(c);
+      g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 6);
+      g.lineStyle(1, dim ? 0x334155 : 0x3b82f6, 0.5);
+      g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 6);
+    };
+    draw(bg);
     const t = this.add.text(x, y, label, {
-      fontSize: '15px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff',
+      fontSize: '14px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
     }).setOrigin(0.5);
-
-    const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0)
-      .setInteractive({ useHandCursor: true });
-
-    hit.on('pointerover', () => {
-      g.clear();
-      g.fillStyle(Phaser.Display.Color.ValueToColor(color).lighten(15).color);
-      g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 8);
-      t.setColor('#fbbf24');
-    });
-    hit.on('pointerout', () => {
-      g.clear();
-      g.fillStyle(color); g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 8);
-      g.lineStyle(1, 0x6b7280, 0.3); g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 8);
-      t.setColor('#ffffff');
-    });
-    hit.on('pointerdown', cb);
+    const hit = this.add.rectangle(x, y, w, h, 0, 0).setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => { draw(hov); t.setColor('#fbbf24'); snd.buttonHover(); });
+    hit.on('pointerout', () => { draw(bg); t.setColor('#e2e8f0'); });
+    hit.on('pointerdown', () => { snd.buttonClick(); cb(); });
   }
 }

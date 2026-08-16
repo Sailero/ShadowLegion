@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HERO_CFG, ARENA_WIDTH, ARENA_HEIGHT } from '../config/gameConfig';
+import { SKILLS, getSkill } from '../data/skills';
 
 export interface FireEvent {
   x: number;
@@ -40,11 +41,21 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   private dashVy = 0;
   dashDamage = 0;
 
+  /* ── Skill system ── */
   charge = 0;
   chargeMax: number;
   chargePerKill: number;
-  chargeBlastRadius: number;
-  chargeBlastDamage: number;
+  activeSkillId = 'burst';
+  skillLevels: Record<string, number> = { burst: 1 };
+  unlockedSkills: string[] = ['burst'];
+
+  /* ── Barrage state ── */
+  barrageEndTime = 0;
+  private barrageInterval = 120;
+  private lastBarrageFire = 0;
+
+  /* ── TimeRift state ── */
+  timeRiftEndTime = 0;
 
   hasShield = false;
   speedMult = 1;
@@ -54,9 +65,6 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
 
   private invUntil = 0;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-
-  // Phase 2 placeholder
-  allies: Hero[] = [];
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'hero');
@@ -80,8 +88,6 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     this.dashCooldown = HERO_CFG.dashCooldown;
     this.chargeMax = HERO_CFG.chargeMax;
     this.chargePerKill = HERO_CFG.chargePerKill;
-    this.chargeBlastRadius = HERO_CFG.chargeBlastRadius;
-    this.chargeBlastDamage = HERO_CFG.chargeBlastDamage;
     this.magnetRadius = HERO_CFG.magnetRadius;
 
     this.setDepth(10);
@@ -97,11 +103,23 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       D: kb.addKey('D', false),
       SHIFT: kb.addKey('SHIFT', false),
       SPACE: kb.addKey('SPACE', false),
+      Q: kb.addKey('Q', false),
     };
   }
 
   get isDashing(): boolean { return this.dashing; }
   get isInvincible(): boolean { return this.dashing || this.scene.time.now < this.invUntil; }
+  get isBarrageActive(): boolean { return this.scene.time.now < this.barrageEndTime; }
+  get isTimeRiftActive(): boolean { return this.scene.time.now < this.timeRiftEndTime; }
+
+  getActiveSkill() { return getSkill(this.activeSkillId); }
+
+  getSkillLevel(id: string): number { return this.skillLevels[id] ?? 0; }
+
+  getSkillChargeCost(): number {
+    const skill = this.getActiveSkill();
+    return skill?.chargeCost ?? 100;
+  }
 
   tick(time: number, delta: number): void {
     if (this.hp <= 0) return;
@@ -125,7 +143,6 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     if (this.keys.S.isDown) iy += 1;
 
     if (ix && iy) { const n = Math.SQRT1_2; ix *= n; iy *= n; }
-
     const maxSpd = this.moveSpeed * this.speedMult;
 
     if (ix || iy) {
@@ -150,17 +167,40 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     const wp = this.scene.cameras.main.getWorldPoint(ptr.x, ptr.y);
     this.rotation = Phaser.Math.Angle.Between(this.x, this.y, wp.x, wp.y);
 
+    // Normal fire
     const interval = this.fireRate / this.atkSpdMult;
     if (ptr.isDown && !ptr.rightButtonDown() && time > this.lastFire + interval) {
       this.fire(time, wp.x, wp.y);
+    }
+
+    // Barrage auto-fire
+    if (this.isBarrageActive && time > this.lastBarrageFire + this.barrageInterval) {
+      this.lastBarrageFire = time;
+      const lvl = this.getSkillLevel('barrage');
+      const dirs = lvl >= 3 ? 16 : lvl >= 2 ? 12 : 8;
+      const skillDef = getSkill('barrage')!;
+      const dmg = skillDef.levels[lvl - 1].damage * this.damageMult;
+      for (let i = 0; i < dirs; i++) {
+        const a = (Math.PI * 2 / dirs) * i + time * 0.001;
+        this.scene.events.emit('heroFire', {
+          x: this.x + Math.cos(a) * 15,
+          y: this.y + Math.sin(a) * 15,
+          angle: a, damage: dmg, speed: this.bulletSpeed * 0.8,
+          piercing: false, homing: false, count: 1, spreadAngle: 0,
+        } as FireEvent);
+      }
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.SHIFT)) {
       this.dash(time);
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE) && this.charge >= this.chargeMax) {
-      this.blast();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE) && this.charge >= this.getSkillChargeCost()) {
+      this.useSkill();
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.Q)) {
+      this.cycleSkill();
     }
   }
 
@@ -170,31 +210,41 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     const ev: FireEvent = {
       x: this.x + Math.cos(angle) * 20,
       y: this.y + Math.sin(angle) * 20,
-      angle,
-      damage: this.bulletDamage * this.damageMult,
-      speed: this.bulletSpeed,
-      piercing: this.bulletPiercing,
-      homing: this.bulletHoming,
-      count: this.bulletCount,
+      angle, damage: this.bulletDamage * this.damageMult,
+      speed: this.bulletSpeed, piercing: this.bulletPiercing,
+      homing: this.bulletHoming, count: this.bulletCount,
       spreadAngle: this.spreadAngle,
     };
     this.scene.events.emit('heroFire', ev);
-
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.velocity.x -= Math.cos(angle) * 30;
     body.velocity.y -= Math.sin(angle) * 30;
   }
 
+  private useSkill(): void {
+    const cost = this.getSkillChargeCost();
+    this.charge -= cost;
+    this.scene.events.emit('heroSkill', {
+      skillId: this.activeSkillId,
+      level: this.getSkillLevel(this.activeSkillId),
+      x: this.x, y: this.y,
+    });
+  }
+
+  private cycleSkill(): void {
+    if (this.unlockedSkills.length <= 1) return;
+    const idx = this.unlockedSkills.indexOf(this.activeSkillId);
+    const next = (idx + 1) % this.unlockedSkills.length;
+    this.activeSkillId = this.unlockedSkills[next];
+    this.scene.events.emit('skillSwitch', { skillId: this.activeSkillId });
+  }
+
   dash(time: number): void {
     if (time < this.lastDash + this.dashCooldown) return;
     const body = this.body as Phaser.Physics.Arcade.Body;
-
-    let angle: number;
-    if (body.velocity.length() > 20) {
-      angle = Math.atan2(body.velocity.y, body.velocity.x);
-    } else {
-      angle = this.rotation;
-    }
+    const angle = body.velocity.length() > 20
+      ? Math.atan2(body.velocity.y, body.velocity.x)
+      : this.rotation;
 
     this.dashing = true;
     this.lastDash = time;
@@ -203,17 +253,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     this.dashVy = Math.sin(angle) * this.dashSpd;
     body.setVelocity(this.dashVx, this.dashVy);
     this.setAlpha(0.5);
-
     this.scene.events.emit('heroDash', { x: this.x, y: this.y, angle });
-  }
-
-  private blast(): void {
-    this.charge = 0;
-    this.scene.events.emit('heroBlast', {
-      x: this.x, y: this.y,
-      radius: this.chargeBlastRadius,
-      damage: this.chargeBlastDamage * this.damageMult,
-    });
   }
 
   takeDamage(amount: number): boolean {
