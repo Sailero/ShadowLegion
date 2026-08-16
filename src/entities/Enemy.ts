@@ -191,16 +191,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (!this.active) return false;
     this.hp -= amount;
 
-    if (this.canSplit && !this.splitDone && this.hp <= this.maxHp * 0.4) {
-      this.splitDone = true;
-      this.scene.events.emit('enemySplit', {
-        x: this.x, y: this.y, type: this.cfg.key, parentHp: this.hp,
-      });
-    }
-
     if (this.hp <= 0) {
       this.die();
       return true;
+    }
+
+    if (this.canSplit && !this.splitDone && this.hp <= this.maxHp * 0.4) {
+      this.splitDone = true;
+      this.scene.events.emit('enemySplit', {
+        x: this.x, y: this.y, type: this.cfg.key,
+      });
     }
 
     this.setTintFill(0xffffff);

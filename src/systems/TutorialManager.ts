@@ -31,13 +31,16 @@ export class TutorialManager {
   private completed = false;
   private chargeReadyPending = false;
   private autoTimer: Phaser.Time.TimerEvent | null = null;
+  private completeTimer: Phaser.Time.TimerEvent | null = null;
   private pulseTween: Phaser.Tweens.Tween | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    if (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) {
-      this.completed = true;
-    }
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) {
+        this.completed = true;
+      }
+    } catch { /* storage disabled */ }
   }
 
   get isActive(): boolean {
@@ -163,13 +166,8 @@ export class TutorialManager {
 
   private onAutoStepComplete(index: number): void {
     if (index === 3) {
-      this.fadeOutPrompt(() => {
-        this.step = 4;
-        if (this.chargeReadyPending) {
-          this.chargeReadyPending = false;
-          this.showStep(4, true);
-        }
-      });
+      this.chargeReadyPending = false;
+      this.advanceTo(4);
     }
   }
 
@@ -228,9 +226,9 @@ export class TutorialManager {
     this.clearAutoTimer();
     this.stopPulse();
 
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, '1');
-    }
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, '1');
+    } catch { /* noop */ }
 
     if (this.promptText && this.subText) {
       this.promptText.setText('教学完成!');
@@ -241,7 +239,8 @@ export class TutorialManager {
         duration: 200,
       });
 
-      this.scene.time.delayedCall(1800, () => {
+      this.completeTimer = this.scene.time.delayedCall(1800, () => {
+        if (!this.promptText || !this.scene?.sys?.isActive()) return;
         this.scene.tweens.add({
           targets: [this.promptText, this.subText, this.overlay],
           alpha: 0,
@@ -256,6 +255,7 @@ export class TutorialManager {
 
   destroy(): void {
     this.clearAutoTimer();
+    if (this.completeTimer) { this.completeTimer.remove(false); this.completeTimer = null; }
     this.stopPulse();
     this.overlay?.destroy();
     this.promptText?.destroy();

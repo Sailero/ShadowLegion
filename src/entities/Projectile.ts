@@ -75,12 +75,31 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.hitSet.clear();
   }
 
-  homeToward(tx: number, ty: number): void {
-    const a = Phaser.Math.Angle.Between(this.x, this.y, tx, ty);
+  static readonly HOMING_RANGE = 120;
+
+  tryHomeToward(enemies: Phaser.GameObjects.GameObject[]): void {
+    let nearX: number | undefined;
+    let nearY: number | undefined;
+    let minD = Infinity;
+    for (const c of enemies) {
+      if (!c.active) continue;
+      const e = c as Phaser.Physics.Arcade.Sprite;
+      const d = Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y);
+      if (d < Projectile.HOMING_RANGE && d < minD) {
+        minD = d;
+        nearX = e.x;
+        nearY = e.y;
+      }
+    }
+    if (nearX === undefined || nearY === undefined) return;
+
+    const a = Phaser.Math.Angle.Between(this.x, this.y, nearX, nearY);
     const b = this.body as Phaser.Physics.Arcade.Body;
-    const cur = Math.atan2(b.velocity.y, b.velocity.x);
+    const cur = b.velocity.lengthSq() < 1
+      ? this.launchAngle
+      : Math.atan2(b.velocity.y, b.velocity.x);
     const diff = Phaser.Math.Angle.Wrap(a - cur);
-    const turn = Phaser.Math.Clamp(diff, -0.06, 0.06);
+    const turn = Phaser.Math.Clamp(diff, -0.1, 0.1);
     const na = cur + turn;
     b.setVelocity(Math.cos(na) * this.spd, Math.sin(na) * this.spd);
     this.rotation = na;

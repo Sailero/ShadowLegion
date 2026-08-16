@@ -74,7 +74,7 @@ export class GameOverScene extends Phaser.Scene {
     this.add.rectangle(GAME_WIDTH / 2, statsY + 46, 200, 1, 0x1e293b).setOrigin(0.5);
 
     const scores = ScoreManager.getScores();
-    if (scores.length > 1) {
+    if (scores.length > 0) {
       const boardY = statsY + 64;
       this.add.text(GAME_WIDTH / 2, boardY, '排行榜', {
         fontSize: '11px', fontFamily: 'monospace', color: '#475569',
@@ -82,7 +82,7 @@ export class GameOverScene extends Phaser.Scene {
       const top5 = scores.slice(0, 5);
       top5.forEach((entry, i) => {
         const ey = boardY + 18 + i * 16;
-        const isThisRun = entry.score === score && entry.kills === kills;
+        const isThisRun = entry.score === score && entry.kills === kills && entry.level === level;
         this.add.text(GAME_WIDTH / 2 - 80, ey, `${i + 1}.`, {
           fontSize: '10px', fontFamily: 'monospace',
           color: isThisRun ? '#fbbf24' : '#475569',
@@ -102,9 +102,10 @@ export class GameOverScene extends Phaser.Scene {
       });
     }
 
+    const retryData = { level: 1, endless };
     const btnY = scores.length > 1 ? 460 : 320;
     this.makeBtn(GAME_WIDTH / 2, btnY, '再来一次', false, snd, () => {
-      this.scene.start('ArenaScene', { level: 1 });
+      this.scene.start('ArenaScene', retryData);
     });
     this.makeBtn(GAME_WIDTH / 2, btnY + 48, '返回菜单', true, snd, () => {
       this.scene.start('MenuScene');
@@ -114,8 +115,8 @@ export class GameOverScene extends Phaser.Scene {
       fontSize: '10px', fontFamily: 'monospace', color: '#1e293b',
     }).setOrigin(0.5);
 
-    this.input.keyboard!.on('keydown-R', () => {
-      this.scene.start('ArenaScene', { level: 1 });
+    this.input.keyboard!.once('keydown-R', () => {
+      this.scene.start('ArenaScene', retryData);
     });
   }
 

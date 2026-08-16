@@ -64,7 +64,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   magnetRadius: number;
 
   private invUntil = 0;
-  private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  keys!: Record<string, Phaser.Input.Keyboard.Key>;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'hero');
@@ -126,14 +126,14 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     const dt = delta / 1000;
     const body = this.body as Phaser.Physics.Arcade.Body;
 
-    if (this.dashing) {
-      if (time > this.dashEnd) {
-        this.dashing = false;
-        this.setAlpha(1);
-      } else {
-        body.setVelocity(this.dashVx, this.dashVy);
-        return;
-      }
+    const isDashing = this.dashing && time <= this.dashEnd;
+    if (this.dashing && time > this.dashEnd) {
+      this.dashing = false;
+      this.setAlpha(1);
+    }
+
+    if (isDashing) {
+      body.setVelocity(this.dashVx, this.dashVy);
     }
 
     let ix = 0, iy = 0;
@@ -142,35 +142,36 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     if (this.keys.W.isDown) iy -= 1;
     if (this.keys.S.isDown) iy += 1;
 
-    if (ix && iy) { const n = Math.SQRT1_2; ix *= n; iy *= n; }
-    const maxSpd = this.moveSpeed * this.speedMult;
+    if (!isDashing) {
+      if (ix && iy) { const n = Math.SQRT1_2; ix *= n; iy *= n; }
+      const maxSpd = this.moveSpeed * this.speedMult;
 
-    if (ix || iy) {
-      const tx = ix * maxSpd;
-      const ty = iy * maxSpd;
-      const lerp = Math.min(1, this.accel * dt / maxSpd);
-      body.setVelocity(
-        Phaser.Math.Linear(body.velocity.x, tx, lerp),
-        Phaser.Math.Linear(body.velocity.y, ty, lerp),
-      );
-    } else {
-      const spd = body.velocity.length();
-      if (spd > 1) {
-        const f = Math.max(0, 1 - this.decel * dt / spd);
-        body.setVelocity(body.velocity.x * f, body.velocity.y * f);
+      if (ix || iy) {
+        const tx = ix * maxSpd;
+        const ty = iy * maxSpd;
+        const lerp = Math.min(1, this.accel * dt / maxSpd);
+        body.setVelocity(
+          Phaser.Math.Linear(body.velocity.x, tx, lerp),
+          Phaser.Math.Linear(body.velocity.y, ty, lerp),
+        );
       } else {
-        body.setVelocity(0, 0);
+        const spd = body.velocity.length();
+        if (spd > 1) {
+          const f = Math.max(0, 1 - this.decel * dt / spd);
+          body.setVelocity(body.velocity.x * f, body.velocity.y * f);
+        } else {
+          body.setVelocity(0, 0);
+        }
       }
-    }
 
-    const ptr = this.scene.input.activePointer;
-    const wp = this.scene.cameras.main.getWorldPoint(ptr.x, ptr.y);
-    this.rotation = Phaser.Math.Angle.Between(this.x, this.y, wp.x, wp.y);
+      const ptr = this.scene.input.activePointer;
+      const wp = this.scene.cameras.main.getWorldPoint(ptr.x, ptr.y);
+      this.rotation = Phaser.Math.Angle.Between(this.x, this.y, wp.x, wp.y);
 
-    // Normal fire
-    const interval = this.fireRate / this.atkSpdMult;
-    if (ptr.isDown && !ptr.rightButtonDown() && time > this.lastFire + interval) {
-      this.fire(time, wp.x, wp.y);
+      const interval = this.fireRate / this.atkSpdMult;
+      if (ptr.isDown && !ptr.rightButtonDown() && time > this.lastFire + interval) {
+        this.fire(time, wp.x, wp.y);
+      }
     }
 
     // Barrage auto-fire

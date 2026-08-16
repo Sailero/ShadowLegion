@@ -32,12 +32,13 @@ export class ScoreManager {
       date: new Date().toISOString(),
     };
 
-    const scores = this.getScores();
-    scores.push(saved);
-    scores.sort((a, b) => b.score - a.score);
-
-    const trimmed = scores.slice(0, this.MAX_ENTRIES);
-    localStorage.setItem(this.KEY, JSON.stringify(trimmed));
+    try {
+      const scores = this.getScores();
+      scores.push(saved);
+      scores.sort((a, b) => b.score - a.score);
+      const trimmed = scores.slice(0, this.MAX_ENTRIES);
+      localStorage.setItem(this.KEY, JSON.stringify(trimmed));
+    } catch { /* storage full or disabled */ }
 
     return saved;
   }
@@ -52,7 +53,7 @@ export class ScoreManager {
   }
 
   static clearScores(): void {
-    localStorage.removeItem(this.KEY);
+    try { localStorage.removeItem(this.KEY); } catch { /* noop */ }
   }
 
   static formatScore(n: number): string {

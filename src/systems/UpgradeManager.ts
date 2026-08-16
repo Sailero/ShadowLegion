@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Hero } from '../entities/Hero';
 import { UpgradeDef, WAVE_UPGRADES, LEVEL_UPGRADES } from '../data/upgrades';
+import { getSkill } from '../data/skills';
 
 export class UpgradeManager {
   private stacks = new Map<string, number>();
@@ -16,6 +17,10 @@ export class UpgradeManager {
         if (u.id === 'skill_timerift' && hero.unlockedSkills.includes('timerift')) return false;
         if (u.id === 'skill_barrage_up' && !hero.unlockedSkills.includes('barrage')) return false;
         if (u.id === 'skill_timerift_up' && !hero.unlockedSkills.includes('timerift')) return false;
+        if (u.id === 'skill_burst_up' && hero.getSkillLevel('burst') >= (getSkill('burst')?.maxLevel ?? 3)) return false;
+        if (u.id === 'skill_barrage_up' && hero.getSkillLevel('barrage') >= (getSkill('barrage')?.maxLevel ?? 3)) return false;
+        if (u.id === 'skill_timerift_up' && hero.getSkillLevel('timerift') >= (getSkill('timerift')?.maxLevel ?? 3)) return false;
+        if (u.id === 'heal' && hero.hp >= hero.maxHp) return false;
       }
       return true;
     });
@@ -25,13 +30,6 @@ export class UpgradeManager {
     while (result.length < 3 && copy.length > 0) {
       const idx = Phaser.Math.Between(0, copy.length - 1);
       result.push(copy.splice(idx, 1)[0]);
-    }
-
-    if (result.length < 3) {
-      const fill = source.filter(u => !result.find(r => r.id === u.id));
-      while (result.length < 3 && fill.length > 0) {
-        result.push(fill.splice(Phaser.Math.Between(0, fill.length - 1), 1)[0]);
-      }
     }
 
     return result;
@@ -45,9 +43,11 @@ export class UpgradeManager {
   }
 
   apply(hero: Hero, upgrade: UpgradeDef): void {
+    const cur = this.stacks.get(upgrade.id) || 0;
+    if (cur >= upgrade.maxStacks) return;
+
     this.appliedIds.push(upgrade.id);
-    const cur = (this.stacks.get(upgrade.id) || 0) + 1;
-    this.stacks.set(upgrade.id, cur);
+    this.stacks.set(upgrade.id, cur + 1);
 
     switch (upgrade.id) {
       case 'atk_up':       hero.damageMult *= 1.15; break;
@@ -65,23 +65,22 @@ export class UpgradeManager {
       case 'magnet':       hero.magnetRadius *= 1.5; break;
       case 'charge_up':    hero.chargePerKill = Math.round(hero.chargePerKill * 1.5); break;
 
-      // Skill upgrades
       case 'skill_burst_up':
-        hero.skillLevels['burst'] = Math.min((hero.skillLevels['burst'] || 1) + 1, 3);
+        hero.skillLevels['burst'] = Math.min((hero.skillLevels['burst'] || 1) + 1, getSkill('burst')?.maxLevel ?? 3);
         break;
       case 'skill_barrage':
-        hero.unlockedSkills.push('barrage');
+        if (!hero.unlockedSkills.includes('barrage')) hero.unlockedSkills.push('barrage');
         hero.skillLevels['barrage'] = 1;
         break;
       case 'skill_barrage_up':
-        hero.skillLevels['barrage'] = Math.min((hero.skillLevels['barrage'] || 1) + 1, 3);
+        hero.skillLevels['barrage'] = Math.min((hero.skillLevels['barrage'] || 1) + 1, getSkill('barrage')?.maxLevel ?? 3);
         break;
       case 'skill_timerift':
-        hero.unlockedSkills.push('timerift');
+        if (!hero.unlockedSkills.includes('timerift')) hero.unlockedSkills.push('timerift');
         hero.skillLevels['timerift'] = 1;
         break;
       case 'skill_timerift_up':
-        hero.skillLevels['timerift'] = Math.min((hero.skillLevels['timerift'] || 1) + 1, 3);
+        hero.skillLevels['timerift'] = Math.min((hero.skillLevels['timerift'] || 1) + 1, getSkill('timerift')?.maxLevel ?? 3);
         break;
 
       case 'perm_atk':     hero.bulletDamage += 5; break;

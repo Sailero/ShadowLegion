@@ -48,8 +48,9 @@ export class ArenaScene extends Phaser.Scene {
   private dead = false;
   private upgradeUI: Phaser.GameObjects.GameObject[] = [];
 
-  /* ── Hitlag (frame-based, no setTimeout) ── */
+  /* ── Hitlag / SlowMo ── */
   private hitlagEndTime = 0;
+  private slowMoActive = false;
   private lastShakeTime = 0;
   private lastDmgNumTime = 0;
   private lastComboVal = 0;
@@ -71,6 +72,10 @@ export class ArenaScene extends Phaser.Scene {
   private tutorial!: TutorialManager;
   private endless = false;
   private bgParticles: Phaser.GameObjects.Graphics | null = null;
+
+  /* ── TimeRift area tracking ── */
+  private riftCenter = { x: 0, y: 0 };
+  private riftRadius = 0;
 
   constructor() { super('ArenaScene'); }
 
@@ -750,6 +755,8 @@ export class ArenaScene extends Phaser.Scene {
 
   private doSkillTimeRift(x: number, y: number, damage: number, radius: number, duration: number, color: number): void {
     this.hero.timeRiftEndTime = this.time.now + duration;
+    this.riftCenter = { x, y };
+    this.riftRadius = radius;
 
     const rift = this.add.graphics().setDepth(3);
 
@@ -840,6 +847,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private slowMoFinish(victory: boolean): void {
+    this.slowMoActive = true;
     this.physics.world.timeScale = 3;
     const cam = this.cameras.main;
     if (victory) {
@@ -848,6 +856,7 @@ export class ArenaScene extends Phaser.Scene {
       cam.zoomTo(1.25, 800, 'Sine.easeIn');
     }
     window.setTimeout(() => {
+      this.slowMoActive = false;
       try { this.physics.world.timeScale = 1; } catch (_) { /* noop */ }
     }, victory ? 2500 : 1800);
   }
@@ -887,6 +896,7 @@ export class ArenaScene extends Phaser.Scene {
   private onEnemySplit(ev: { x: number; y: number; type: string }): void {
     const cfg = ENEMY_TYPES[ev.type];
     if (!cfg) return;
+    this.waveEnemyTotal += 2;
     for (let i = 0; i < 2; i++) {
       const offset = 20;
       const a = Math.random() * Math.PI * 2;
@@ -897,6 +907,9 @@ export class ArenaScene extends Phaser.Scene {
       child.hp = Math.round(cfg.hp * 0.4);
       child.maxHp = child.hp;
       child.setScale(0.7);
+      const b = child.body as Phaser.Physics.Arcade.Body;
+      const br = cfg.bodyRadius * 0.7;
+      b.setCircle(br, child.width / 2 - br, child.height / 2 - br);
       this.enemies.add(child);
     }
     this.snd.hit();
@@ -924,6 +937,8 @@ export class ArenaScene extends Phaser.Scene {
 
   private onLevelComplete(ev: { level: number }): void {
     if (ev.level >= 3 && !this.endless) {
+      this.dead = true;
+      this.tutorial.destroy();
       this.snd.victory();
       this.announce('🏆 通关成功！进入无尽模式可继续挑战', 0x22c55e, 3000);
       this.slowMoFinish(true);
@@ -944,7 +959,10 @@ export class ArenaScene extends Phaser.Scene {
     } else {
       this.announce(`关卡 ${ev.level} 通过！`, 0x22c55e, 2000);
     }
-    const showUpgrade = () => this.showUpgradeUI('level');
+    const showUpgrade = () => {
+      if (this.dead) return;
+      this.showUpgradeUI('level');
+    };
     window.setTimeout(() => { try { showUpgrade(); } catch (_) { /* noop */ } }, 2500);
   }
 
@@ -1045,6 +1063,7 @@ export class ArenaScene extends Phaser.Scene {
   /* ────────────────── Upgrade UI ────────────────── */
 
   private showUpgradeUI(pool: 'wave' | 'level'): void {
+    if (this.dead || this.upgrading) return;
     this.upgrading = true;
     this.physics.pause();
 
@@ -1151,13 +1170,11 @@ export class ArenaScene extends Phaser.Scene {
   /* ────────────────── Main Update Loop ────────────────── */
 
   update(time: number, delta: number) {
-    // CRITICAL: hitlag recovery runs ALWAYS, even during upgrade/death screens
     if (this.hitlagEndTime > 0 && time >= this.hitlagEndTime) {
       this.physics.world.timeScale = 1;
       this.hitlagEndTime = 0;
     }
-    // Safety: never let timeScale stick >1 for more than 200ms
-    if (this.physics.world.timeScale > 1 && this.hitlagEndTime === 0) {
+    if (this.physics.world.timeScale > 1 && this.hitlagEndTime === 0 && !this.slowMoActive) {
       this.physics.world.timeScale = 1;
     }
 
@@ -1171,11 +1188,9 @@ export class ArenaScene extends Phaser.Scene {
     this.updateUI(time);
     this.updateBgParticles(time);
 
-    // Tutorial hooks
     if (this.tutorial.isActive) {
-      const kb = this.input.keyboard!;
-      if (kb.addKey('W', false).isDown || kb.addKey('A', false).isDown ||
-          kb.addKey('S', false).isDown || kb.addKey('D', false).isDown) {
+      const k = this.hero.keys;
+      if (k.W.isDown || k.A.isDown || k.S.isDown || k.D.isDown) {
         this.tutorial.onMove();
       }
       if (this.hero.charge >= this.hero.getSkillChargeCost()) {
@@ -1197,30 +1212,24 @@ export class ArenaScene extends Phaser.Scene {
       if (!e.active) return;
       e.tick(time, delta, this.hero.x, this.hero.y);
       if (riftActive) {
-        const b = e.body as Phaser.Physics.Arcade.Body;
-        b.velocity.x *= 0.3;
-        b.velocity.y *= 0.3;
+        const dist = Phaser.Math.Distance.Between(this.riftCenter.x, this.riftCenter.y, e.x, e.y);
+        if (dist < this.riftRadius) {
+          const b = e.body as Phaser.Physics.Arcade.Body;
+          b.velocity.x *= 0.3;
+          b.velocity.y *= 0.3;
+        }
       }
     });
   }
 
   private updateBullets(time: number): void {
-    let nearX: number | undefined, nearY: number | undefined;
-    if (this.hero.bulletHoming) {
-      let minD = Infinity;
-      for (const c of this.enemies.getChildren()) {
-        const e = c as Enemy;
-        if (!e.active) continue;
-        const d = Phaser.Math.Distance.Between(this.hero.x, this.hero.y, e.x, e.y);
-        if (d < minD) { minD = d; nearX = e.x; nearY = e.y; }
-      }
-    }
+    const enemyChildren = this.enemies.getChildren();
 
     [...this.playerBullets.getChildren()].forEach(c => {
       const b = c as Projectile;
       if (b.active) {
-        if (b.homing && nearX !== undefined && nearY !== undefined) {
-          b.homeToward(nearX, nearY);
+        if (b.homing) {
+          b.tryHomeToward(enemyChildren);
         }
         b.tick(time);
       }
