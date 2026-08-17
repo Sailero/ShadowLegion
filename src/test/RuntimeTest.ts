@@ -6,6 +6,7 @@ import {
 import { SKILLS, getSkill } from '../data/skills';
 import { WAVE_UPGRADES, LEVEL_UPGRADES } from '../data/upgrades';
 import { LEVEL_WAVES } from '../data/enemies';
+import { Projectile } from '../entities/Projectile';
 
 interface Result { name: string; ok: boolean; msg?: string }
 
@@ -217,16 +218,94 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
     assert(typeof s.hero.regenPerSec === 'number', 'regenPerSec missing');
   });
 
-  t('Hero damage/charge functions work', () => {
+  // ── HP Module Tests ──
+  t('[HP] takeDamage reduces HP', () => {
     const origHp = s.hero.hp;
-    const origCharge = s.hero.charge;
-    s.hero.addCharge(10);
-    assert(s.hero.charge >= origCharge, 'addCharge failed');
-    s.hero.charge = origCharge;
+    const origInvUntil = s.hero.invUntil;
+    s.hero.invUntil = 0; // clear invincibility
+    const took = s.hero.takeDamage(10);
+    assert(took === true, 'takeDamage should return true');
+    assert(s.hero.hp === origHp - 10, `hp: expected ${origHp - 10}, got ${s.hero.hp}`);
+    s.hero.hp = origHp;
+    s.hero.invUntil = origInvUntil;
+  });
+
+  t('[HP] invincible blocks damage', () => {
+    const origHp = s.hero.hp;
+    s.hero.invUntil = Date.now() + 99999;
+    const took = s.hero.takeDamage(10);
+    assert(took === false, 'should be blocked by invincibility');
+    assert(s.hero.hp === origHp, 'hp should not change');
+    s.hero.invUntil = 0;
+  });
+
+  t('[HP] heal works and is integer', () => {
+    const origHp = s.hero.hp;
+    s.hero.hp = 50;
+    s.hero.heal(20.7);
+    assert(Number.isInteger(s.hero.hp), `heal result should be integer, got ${s.hero.hp}`);
+    assert(s.hero.hp === 71, `expected 71, got ${s.hero.hp}`);
     s.hero.hp = origHp;
   });
 
-  t('UI text elements exist', () => {
+  t('[HP] heal caps at maxHp', () => {
+    s.hero.hp = s.hero.maxHp - 5;
+    s.hero.heal(100);
+    assert(s.hero.hp === s.hero.maxHp, `heal should cap at maxHp`);
+  });
+
+  // ── Charge/Energy Module Tests ──
+  t('[Energy] addCharge works', () => {
+    const origCharge = s.hero.charge;
+    s.hero.charge = 0;
+    s.hero.addCharge(10);
+    assert(s.hero.charge === 10, `expected 10, got ${s.hero.charge}`);
+    s.hero.charge = origCharge;
+  });
+
+  t('[Energy] addCharge caps at chargeMax', () => {
+    s.hero.charge = 0;
+    s.hero.addCharge(9999);
+    const max = s.hero.overcharge ? Math.round(s.hero.chargeMax * 1.5) : s.hero.chargeMax;
+    assert(s.hero.charge === max, `expected ${max}, got ${s.hero.charge}`);
+    s.hero.charge = 0;
+  });
+
+  // ── Skill Module Tests ──
+  t('[Skill] activeSkill is valid', () => {
+    const sk = s.hero.getActiveSkill();
+    assert(sk !== null && sk !== undefined, 'activeSkill should exist');
+    assert(typeof sk.id === 'string', 'skill should have id');
+    assert(sk.levels.length > 0, 'skill should have levels');
+  });
+
+  t('[Skill] skill level within bounds', () => {
+    for (const sid of ['burst', 'barrage', 'timerift']) {
+      const lvl = s.hero.getSkillLevel(sid);
+      assert(typeof lvl === 'number' && lvl >= 0, `${sid} level invalid: ${lvl}`);
+    }
+  });
+
+  // ── Projectile Module Tests ──
+  t('[Projectile] HOMING_RANGE is reasonable', () => {
+    assert(Projectile.HOMING_RANGE <= 200, `HOMING_RANGE=${Projectile.HOMING_RANGE}, should be <= 200`);
+    assert(Projectile.HOMING_RANGE >= 80, `HOMING_RANGE=${Projectile.HOMING_RANGE}, should be >= 80`);
+  });
+
+  // ── Attribute/Property Module Tests ──
+  t('[Attr] hero initial properties are integers', () => {
+    assert(Number.isInteger(s.hero.hp), `hp not integer: ${s.hero.hp}`);
+    assert(Number.isInteger(s.hero.maxHp), `maxHp not integer: ${s.hero.maxHp}`);
+  });
+
+  t('[Attr] upgrade properties have correct types', () => {
+    assert(s.hero.critChance >= 0 && s.hero.critChance <= 1, `critChance out of range: ${s.hero.critChance}`);
+    assert(s.hero.dodgeChance >= 0 && s.hero.dodgeChance <= 1, `dodgeChance out of range: ${s.hero.dodgeChance}`);
+    assert(s.hero.thorns >= 0, `thorns negative: ${s.hero.thorns}`);
+  });
+
+  // ── UI Module Tests ──
+  t('[UI] text elements exist', () => {
     assert(s.hpText !== undefined, 'hpText missing');
     assert(s.waveText !== undefined, 'waveText missing');
     assert(s.scoreText !== undefined, 'scoreText missing');
@@ -234,8 +313,15 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
     assert(s.comboText !== undefined, 'comboText missing');
   });
 
-  t('Collision handlers registered', () => {
-    assert(scene.physics.world.colliders.getActive().length > 0, 'no active colliders');
+  // ── Collision Module Tests ──
+  t('[Collision] handlers registered', () => {
+    assert(scene.physics.world.colliders.getActive().length >= 4, 'expected at least 4 colliders');
+  });
+
+  // ── Enemy Module Tests ──
+  t('[Enemy] group exists and has physics', () => {
+    assert(s.enemies !== undefined, 'enemies group missing');
+    assert(typeof s.enemies.getChildren === 'function', 'enemies should be a group');
   });
 
   return R;

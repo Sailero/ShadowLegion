@@ -75,8 +75,8 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.hitSet.clear();
   }
 
-  static readonly HOMING_RANGE = 300;
-  private static readonly TURN_RATE = 0.15;
+  static readonly HOMING_RANGE = 150;
+  private static readonly TURN_RATE = 0.18;
 
   tryHomeToward(enemies: Phaser.GameObjects.GameObject[]): void {
     let target: Phaser.Physics.Arcade.Sprite | null = null;

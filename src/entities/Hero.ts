@@ -193,14 +193,16 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
 
     // Second wind: regen after 3s out of combat
     if (this.secondWind && time - this.lastDamageTaken > 3000 && this.hp < this.maxHp) {
-      this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.02 * dt);
-    }
-    // Passive regen
-    if (this.regenPerSec > 0 && this.hp < this.maxHp) {
+      this.regenTimer += dt;
+      if (this.regenTimer >= 0.5) {
+        this.regenTimer -= 0.5;
+        this.hp = Math.min(this.maxHp, Math.round(this.hp + this.maxHp * 0.01));
+      }
+    } else if (this.regenPerSec > 0 && this.hp < this.maxHp) {
       this.regenTimer += dt;
       if (this.regenTimer >= 1) {
         this.regenTimer -= 1;
-        this.hp = Math.min(this.maxHp, this.hp + this.regenPerSec);
+        this.hp = Math.min(this.maxHp, Math.round(this.hp + this.regenPerSec));
       }
     }
 
@@ -302,7 +304,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       return false;
     }
 
-    this.hp = Math.max(0, this.hp - amount);
+    this.hp = Math.max(0, Math.round(this.hp - amount));
     this.lastDamageTaken = this.scene.time.now;
     this.invUntil = this.scene.time.now + HERO_CFG.invincibleMs;
     this.scene.events.emit('heroHit', { x: this.x, y: this.y, damage: amount });
@@ -310,9 +312,8 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     if (this.hp <= 0) {
       this.scene.events.emit('heroDeath');
       this.setActive(false).setVisible(false);
-      return true;
     }
-    return false;
+    return true;
   }
 
   addCharge(amount: number): void {
@@ -321,7 +322,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   }
 
   heal(amount: number): void {
-    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.hp = Math.min(this.maxHp, Math.round(this.hp + amount));
   }
 
   resetDashCooldown(): void {

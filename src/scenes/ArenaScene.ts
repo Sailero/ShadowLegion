@@ -316,8 +316,10 @@ export class ArenaScene extends Phaser.Scene {
       if (!bullet.active) return;
       const dmg = bullet.damage;
       bullet.recycle();
-      this.hero.takeDamage(dmg);
-      this.snd.heroHit();
+      const took = this.hero.takeDamage(dmg);
+      if (took) {
+        this.snd.heroHit();
+      }
     } catch (err) { console.error('[onEnemyBulletHitHero]', err); }
   }
 
@@ -333,8 +335,10 @@ export class ArenaScene extends Phaser.Scene {
         return;
       }
 
-      this.hero.takeDamage(enemy.dmg);
-      this.snd.heroHit();
+      const took = this.hero.takeDamage(enemy.dmg);
+      if (took) {
+        this.snd.heroHit();
+      }
     } catch (err) { console.error('[onHeroTouchEnemy]', err); }
   }
 
@@ -445,7 +449,7 @@ export class ArenaScene extends Phaser.Scene {
     g.fillRect(bx + 2, by + 4, 3, bh - 8);
     g.fillRect(bx + 1, by + 5, 5, bh - 10);
 
-    this.hpText.setText(`${this.hero.hp} / ${this.hero.maxHp}`);
+    this.hpText.setText(`${Math.round(this.hero.hp)} / ${this.hero.maxHp}`);
     this.hpText.setPosition(bx + bw / 2, by + bh / 2 + 1);
 
     // Skill charge bar
@@ -1447,9 +1451,10 @@ export class ArenaScene extends Phaser.Scene {
     if (!skill) { this.finishUpgrade(pool); return; }
 
     const previewUI: Phaser.GameObjects.GameObject[] = [];
+    const previewTweens: Phaser.Tweens.Tween[] = [];
 
     const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.75)
-      .setScrollFactor(0).setDepth(400).setInteractive();
+      .setScrollFactor(0).setDepth(400);
     previewUI.push(overlay);
 
     const cardW = 360, cardH = 300;
@@ -1473,26 +1478,23 @@ export class ArenaScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
     previewUI.push(desc);
 
-    // Animated demo
     const demoY = cy + 10;
     const demoGfx = this.add.graphics().setScrollFactor(0).setDepth(402);
     previewUI.push(demoGfx);
 
-    // Demo animation: pulsing rings showing skill effect
     const demoCircle = this.add.circle(cx, demoY, 8, skill.color, 0.8).setScrollFactor(0).setDepth(402);
     previewUI.push(demoCircle);
 
     const ring1 = this.add.circle(cx, demoY, 15, skill.color, 0).setScrollFactor(0).setDepth(402);
     ring1.setStrokeStyle(2, skill.color, 0.7);
     previewUI.push(ring1);
-    this.tweens.add({ targets: ring1, radius: 60, alpha: 0, duration: 1200, repeat: -1, ease: 'Quad.easeOut' });
+    previewTweens.push(this.tweens.add({ targets: ring1, radius: 60, alpha: 0, duration: 1200, repeat: -1, ease: 'Quad.easeOut' }));
 
     const ring2 = this.add.circle(cx, demoY, 15, skill.color, 0).setScrollFactor(0).setDepth(402);
     ring2.setStrokeStyle(1.5, skill.color, 0.5);
     previewUI.push(ring2);
-    this.tweens.add({ targets: ring2, radius: 45, alpha: 0, duration: 1200, repeat: -1, delay: 400, ease: 'Quad.easeOut' });
+    previewTweens.push(this.tweens.add({ targets: ring2, radius: 45, alpha: 0, duration: 1200, repeat: -1, delay: 400, ease: 'Quad.easeOut' }));
 
-    // Level descriptions
     const levelsY = cy + 60;
     for (let i = 0; i < skill.levels.length; i++) {
       const lvlText = this.add.text(cx, levelsY + i * 22, `Lv${i + 1}: ${skill.levels[i].desc}`, {
@@ -1501,24 +1503,22 @@ export class ArenaScene extends Phaser.Scene {
       previewUI.push(lvlText);
     }
 
-    // Usage hint
     const hint = this.add.text(cx, cy + cardH / 2 - 65, '充能满后按 [ SPACE ] 释放  |  [ Q ] 切换技能', {
       fontSize: '11px', fontFamily: 'monospace', color: '#60a5fa',
       backgroundColor: '#1e293b', padding: { x: 8, y: 3 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
     previewUI.push(hint);
 
-    // OK button
     const btnBg = this.add.graphics().setScrollFactor(0).setDepth(402);
-    const btnW = 120, btnH = 32, btnY = cy + cardH / 2 - 28;
-    btnBg.fillStyle(skill.color, 0.2);
-    btnBg.fillRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, 6);
-    btnBg.lineStyle(1, skill.color, 0.6);
-    btnBg.strokeRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, 6);
+    const btnW = 140, btnH = 40, btnY = cy + cardH / 2 - 28;
+    btnBg.fillStyle(skill.color, 0.3);
+    btnBg.fillRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, 8);
+    btnBg.lineStyle(2, skill.color, 0.8);
+    btnBg.strokeRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, 8);
     previewUI.push(btnBg);
 
-    const btnText = this.add.text(cx, btnY, '确认', {
-      fontSize: '15px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fff',
+    const btnText = this.add.text(cx, btnY, '确 认', {
+      fontSize: '16px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(403);
     previewUI.push(btnText);
 
@@ -1526,11 +1526,18 @@ export class ArenaScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(404).setInteractive({ useHandCursor: true });
     previewUI.push(btnHit);
 
-    btnHit.on('pointerdown', () => {
-      previewUI.forEach(o => o.destroy());
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      previewTweens.forEach(tw => tw.stop());
+      previewUI.forEach(o => { try { o.destroy(); } catch (_) { /* noop */ } });
       this.announce(`获得: ${skill.name}`, skill.color, 1000);
       this.finishUpgrade(pool);
-    });
+    };
+
+    btnHit.on('pointerdown', dismiss);
+    overlay.setInteractive().on('pointerdown', dismiss);
   }
 
   private finishUpgrade(pool: 'wave' | 'level'): void {
