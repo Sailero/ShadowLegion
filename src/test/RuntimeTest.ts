@@ -288,8 +288,8 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
 
   // ── Projectile Module Tests ──
   t('[Projectile] HOMING_RANGE is reasonable', () => {
-    assert(Projectile.HOMING_RANGE <= 200, `HOMING_RANGE=${Projectile.HOMING_RANGE}, should be <= 200`);
-    assert(Projectile.HOMING_RANGE >= 80, `HOMING_RANGE=${Projectile.HOMING_RANGE}, should be >= 80`);
+    assert(Projectile.HOMING_RANGE <= 150, `HOMING_RANGE=${Projectile.HOMING_RANGE}, should be <= 150`);
+    assert(Projectile.HOMING_RANGE >= 50, `HOMING_RANGE=${Projectile.HOMING_RANGE}, should be >= 50`);
   });
 
   // ── Attribute/Property Module Tests ──

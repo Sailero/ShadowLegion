@@ -126,10 +126,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         break;
     }
 
-    // Elite dodge: evade when a bullet is near
-    if (this.canDodge && !this.isDodging && time > this.lastDodge + this.dodgeCooldown) {
-      // pass bulletCheckFn via scene event — we'll set canDodge enemies' dodge in ArenaScene
-    }
     // Dodge movement
     if (this.isDodging) {
       if (time > this.dodgeEnd) {

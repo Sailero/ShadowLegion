@@ -75,8 +75,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.hitSet.clear();
   }
 
-  static readonly HOMING_RANGE = 150;
-  private static readonly TURN_RATE = 0.18;
+  static readonly HOMING_RANGE = 100;
 
   tryHomeToward(enemies: Phaser.GameObjects.GameObject[]): void {
     let target: Phaser.Physics.Arcade.Sprite | null = null;
@@ -96,7 +95,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     const b = this.body as Phaser.Physics.Arcade.Body;
     const tb = target.body as Phaser.Physics.Arcade.Body | null;
 
-    // Intercept prediction: aim at where the enemy WILL be
     let aimX = target.x;
     let aimY = target.y;
 
@@ -106,16 +104,12 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
       const evx = tb.velocity.x;
       const evy = tb.velocity.y;
 
-      // Solve quadratic for intercept time:
-      // |P + V_enemy * t - (B + V_bullet_dir * bulletSpeed * t)| = 0
-      // Simplified: find t where bullet at speed `spd` reaches the moving target
       const a2 = evx * evx + evy * evy - this.spd * this.spd;
       const b2 = 2 * (dx * evx + dy * evy);
       const c2 = dx * dx + dy * dy;
 
       let t = 0;
       if (Math.abs(a2) < 0.001) {
-        // Linear case
         if (Math.abs(b2) > 0.001) t = -c2 / b2;
       } else {
         const disc = b2 * b2 - 4 * a2 * c2;
@@ -123,30 +117,19 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
           const sqrtD = Math.sqrt(disc);
           const t1 = (-b2 + sqrtD) / (2 * a2);
           const t2 = (-b2 - sqrtD) / (2 * a2);
-          // Pick smallest positive t
           if (t1 > 0 && t2 > 0) t = Math.min(t1, t2);
           else if (t1 > 0) t = t1;
           else if (t2 > 0) t = t2;
         }
       }
 
-      t = Phaser.Math.Clamp(t, 0, 0.8);
+      t = Phaser.Math.Clamp(t, 0, 0.6);
       aimX = target.x + evx * t;
       aimY = target.y + evy * t;
     }
 
-    const aimAngle = Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY);
-    const cur = b.velocity.lengthSq() < 1
-      ? this.launchAngle
-      : Math.atan2(b.velocity.y, b.velocity.x);
-
-    // Aggressive turning: stronger when closer
-    const distFactor = Phaser.Math.Clamp(1.5 - minD / Projectile.HOMING_RANGE, 0.5, 1.5);
-    const maxTurn = Projectile.TURN_RATE * distFactor;
-
-    const diff = Phaser.Math.Angle.Wrap(aimAngle - cur);
-    const turn = Phaser.Math.Clamp(diff, -maxTurn, maxTurn);
-    const na = cur + turn;
+    // Instant turn: no turn-rate limit, directly aim at predicted intercept point
+    const na = Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY);
     b.setVelocity(Math.cos(na) * this.spd, Math.sin(na) * this.spd);
     this.rotation = na;
   }
