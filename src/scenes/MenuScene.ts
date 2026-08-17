@@ -17,24 +17,24 @@ export class MenuScene extends Phaser.Scene {
     }
 
     const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.22, 'SHADOW LEGION', {
-      fontSize: '36px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
+      fontSize: '44px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
       stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5).setAlpha(0);
 
-    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.22 + 42, '暗影军团', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#475569',
+    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.22 + 50, '暗影军团', {
+      fontSize: '18px', fontFamily: 'monospace', color: '#475569',
     }).setOrigin(0.5).setAlpha(0);
 
     this.tweens.add({ targets: title, alpha: 1, y: title.y - 10, duration: 600, ease: 'Cubic.easeOut' });
     this.tweens.add({ targets: sub, alpha: 1, y: sub.y - 10, duration: 600, ease: 'Cubic.easeOut', delay: 150 });
 
-    const line = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.22 + 62, 60, 1, 0x3b82f6, 0.5).setOrigin(0.5);
+    const line = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.22 + 75, 80, 1, 0x3b82f6, 0.5).setOrigin(0.5);
     this.tweens.add({ targets: line, scaleX: { from: 0, to: 1 }, duration: 500, delay: 300 });
 
     const high = ScoreManager.getHighScore();
     if (high > 0) {
       this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.38, `最高分 ${ScoreManager.formatScore(high)}`, {
-        fontSize: '13px', fontFamily: 'monospace', color: '#fbbf24',
+        fontSize: '16px', fontFamily: 'monospace', color: '#fbbf24',
       }).setOrigin(0.5);
     }
 
@@ -42,7 +42,7 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start('ArenaScene', { level: 1 });
     });
 
-    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.48 + 52, '无尽模式', true, snd, () => {
+    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.48 + 60, '无尽模式', true, snd, () => {
       this.scene.start('ArenaScene', { level: 1, endless: true });
     });
 
@@ -51,13 +51,13 @@ export class MenuScene extends Phaser.Scene {
       'Shift 闪避  |  Space 技能  |  Q 切换技能',
     ];
     hints.forEach((h, i) => {
-      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.78 + i * 20, h, {
-        fontSize: '11px', fontFamily: 'monospace', color: '#374151',
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.78 + i * 24, h, {
+        fontSize: '13px', fontFamily: 'monospace', color: '#374151',
       }).setOrigin(0.5);
     });
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 16, 'v1.0', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#1e293b',
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 18, 'v1.0', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#1e293b',
     }).setOrigin(0.5);
   }
 
@@ -65,7 +65,7 @@ export class MenuScene extends Phaser.Scene {
     x: number, y: number, label: string, secondary: boolean,
     snd: SoundManager, cb: () => void,
   ): void {
-    const w = 180, h = 42;
+    const w = 220, h = 48;
     const g = this.add.graphics();
     const draw = (hover: boolean) => {
       g.clear();
@@ -82,7 +82,7 @@ export class MenuScene extends Phaser.Scene {
     draw(false);
 
     const txt = this.add.text(x, y, label, {
-      fontSize: secondary ? '13px' : '16px',
+      fontSize: secondary ? '15px' : '18px',
       fontFamily: 'monospace', fontStyle: 'bold',
       color: secondary ? '#94a3b8' : '#e2e8f0',
     }).setOrigin(0.5);

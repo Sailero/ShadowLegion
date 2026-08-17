@@ -25,7 +25,7 @@ export class WaveManager {
     this.waves = LEVEL_WAVES[this.level] || LEVEL_WAVES[0];
     this.enemies = enemies;
     if (level > WAVE_CFG.levels) {
-      this.endlessScale = 1 + (level - WAVE_CFG.levels) * 0.15;
+      this.endlessScale = 1 + (level - WAVE_CFG.levels) * 0.25;
     }
   }
 
@@ -100,14 +100,19 @@ export class WaveManager {
     const cfg = ENEMY_TYPES[type];
     if (!cfg) return;
 
+    // Endless mode: random chance to become elite
+    const endlessEliteChance = this.endlessScale > 1.5 ? Math.min(0.5, (this.endlessScale - 1.5) * 0.15) : 0;
+    const isElite = elite || (!boss && endlessEliteChance > 0 && Math.random() < endlessEliteChance);
+
     const pos = this.getSpawnPos();
-    const enemy = new Enemy(this.scene, pos.x, pos.y, cfg, elite, boss);
+    const enemy = new Enemy(this.scene, pos.x, pos.y, cfg, isElite, boss);
     if (this.endlessScale > 1) {
       enemy.hp = Math.round(enemy.hp * this.endlessScale);
       enemy.maxHp = enemy.hp;
-      enemy.dmg = Math.round(enemy.dmg * (1 + (this.endlessScale - 1) * 0.5));
+      enemy.dmg = Math.round(enemy.dmg * (1 + (this.endlessScale - 1) * 0.6));
+      enemy.spd *= (1 + (this.endlessScale - 1) * 0.2);
     }
-    if (type === 'slime' && (elite || this.endlessScale > 1.2)) {
+    if (type === 'slime' && (isElite || this.endlessScale > 1.2)) {
       enemy.canSplit = true;
     }
     this.enemies.add(enemy);

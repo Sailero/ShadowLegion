@@ -58,6 +58,23 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   timeRiftEndTime = 0;
 
   hasShield = false;
+  critChance = 0;
+  lifesteal = false;
+  explosiveShot = false;
+  ricochetShot = false;
+  frostShot = false;
+  berserk = false;
+  thorns = 0;
+  secondWind = false;
+  dodgeChance = 0;
+  afterimage = false;
+  dashResetOnKill = false;
+  xpMagnetOnSkill = false;
+  comboDmg = false;
+  overcharge = false;
+  regenPerSec = 0;
+  private lastDamageTaken = 0;
+  private regenTimer = 0;
   speedMult = 1;
   damageMult = 1;
   atkSpdMult = 1;
@@ -174,10 +191,23 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
+    // Second wind: regen after 3s out of combat
+    if (this.secondWind && time - this.lastDamageTaken > 3000 && this.hp < this.maxHp) {
+      this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.02 * dt);
+    }
+    // Passive regen
+    if (this.regenPerSec > 0 && this.hp < this.maxHp) {
+      this.regenTimer += dt;
+      if (this.regenTimer >= 1) {
+        this.regenTimer -= 1;
+        this.hp = Math.min(this.maxHp, this.hp + this.regenPerSec);
+      }
+    }
+
     // Barrage auto-fire
     if (this.isBarrageActive && time > this.lastBarrageFire + this.barrageInterval) {
       this.lastBarrageFire = time;
-      const lvl = this.getSkillLevel('barrage');
+      const lvl = Math.max(1, this.getSkillLevel('barrage'));
       const dirs = lvl >= 3 ? 16 : lvl >= 2 ? 12 : 8;
       const skillDef = getSkill('barrage')!;
       const dmg = skillDef.levels[lvl - 1].damage * this.damageMult;
@@ -266,7 +296,14 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       return false;
     }
 
+    // Dodge chance
+    if (this.dodgeChance > 0 && Math.random() < this.dodgeChance) {
+      this.scene.events.emit('heroDodge', { x: this.x, y: this.y });
+      return false;
+    }
+
     this.hp = Math.max(0, this.hp - amount);
+    this.lastDamageTaken = this.scene.time.now;
     this.invUntil = this.scene.time.now + HERO_CFG.invincibleMs;
     this.scene.events.emit('heroHit', { x: this.x, y: this.y, damage: amount });
 
@@ -279,11 +316,16 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   }
 
   addCharge(amount: number): void {
-    this.charge = Math.min(this.chargeMax, this.charge + amount);
+    const max = this.overcharge ? Math.round(this.chargeMax * 1.5) : this.chargeMax;
+    this.charge = Math.min(max, this.charge + amount);
   }
 
   heal(amount: number): void {
     this.hp = Math.min(this.maxHp, this.hp + amount);
+  }
+
+  resetDashCooldown(): void {
+    this.lastDash = 0;
   }
 
   dashCooldownPct(time: number): number {

@@ -26,6 +26,25 @@ export const WAVE_UPGRADES: UpgradeDef[] = [
   { id: 'magnet',       name: '磁力装置',    desc: '拾取范围 +50%',          category: 'special',  rarity: 'common', maxStacks: 3 },
   { id: 'charge_up',    name: '能量回收',    desc: '击杀充能 +50%',          category: 'special',  rarity: 'common', maxStacks: 3 },
 
+  // 新增有趣升级
+  { id: 'lifesteal',    name: '生命汲取',    desc: '攻击回复1%最大生命值',       category: 'attack',   rarity: 'rare',   maxStacks: 1 },
+  { id: 'crit',         name: '暴击强化',    desc: '20%几率造成双倍伤害',        category: 'attack',   rarity: 'rare',   maxStacks: 2 },
+  { id: 'explosive',    name: '爆裂弹',      desc: '子弹命中时小范围爆炸',       category: 'attack',   rarity: 'epic',   maxStacks: 1 },
+  { id: 'ricochet',     name: '弹射',        desc: '子弹击杀后弹向附近敌人',     category: 'attack',   rarity: 'epic',   maxStacks: 1 },
+  { id: 'frost_shot',   name: '寒冰弹',      desc: '子弹减速敌人50%持续1秒',     category: 'attack',   rarity: 'rare',   maxStacks: 1 },
+  { id: 'berserk',      name: '狂暴本能',    desc: 'HP低于30%时伤害+80%',       category: 'attack',   rarity: 'rare',   maxStacks: 1 },
+
+  { id: 'thorns',       name: '反伤荆棘',    desc: '受伤时对周围敌人造成伤害',   category: 'defense',  rarity: 'rare',   maxStacks: 2 },
+  { id: 'second_wind',  name: '再生之力',    desc: '脱战3秒后每秒恢复2%HP',     category: 'defense',  rarity: 'rare',   maxStacks: 1 },
+  { id: 'dodge',        name: '闪避本能',    desc: '15%几率完全闪避伤害',        category: 'defense',  rarity: 'rare',   maxStacks: 2 },
+
+  { id: 'afterimage',   name: '残影冲刺',    desc: '闪避留下爆炸残影',           category: 'mobility', rarity: 'epic',   maxStacks: 1 },
+  { id: 'dash_reset',   name: '连续冲刺',    desc: '击杀重置闪避冷却',           category: 'mobility', rarity: 'rare',   maxStacks: 1 },
+
+  { id: 'xp_magnet_burst', name: '充能磁暴', desc: '使用技能时吸取全场能量球',  category: 'special',  rarity: 'rare',   maxStacks: 1 },
+  { id: 'combo_dmg',    name: '连击强化',    desc: '10连击以上额外+30%伤害',    category: 'special',  rarity: 'rare',   maxStacks: 1 },
+  { id: 'overcharge',   name: '过载充能',    desc: '充能可超过上限50%,溢出增伤', category: 'special',  rarity: 'epic',   maxStacks: 1 },
+
   // Skill upgrades
   { id: 'skill_burst_up',   name: '爆发强化',  desc: '能量爆发等级 +1',     category: 'skill', rarity: 'rare',  maxStacks: 2 },
   { id: 'skill_barrage',    name: '解锁：弹幕风暴', desc: '解锁弹幕风暴技能', category: 'skill', rarity: 'epic',  maxStacks: 1 },
@@ -39,6 +58,8 @@ export const LEVEL_UPGRADES: UpgradeDef[] = [
   { id: 'perm_hp',      name: '体质强化',    desc: '永久最大HP +20',         category: 'defense',  rarity: 'epic', maxStacks: 99 },
   { id: 'perm_spd',     name: '动力核心',    desc: '永久移速 +8%',           category: 'mobility', rarity: 'epic', maxStacks: 99 },
   { id: 'perm_charge',  name: '蓄能核心',    desc: '击杀充能 +30%',          category: 'special',  rarity: 'epic', maxStacks: 99 },
+  { id: 'perm_crit',    name: '精密打击',    desc: '暴击率永久+10%',            category: 'attack',   rarity: 'epic', maxStacks: 3 },
+  { id: 'perm_regen',   name: '再生体质',    desc: '永久每秒恢复1HP',           category: 'defense',  rarity: 'epic', maxStacks: 3 },
 ];
 
 export const CATEGORY_COLORS: Record<string, number> = {

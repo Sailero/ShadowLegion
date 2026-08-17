@@ -65,6 +65,21 @@ export class UpgradeManager {
       case 'magnet':       hero.magnetRadius *= 1.5; break;
       case 'charge_up':    hero.chargePerKill = Math.round(hero.chargePerKill * 1.5); break;
 
+      case 'lifesteal':    hero.lifesteal = true; break;
+      case 'crit':         hero.critChance += 0.2; break;
+      case 'explosive':    hero.explosiveShot = true; break;
+      case 'ricochet':     hero.ricochetShot = true; break;
+      case 'frost_shot':   hero.frostShot = true; break;
+      case 'berserk':      hero.berserk = true; break;
+      case 'thorns':       hero.thorns += 15; break;
+      case 'second_wind':  hero.secondWind = true; break;
+      case 'dodge':        hero.dodgeChance += 0.15; break;
+      case 'afterimage':   hero.afterimage = true; break;
+      case 'dash_reset':   hero.dashResetOnKill = true; break;
+      case 'xp_magnet_burst': hero.xpMagnetOnSkill = true; break;
+      case 'combo_dmg':    hero.comboDmg = true; break;
+      case 'overcharge':   hero.overcharge = true; break;
+
       case 'skill_burst_up':
         hero.skillLevels['burst'] = Math.min((hero.skillLevels['burst'] || 1) + 1, getSkill('burst')?.maxLevel ?? 3);
         break;
@@ -87,6 +102,8 @@ export class UpgradeManager {
       case 'perm_hp':      hero.maxHp += 20; hero.hp = Math.min(hero.hp + 20, hero.maxHp); break;
       case 'perm_spd':     hero.speedMult *= 1.08; break;
       case 'perm_charge':  hero.chargePerKill = Math.round(hero.chargePerKill * 1.3); break;
+      case 'perm_crit':    hero.critChance += 0.1; break;
+      case 'perm_regen':   hero.regenPerSec += 1; break;
     }
   }
 

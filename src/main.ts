@@ -11,6 +11,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: GAME_HEIGHT,
   parent: 'game-container',
   backgroundColor: `#${COLORS.bg.toString(16).padStart(6, '0')}`,
+  roundPixels: true,
   physics: {
     default: 'arcade',
     arcade: {
@@ -25,4 +26,25 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, MenuScene, ArenaScene, GameOverScene],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+if ((import.meta as unknown as Record<string, Record<string, boolean>>).env?.DEV) {
+  import('./test/RuntimeTest').then(({ runDataTests, printResults }) => {
+    printResults('DATA TESTS', runDataTests());
+  });
+
+  game.events.on('step', () => {
+    const arena = game.scene.getScene('ArenaScene');
+    if (arena?.sys?.isActive()) {
+      game.events.off('step');
+      setTimeout(() => {
+        import('./test/RuntimeTest').then(({ runSceneTests, printResults }) => {
+          printResults('SCENE TESTS', runSceneTests(arena));
+        });
+        import('./test/scenarioTest').then(({ attachScenarioTests }) => {
+          attachScenarioTests(arena);
+        });
+      }, 500);
+    }
+  });
+}

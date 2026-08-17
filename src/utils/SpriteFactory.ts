@@ -89,6 +89,42 @@ export class SpriteFactory {
     g.destroy();
 
     g = this.g(scene);
+    g.fillStyle(COLORS.ninjaDark);
+    g.fillTriangle(14, 2, 4, 24, 24, 24);
+    g.fillStyle(COLORS.ninja);
+    g.fillTriangle(14, 0, 2, 22, 26, 22);
+    g.fillTriangle(2, 10, 0, 18, 6, 14);
+    g.fillTriangle(26, 10, 28, 18, 22, 14);
+    g.fillStyle(0xffffff);
+    g.fillCircle(10, 13, 2);
+    g.fillCircle(18, 13, 2);
+    g.fillStyle(0x064e3b);
+    g.fillCircle(10, 13, 1);
+    g.fillCircle(18, 13, 1);
+    g.generateTexture('enemy_ninja', 28, 28);
+    g.destroy();
+
+    g = this.g(scene);
+    g.fillStyle(COLORS.summonerDark);
+    g.fillCircle(16, 16, 13);
+    g.fillStyle(COLORS.summoner);
+    g.fillCircle(16, 16, 11);
+    g.lineStyle(2, 0xfbcfe8);
+    for (let i = 0; i < 5; i++) {
+      const sa = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      const ex = 16 + Math.cos(sa) * 14;
+      const ey = 16 + Math.sin(sa) * 14;
+      g.lineBetween(16, 16, ex, ey);
+    }
+    g.fillStyle(0xffffff);
+    g.fillCircle(13, 14, 2);
+    g.fillCircle(19, 14, 2);
+    g.fillStyle(0xfce7f3);
+    g.fillCircle(16, 8, 2);
+    g.generateTexture('enemy_summoner', 32, 32);
+    g.destroy();
+
+    g = this.g(scene);
     g.lineStyle(3, COLORS.eliteGlow, 0.7);
     g.strokeCircle(24, 24, 22);
     g.lineStyle(1, 0xfca5a5, 0.4);

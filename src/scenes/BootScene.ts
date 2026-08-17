@@ -9,13 +9,13 @@ export class BootScene extends Phaser.Scene {
     SpriteFactory.createAll(this);
 
     const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bg);
-    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, 'SHADOW LEGION', {
-      fontSize: '40px', fontFamily: 'Arial', fontStyle: 'bold', color: '#fbbf24',
+    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 24, 'SHADOW LEGION', {
+      fontSize: '48px', fontFamily: 'Arial', fontStyle: 'bold', color: '#fbbf24',
       stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5).setAlpha(0);
 
-    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, '暗影军团', {
-      fontSize: '18px', fontFamily: 'Arial', color: '#9ca3af',
+    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 36, '暗影军团', {
+      fontSize: '22px', fontFamily: 'Arial', color: '#9ca3af',
     }).setOrigin(0.5).setAlpha(0);
 
     this.tweens.add({

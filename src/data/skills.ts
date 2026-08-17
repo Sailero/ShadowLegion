@@ -25,9 +25,9 @@ export const SKILLS: SkillDef[] = [
     color: 0xfbbf24,
     maxLevel: 3,
     levels: [
-      { damage: 15, radius: 80, duration: 0, cooldown: 0, desc: '15伤害 / 80范围' },
-      { damage: 25, radius: 100, duration: 0, cooldown: 0, desc: '25伤害 / 100范围' },
-      { damage: 40, radius: 130, duration: 0, cooldown: 0, desc: '40伤害 / 130范围' },
+      { damage: 20, radius: 120, duration: 0, cooldown: 0, desc: '20伤害 / 120范围' },
+      { damage: 35, radius: 160, duration: 0, cooldown: 0, desc: '35伤害 / 160范围' },
+      { damage: 55, radius: 200, duration: 0, cooldown: 0, desc: '55伤害 / 200范围' },
     ],
   },
   {

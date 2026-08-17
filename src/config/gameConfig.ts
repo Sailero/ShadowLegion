@@ -1,5 +1,5 @@
-export const GAME_WIDTH = 800;
-export const GAME_HEIGHT = 600;
+export const GAME_WIDTH = 1024;
+export const GAME_HEIGHT = 768;
 export const ARENA_WIDTH = 1600;
 export const ARENA_HEIGHT = 1200;
 
@@ -21,6 +21,10 @@ export const COLORS = {
   archerDark: 0xea580c,
   tank: 0x6b7280,
   tankDark: 0x4b5563,
+  ninja: 0x14b8a6,
+  ninjaDark: 0x0d9488,
+  summoner: 0xec4899,
+  summonerDark: 0xdb2777,
   eliteGlow: 0xef4444,
 
   bulletPlayer: 0xfbbf24,
@@ -62,7 +66,7 @@ export const HERO_CFG = {
   chargeMax: 100,
   chargePerKill: 15,
 
-  invincibleMs: 400,
+  invincibleMs: 250,
   magnetRadius: 120,
 };
 
@@ -88,32 +92,46 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
   slime: {
     key: 'slime', name: '史莱姆',
     color: 0x22c55e, colorDark: 0x16a34a,
-    hp: 25, speed: 65, damage: 12, bodyRadius: 12,
+    hp: 35, speed: 75, damage: 14, bodyRadius: 12,
     xp: 5, score: 10,
   },
   bat: {
     key: 'bat', name: '蝙蝠',
     color: 0xa855f7, colorDark: 0x7c3aed,
-    hp: 16, speed: 120, damage: 10, bodyRadius: 8,
+    hp: 22, speed: 140, damage: 12, bodyRadius: 8,
     xp: 4, score: 8,
   },
   archer: {
     key: 'archer', name: '弓箭手',
     color: 0xf97316, colorDark: 0xea580c,
-    hp: 40, speed: 50, damage: 8, bodyRadius: 10,
+    hp: 50, speed: 55, damage: 10, bodyRadius: 10,
     xp: 8, score: 15,
-    ranged: true, fireRate: 1800, bulletSpeed: 260, bulletDamage: 14,
-    keepDistance: 200,
+    ranged: true, fireRate: 1400, bulletSpeed: 300, bulletDamage: 16,
+    keepDistance: 220,
   },
   tank: {
     key: 'tank', name: '重甲',
     color: 0x6b7280, colorDark: 0x4b5563,
-    hp: 140, speed: 35, damage: 22, bodyRadius: 16,
+    hp: 180, speed: 40, damage: 28, bodyRadius: 16,
     xp: 15, score: 25,
+  },
+  ninja: {
+    key: 'ninja', name: '忍者',
+    color: 0x14b8a6, colorDark: 0x0d9488,
+    hp: 30, speed: 160, damage: 18, bodyRadius: 9,
+    xp: 10, score: 18,
+  },
+  summoner: {
+    key: 'summoner', name: '召唤师',
+    color: 0xec4899, colorDark: 0xdb2777,
+    hp: 70, speed: 45, damage: 8, bodyRadius: 11,
+    xp: 12, score: 20,
+    ranged: true, fireRate: 2000, bulletSpeed: 220, bulletDamage: 12,
+    keepDistance: 280,
   },
 };
 
-export const ELITE = { hp: 2.0, speed: 1.25, damage: 1.4, xp: 3, score: 3 };
+export const ELITE = { hp: 2.5, speed: 1.3, damage: 1.6, xp: 3, score: 3 };
 
 export const WAVE_CFG = {
   perLevel: 10,
