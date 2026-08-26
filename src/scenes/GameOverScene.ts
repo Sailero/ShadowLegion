@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
+import { GAME_WIDTH, GAME_HEIGHT, WAVE_CFG } from '../config/gameConfig';
 import { SoundManager } from '../systems/SoundManager';
 import { ScoreManager } from '../systems/ScoreManager';
-import { BUILD_INFO } from '../data/upgrades';
 import type { BuildPath } from '../data/upgrades';
 import type { CombatProfile } from '../systems/RunRecorder';
 import type { RunReward } from '../systems/MetaProgressionManager';
+import { getOperative, OperativeId } from '../data/operatives';
 
 export class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOverScene'); }
@@ -15,11 +15,13 @@ export class GameOverScene extends Phaser.Scene {
     level?: number; victory?: boolean; endless?: boolean;
     durationSec?: number; build?: BuildPath | null; newHighScore?: boolean;
     profile?: CombatProfile | null; reward?: RunReward | null;
+    defeatReason?: string; operativeId?: OperativeId;
   }) {
     const {
       score = 0, kills = 0, wave = 0, level = 1,
       victory = false, endless = false, durationSec = 0,
       build = null, newHighScore = false, profile = null, reward = null,
+      defeatReason = '阵亡', operativeId = 'ranger',
     } = data;
     const snd = SoundManager.get();
     this.cameras.main.setBackgroundColor(0x080c14);
@@ -32,7 +34,7 @@ export class GameOverScene extends Phaser.Scene {
       glow.fillCircle(GAME_WIDTH / 2, 110, r);
     }
 
-    const titleStr = victory ? '胜 利' : '阵 亡';
+    const titleStr = victory ? '战 役 胜 利' : defeatReason;
     const titleColor = victory ? '#4ade80' : '#f87171';
     const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.14, titleStr, {
       fontSize: '52px', fontFamily: 'monospace', fontStyle: 'bold', color: titleColor,
@@ -61,7 +63,7 @@ export class GameOverScene extends Phaser.Scene {
       { label: '分数', value: ScoreManager.formatScore(score), color: '#fbbf24' },
       { label: '击杀', value: `${kills}`, color: '#4ade80' },
       { label: '用时', value: `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}`, color: '#60a5fa' },
-      { label: '构筑', value: build ? BUILD_INFO[build].name : '未定', color: build ? `#${BUILD_INFO[build].color.toString(16).padStart(6, '0')}` : '#94a3b8' },
+      { label: '兵种', value: getOperative(operativeId).name, color: `#${getOperative(operativeId).color.toString(16).padStart(6, '0')}` },
     ];
 
     const statsY = GAME_HEIGHT * 0.28;
@@ -102,7 +104,7 @@ export class GameOverScene extends Phaser.Scene {
           fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold',
           color: isThisRun ? '#fbbf24' : '#94a3b8',
         });
-        this.add.text(GAME_WIDTH / 2 + 35, ey, entry.endless ? `∞${entry.level}` : `${entry.wave}/8`, {
+        this.add.text(GAME_WIDTH / 2 + 35, ey, entry.endless ? `∞${entry.level}` : `${entry.level}-${entry.wave}/${WAVE_CFG.perLevel}`, {
           fontSize: '12px', fontFamily: 'monospace',
           color: '#475569',
         });
@@ -155,7 +157,7 @@ export class GameOverScene extends Phaser.Scene {
       { fontSize: '11px', fontFamily: 'monospace', color: '#64748b' },
     ).setOrigin(0.5);
 
-    const retryData = { level: 1, endless };
+    const retryData = { level: victory ? 1 : level, endless, operativeId, freshRun: true };
     const btnY = 680;
     this.makeBtn(GAME_WIDTH / 2 - 220, btnY, '再来一次', false, snd, () => {
       this.scene.start('ArenaScene', retryData);

@@ -55,14 +55,14 @@ export class TutorialManager {
       fontSize: '30px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2));
 
-    this.objects.push(this.scene.add.text(cx, cy - 125, '击破 8 波敌军并摧毁军团核心', {
+    this.objects.push(this.scene.add.text(cx, cy - 125, '守住防线核心，击破每章 5 波进攻', {
       fontSize: '15px', fontFamily: 'monospace', color: '#fbbf24',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2));
 
     const cards = [
-      { x: cx - 205, key: 'WASD', title: '移动', desc: '保持走位\n不要被包围', color: 0x60a5fa },
-      { x: cx, key: '鼠标左键', title: '瞄准射击', desc: '优先击破\n远程与精英', color: 0xfbbf24 },
-      { x: cx + 205, key: 'SHIFT / 右键', title: '闪避', desc: '短暂无敌\n穿过危险区', color: 0x818cf8 },
+      { x: cx - 205, key: 'WASD', title: '机动防守', desc: '依托掩体\n拦截进攻路线', color: 0x60a5fa },
+      { x: cx, key: '鼠标左键', title: '瞄准射击', desc: '优先击破\n远程、治疗与爆破', color: 0xfbbf24 },
+      { x: cx + 205, key: 'SHIFT / 右键', title: '闪避', desc: '短暂无敌\n穿过 Boss 预警区', color: 0x818cf8 },
     ];
 
     for (const card of cards) {
@@ -86,7 +86,7 @@ export class TutorialManager {
       }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3));
     }
 
-    this.objects.push(this.scene.add.text(cx, cy + 93, '击杀充能，满能量按 SPACE 释放技能  ·  ESC 暂停', {
+    this.objects.push(this.scene.add.text(cx, cy + 93, '击杀充能，SPACE 释放兵种技能  ·  每波结束三选一改装  ·  ESC 暂停', {
       fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3));
 

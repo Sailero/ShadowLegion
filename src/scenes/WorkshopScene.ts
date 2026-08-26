@@ -94,7 +94,7 @@ export class WorkshopScene extends Phaser.Scene {
       ? '--:--'
       : `${Math.floor(state.bestVictorySec / 60)}:${String(state.bestVictorySec % 60).padStart(2, '0')}`;
     this.add.text(GAME_WIDTH / 2, 555,
-      `突围 ${state.totalRuns} 次  ·  胜利 ${state.wins} 次  ·  协议通关 ${state.clearedBuilds.length}/3  ·  最快 ${bestTime}`,
+      `行动 ${state.totalRuns} 次  ·  战役胜利 ${state.wins} 次  ·  章节 ${state.clearedChapters.length}/4  ·  兵种 ${state.unlockedOperatives.length}/4  ·  最快 ${bestTime}`,
       { fontSize: '14px', fontFamily: 'monospace', color: '#94a3b8' },
     ).setOrigin(0.5);
     this.add.text(GAME_WIDTH / 2, 590,

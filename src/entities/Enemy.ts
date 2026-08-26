@@ -1,6 +1,14 @@
 import Phaser from 'phaser';
 import { EnemyType, ELITE, WAVE_CFG } from '../config/gameConfig';
 
+export const BOSS_CHARGE_PROFILE = {
+  windupMs: 900,
+  durationMs: 650,
+  width: 72,
+  baseSpeed: 440,
+  cooldownMs: 4200,
+} as const;
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   cfg: EnemyType;
   hp: number;
@@ -11,13 +19,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   scoreVal: number;
   isElite: boolean;
   isBoss: boolean;
+  projectileDamageScale = 1;
 
   private lastFire = 0;
   private changeDirTime = 0;
   private offsetAngle = 0;
   private eliteGlow: Phaser.GameObjects.Sprite | null = null;
 
-  private bossChargeCD = 3000;
+  private bossChargeCD = BOSS_CHARGE_PROFILE.cooldownMs;
   private bossLastCharge = 0;
   private bossWindup = false;
   private bossWindupEnd = 0;
@@ -45,6 +54,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   // Summoner state
   private summonCooldown = 5000;
   private lastSummon = 0;
+  private lastSupport = 0;
+  private supportCooldown = 4500;
+  private bombWindup = false;
+  private bombEnd = 0;
 
   constructor(
     scene: Phaser.Scene, x: number, y: number,
@@ -64,9 +77,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.lastSummon = spawnedAt;
     this.lastLunge = spawnedAt;
     this.lastDodge = spawnedAt;
+    this.lastSupport = spawnedAt;
 
     let hpMul = 1, spdMul = 1, dmgMul = 1, xpMul = 1, scMul = 1, sizeMul = 1;
-    if (elite) { hpMul = ELITE.hp; spdMul = ELITE.speed; dmgMul = ELITE.damage; xpMul = ELITE.xp; scMul = ELITE.score; sizeMul = 1.15; }
+    if (elite && !boss) { hpMul = ELITE.hp; spdMul = ELITE.speed; dmgMul = ELITE.damage; xpMul = ELITE.xp; scMul = ELITE.score; sizeMul = 1.15; }
     if (boss) { hpMul *= WAVE_CFG.bossHp; sizeMul = WAVE_CFG.bossSize; dmgMul *= WAVE_CFG.bossDmg; spdMul *= WAVE_CFG.bossSpeed; xpMul *= 10; scMul *= 10; }
 
     this.hp = Math.round(cfg.hp * hpMul);
@@ -133,6 +147,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         break;
       case 'summoner':
         this.summonerAI(time, heroX, heroY);
+        break;
+      case 'bomber':
+        this.bomberAI(time, heroX, heroY);
+        break;
+      case 'medic':
+        this.medicAI(time, heroX, heroY);
         break;
     }
 
@@ -224,7 +244,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
           y: this.y + Math.sin(a) * 16,
           angle: a + offset,
           speed: this.cfg.bulletSpeed || 300,
-          damage: this.cfg.bulletDamage || 16,
+            damage: (this.cfg.bulletDamage || 16) * this.projectileDamageScale,
         });
       }
     }
@@ -257,10 +277,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       if (time >= this.bossWindupEnd) {
         this.bossWindup = false;
         this.bossCharging = true;
-        this.bossChargeEnd = time + 520;
+        this.bossChargeEnd = time + BOSS_CHARGE_PROFILE.durationMs;
+        const chargeSpeed = BOSS_CHARGE_PROFILE.baseSpeed + (this.cfg.key === 'ninja' ? 80 : this.cfg.key === 'tank' ? -30 : 0);
         b.setVelocity(
-          Math.cos(this.bossChargeAngle) * this.spd * 7,
-          Math.sin(this.bossChargeAngle) * this.spd * 7,
+          Math.cos(this.bossChargeAngle) * chargeSpeed,
+          Math.sin(this.bossChargeAngle) * chargeSpeed,
         );
         this.setTint(0xff4444);
 
@@ -271,7 +292,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             x: this.x, y: this.y,
             angle: shotAngle,
             speed: (this.cfg.bulletSpeed || 250) * 1.25,
-            damage: (this.cfg.bulletDamage || 14) * 1.25,
+            damage: (this.cfg.bulletDamage || 14) * 1.25 * this.projectileDamageScale,
           });
         }
       }
@@ -291,12 +312,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (time > this.bossLastCharge + this.bossChargeCD) {
       this.bossLastCharge = time;
       this.bossWindup = true;
-      this.bossWindupEnd = time + 750;
+      this.bossWindupEnd = time + BOSS_CHARGE_PROFILE.windupMs;
       this.bossChargeAngle = a;
       b.setVelocity(0, 0);
       this.setTint(0xffaa44);
+      const chargeSpeed = BOSS_CHARGE_PROFILE.baseSpeed + (this.cfg.key === 'ninja' ? 80 : this.cfg.key === 'tank' ? -30 : 0);
       this.scene.events.emit('bossTelegraph', {
-        x: this.x, y: this.y, angle: a, duration: 750,
+        x: this.x, y: this.y, angle: a,
+        duration: BOSS_CHARGE_PROFILE.windupMs,
+        length: chargeSpeed * BOSS_CHARGE_PROFILE.durationMs / 1000,
+        width: BOSS_CHARGE_PROFILE.width,
       });
       return;
     }
@@ -350,7 +375,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         for (let i = -2; i <= 2; i++) {
           this.scene.events.emit('enemyFire', {
             x: this.x, y: this.y, angle: a + i * 0.3,
-            speed: 320, damage: (this.cfg.bulletDamage || 14) * 1.2,
+            speed: 320, damage: (this.cfg.bulletDamage || 14) * 1.2 * this.projectileDamageScale,
           });
         }
       } else if (isArcherBoss) {
@@ -360,7 +385,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
           const sa = a + (i - (cnt - 1) / 2) * 0.12;
           this.scene.events.emit('enemyFire', {
             x: this.x, y: this.y, angle: sa,
-            speed: 350, damage: (this.cfg.bulletDamage || 16) * 1.5,
+            speed: 350, damage: (this.cfg.bulletDamage || 16) * 1.5 * this.projectileDamageScale,
           });
         }
       } else {
@@ -371,7 +396,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.scene.events.emit('enemyFire', {
               x: this.x, y: this.y, angle: ra,
               speed: (this.cfg.bulletSpeed || 250) * 0.8,
-              damage: (this.cfg.bulletDamage || 14),
+              damage: (this.cfg.bulletDamage || 14) * this.projectileDamageScale,
             });
           }
         } else {
@@ -382,7 +407,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
               x: this.x + Math.cos(a) * 20, y: this.y + Math.sin(a) * 20,
               angle: a + spread,
               speed: this.cfg.bulletSpeed || 300,
-              damage: this.cfg.bulletDamage || 16,
+              damage: (this.cfg.bulletDamage || 16) * this.projectileDamageScale,
             });
           }
         }
@@ -457,7 +482,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
           x: this.x + Math.cos(a) * 12, y: this.y + Math.sin(a) * 12,
           angle: a + i * 0.25,
           speed: this.cfg.bulletSpeed || 280,
-          damage: this.cfg.bulletDamage || 14,
+          damage: (this.cfg.bulletDamage || 14) * this.projectileDamageScale,
         });
       }
     }
@@ -491,7 +516,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
           y: this.y + Math.sin(a) * 14,
           angle: a + i * 0.3,
           speed: this.cfg.bulletSpeed || 220,
-          damage: this.cfg.bulletDamage || 12,
+          damage: (this.cfg.bulletDamage || 12) * this.projectileDamageScale,
         });
       }
     }
@@ -501,6 +526,53 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.lastSummon = time;
       this.scene.events.emit('enemySummon', { x: this.x, y: this.y, count: 2 });
     }
+  }
+
+  private bomberAI(time: number, tx: number, ty: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (this.bombWindup) {
+      body.setVelocity(0, 0);
+      if (time >= this.bombEnd) {
+        this.scene.events.emit('enemyBlast', {
+          x: this.x, y: this.y, radius: 105,
+          damage: Math.round(this.dmg * 1.15),
+        });
+        this.die();
+      }
+      return;
+    }
+    const distance = Phaser.Math.Distance.Between(this.x, this.y, tx, ty);
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, tx, ty);
+    this.rotation = angle;
+    if (distance <= 92) {
+      this.bombWindup = true;
+      this.bombEnd = time + 720;
+      body.setVelocity(0, 0);
+      this.setTint(0xff3355);
+      this.scene.events.emit('enemyBlastTelegraph', {
+        x: this.x, y: this.y, radius: 105, duration: 720,
+      });
+      return;
+    }
+    body.setVelocity(Math.cos(angle) * this.spd, Math.sin(angle) * this.spd);
+  }
+
+  private medicAI(time: number, tx: number, ty: number): void {
+    this.archerAI(time, tx, ty);
+    if (time > this.lastSupport + this.supportCooldown) {
+      this.lastSupport = time;
+      this.scene.events.emit('enemySupportPulse', {
+        x: this.x, y: this.y, radius: 180,
+        amount: Math.round(this.maxHp * 0.24),
+      });
+    }
+  }
+
+  heal(amount: number): number {
+    if (!this.active || this._dying || this.hp >= this.maxHp) return 0;
+    const before = this.hp;
+    this.hp = Math.min(this.maxHp, this.hp + Math.max(0, Math.round(amount)));
+    return this.hp - before;
   }
 
   takeDamage(amount: number): boolean {

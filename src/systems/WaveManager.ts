@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { ENEMY_TYPES, WAVE_CFG, ARENA_WIDTH, ARENA_HEIGHT, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
+import { ENEMY_TYPES, WAVE_CFG, ARENA_WIDTH, ARENA_HEIGHT } from '../config/gameConfig';
 import { LEVEL_WAVES, WaveDef } from '../data/enemies';
+import { ChapterDef, getChapter } from '../data/chapters';
 import { Enemy } from '../entities/Enemy';
 
 export class WaveManager {
@@ -9,24 +10,28 @@ export class WaveManager {
   wave = 0;
   private waves: WaveDef[];
   private enemies: Phaser.Physics.Arcade.Group;
+  private chapter: ChapterDef;
   aliveCount = 0;
   private spawning = false;
   private waveActive = false;
-  private pendingSpawns: Array<{ type: string; elite: boolean; boss: boolean }> = [];
+  private pendingSpawns: Array<{ type: string; elite: boolean; boss: boolean; bossName?: string }> = [];
   private spawnTimer = 0;
   private betweenWaves = false;
   private nextWaveAt = 0;
   allWavesDone = false;
   endlessScale = 1.0;
 
-  constructor(scene: Phaser.Scene, level: number, enemies: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, level: number, enemies: Phaser.Physics.Arcade.Group, endless = false) {
     this.scene = scene;
     this.level = Math.max(1, level);
-    const levelIndex = Math.min(this.level, WAVE_CFG.levels) - 1;
+    const levelIndex = endless
+      ? (this.level - 1) % WAVE_CFG.levels
+      : Math.min(this.level, WAVE_CFG.levels) - 1;
     this.waves = LEVEL_WAVES[levelIndex] || LEVEL_WAVES[0];
+    this.chapter = getChapter(this.level, endless);
     this.enemies = enemies;
-    if (level > WAVE_CFG.levels) {
-      this.endlessScale = 1 + (level - WAVE_CFG.levels) * 0.25;
+    if (endless && level > WAVE_CFG.levels) {
+      this.endlessScale = 1 + Math.floor((level - 1) / WAVE_CFG.levels) * 0.22;
     }
   }
 
@@ -52,7 +57,7 @@ export class WaveManager {
       }
     }
     if (def.isBoss && def.bossType) {
-      this.pendingSpawns.push({ type: def.bossType, elite: true, boss: true });
+      this.pendingSpawns.push({ type: def.bossType, elite: true, boss: true, bossName: def.name });
     }
 
     Phaser.Utils.Array.Shuffle(this.pendingSpawns);
@@ -84,7 +89,7 @@ export class WaveManager {
       while (this.spawnTimer >= WAVE_CFG.spawnInterval && this.pendingSpawns.length > 0) {
         this.spawnTimer -= WAVE_CFG.spawnInterval;
         const s = this.pendingSpawns.pop()!;
-        this.spawnOne(s.type, s.elite, s.boss);
+        this.spawnOne(s.type, s.elite, s.boss, s.bossName);
       }
       if (this.pendingSpawns.length === 0) this.spawning = false;
     }
@@ -105,7 +110,7 @@ export class WaveManager {
     this.nextWaveAt = time + WAVE_CFG.delayMs;
   }
 
-  private spawnOne(type: string, elite: boolean, boss: boolean): void {
+  private spawnOne(type: string, elite: boolean, boss: boolean, bossName?: string): void {
     const cfg = ENEMY_TYPES[type];
     if (!cfg) return;
 
@@ -115,12 +120,16 @@ export class WaveManager {
 
     const pos = this.getSpawnPos();
     const enemy = new Enemy(this.scene, pos.x, pos.y, cfg, isElite, boss);
+    const hpScale = this.chapter.enemyHpScale * this.endlessScale;
+    const damageScale = this.chapter.enemyDamageScale * (1 + (this.endlessScale - 1) * 0.55);
+    enemy.hp = Math.round(enemy.hp * hpScale);
+    enemy.maxHp = enemy.hp;
+    enemy.dmg = Math.round(enemy.dmg * damageScale);
+    enemy.projectileDamageScale = damageScale;
     if (this.endlessScale > 1) {
-      enemy.hp = Math.round(enemy.hp * this.endlessScale);
-      enemy.maxHp = enemy.hp;
-      enemy.dmg = Math.round(enemy.dmg * (1 + (this.endlessScale - 1) * 0.6));
       enemy.spd *= (1 + (this.endlessScale - 1) * 0.2);
     }
+    if (bossName) enemy.setData('bossName', bossName);
     if (type === 'slime' && (isElite || this.endlessScale > 1.2)) {
       enemy.canSplit = true;
     }
@@ -128,32 +137,10 @@ export class WaveManager {
   }
 
   private getSpawnPos(): { x: number; y: number } {
-    const cam = this.scene.cameras.main;
-    const margin = WAVE_CFG.spawnMargin;
-    const side = Phaser.Math.Between(0, 3);
-    let x: number, y: number;
-
-    switch (side) {
-      case 0:
-        x = Phaser.Math.Between(cam.scrollX - margin, cam.scrollX + GAME_WIDTH + margin);
-        y = cam.scrollY - margin;
-        break;
-      case 1:
-        x = cam.scrollX + GAME_WIDTH + margin;
-        y = Phaser.Math.Between(cam.scrollY - margin, cam.scrollY + GAME_HEIGHT + margin);
-        break;
-      case 2:
-        x = Phaser.Math.Between(cam.scrollX - margin, cam.scrollX + GAME_WIDTH + margin);
-        y = cam.scrollY + GAME_HEIGHT + margin;
-        break;
-      default:
-        x = cam.scrollX - margin;
-        y = Phaser.Math.Between(cam.scrollY - margin, cam.scrollY + GAME_HEIGHT + margin);
-        break;
-    }
-
-    x = Phaser.Math.Clamp(x, 30, ARENA_WIDTH - 30);
-    y = Phaser.Math.Clamp(y, 30, ARENA_HEIGHT - 30);
+    const lane = Phaser.Utils.Array.GetRandom(this.chapter.spawnPoints);
+    const edgeIsVertical = lane.x < 100 || lane.x > ARENA_WIDTH - 100;
+    const x = Phaser.Math.Clamp(lane.x + (edgeIsVertical ? 0 : Phaser.Math.Between(-70, 70)), 30, ARENA_WIDTH - 30);
+    const y = Phaser.Math.Clamp(lane.y + (edgeIsVertical ? Phaser.Math.Between(-70, 70) : 0), 30, ARENA_HEIGHT - 30);
     return { x, y };
   }
 }

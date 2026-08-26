@@ -22,7 +22,7 @@ export class MenuScene extends Phaser.Scene {
       stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5).setAlpha(0);
 
-    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.18 + 50, '8 波动作生存 · 每一局都在塑造你的影子', {
+    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.18 + 50, '四章攻防战役 · 兵种解锁 · 肉鸽火力构筑', {
       fontSize: '16px', fontFamily: 'monospace', color: '#64748b',
     }).setOrigin(0.5).setAlpha(0);
 
@@ -40,9 +40,9 @@ export class MenuScene extends Phaser.Scene {
     }
 
     const promises = [
-      { value: '8', label: '波战斗', color: '#60a5fa' },
-      { value: '3', label: '套构筑', color: '#fbbf24' },
-      { value: '1', label: '场首领战', color: '#f87171' },
+      { value: '4', label: '章特色地图', color: '#60a5fa' },
+      { value: '4', label: '类可解锁兵种', color: '#fbbf24' },
+      { value: '20', label: '波攻防战斗', color: '#f87171' },
     ];
     promises.forEach((item, index) => {
       const x = GAME_WIDTH / 2 + (index - 1) * 145;
@@ -59,16 +59,16 @@ export class MenuScene extends Phaser.Scene {
     const profileText = meta.lastProfile ? `  ·  最近影子 ${meta.lastProfile.style}` : '';
     this.add.text(
       GAME_WIDTH / 2, GAME_HEIGHT * 0.47,
-      `◆ 影核 ${meta.shadowCores}  ·  工坊 ${workshopLevel}/15  ·  协议通关 ${meta.clearedBuilds.length}/3${profileText}`,
+      `◆ 影核 ${meta.shadowCores}  ·  工坊 ${workshopLevel}/15  ·  章节 ${meta.clearedChapters.length}/4  ·  兵种 ${meta.unlockedOperatives.length}/4${profileText}`,
       { fontSize: '13px', fontFamily: 'monospace', color: '#a78bfa' },
     ).setOrigin(0.5);
 
     this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.55, '开始突围', false, snd, () => {
-      this.scene.start('ArenaScene', { level: 1, endless: false });
+      this.scene.start('LoadoutScene', { endless: false });
     });
 
     this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.55 + 58, '无尽演练', true, snd, () => {
-      this.scene.start('ArenaScene', { level: 1, endless: true });
+      this.scene.start('LoadoutScene', { endless: true });
     });
 
     this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.55 + 116, '军团工坊', true, snd, () => {
@@ -85,7 +85,7 @@ export class MenuScene extends Phaser.Scene {
       }).setOrigin(0.5);
     });
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 18, 'Phase 1 · playable slice', {
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 18, 'Chapter Campaign Demo · v1.1.0', {
       fontSize: '11px', fontFamily: 'monospace', color: '#1e293b',
     }).setOrigin(0.5);
   }

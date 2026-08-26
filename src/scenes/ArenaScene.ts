@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   GAME_WIDTH, GAME_HEIGHT, ARENA_WIDTH, ARENA_HEIGHT,
-  COLORS, HERO_CFG, ENEMY_TYPES,
+  COLORS, HERO_CFG, ENEMY_TYPES, WAVE_CFG,
 } from '../config/gameConfig';
 import { BUILD_INFO, CATEGORY_COLORS, EVOLUTION_INFO } from '../data/upgrades';
 import { Hero, FireEvent } from '../entities/Hero';
@@ -16,6 +16,9 @@ import { MetaProgressionManager } from '../systems/MetaProgressionManager';
 import { RunRecorder } from '../systems/RunRecorder';
 import { getSkill, getSkillStatsForLevel } from '../data/skills';
 import type { UpgradeDef } from '../data/upgrades';
+import { ChapterDef, getChapter, pointInRect } from '../data/chapters';
+import { getOperative, OperativeId } from '../data/operatives';
+import type { ChapterUnlockResult } from '../systems/MetaProgressionManager';
 
 const MAX_PARTICLES = 30;
 
@@ -25,6 +28,8 @@ export class ArenaScene extends Phaser.Scene {
   private playerBullets!: Phaser.Physics.Arcade.Group;
   private enemyBullets!: Phaser.Physics.Arcade.Group;
   private xpGems!: Phaser.Physics.Arcade.Group;
+  private obstacles!: Phaser.Physics.Arcade.StaticGroup;
+  private defenseCore!: Phaser.Physics.Arcade.Image;
 
   private waveMgr!: WaveManager;
   private upgradeMgr!: UpgradeManager;
@@ -47,6 +52,10 @@ export class ArenaScene extends Phaser.Scene {
   private bossNameText!: Phaser.GameObjects.Text;
   private runTimerText!: Phaser.GameObjects.Text;
   private crosshairGfx!: Phaser.GameObjects.Graphics;
+  private defenseHudGfx!: Phaser.GameObjects.Graphics;
+  private hazardGfx!: Phaser.GameObjects.Graphics;
+  private defenseText!: Phaser.GameObjects.Text;
+  private chapterText!: Phaser.GameObjects.Text;
 
   /* ── State ── */
   private score = 0;
@@ -61,6 +70,13 @@ export class ArenaScene extends Phaser.Scene {
   private pauseMenuHandler?: () => void;
   private activeRunMs = 0;
   private currentWaveName = '';
+  private chapter!: ChapterDef;
+  private operativeId: OperativeId = 'ranger';
+  private defenseHp = 0;
+  private defenseMaxHp = 0;
+  private defenseInvUntil = 0;
+  private elapsedBeforeChapterMs = 0;
+  private pulseDamageAt = 0;
 
   /* ── Hitlag ── */
   private hitlagUntil = 0;
@@ -93,10 +109,13 @@ export class ArenaScene extends Phaser.Scene {
 
   constructor() { super('ArenaScene'); }
 
-  init(data: { level?: number; score?: number; endless?: boolean }) {
+  init(data: {
+    level?: number; score?: number; kills?: number; endless?: boolean;
+    operativeId?: OperativeId; freshRun?: boolean; elapsedMs?: number;
+  }) {
     this.currentLevel = data.level || 1;
     this.score = data.score || 0;
-    this.kills = 0;
+    this.kills = data.kills || 0;
     this.upgrading = false;
     this.paused = false;
     this.dead = false;
@@ -109,7 +128,11 @@ export class ArenaScene extends Phaser.Scene {
     this.activeRunMs = 0;
     this.currentWaveName = '';
     this.endless = data.endless || false;
-    if (this.currentLevel === 1 && !this.endless) {
+    this.operativeId = data.operativeId ?? 'ranger';
+    this.chapter = getChapter(this.currentLevel, this.endless);
+    this.elapsedBeforeChapterMs = data.elapsedMs || 0;
+    this.pulseDamageAt = 0;
+    if (data.freshRun) {
       this.registry.remove('appliedUpgrades');
     }
   }
@@ -124,10 +147,20 @@ export class ArenaScene extends Phaser.Scene {
     this.playerBullets = this.physics.add.group({ runChildUpdate: false });
     this.enemyBullets = this.physics.add.group({ runChildUpdate: false });
     this.xpGems = this.physics.add.group({ runChildUpdate: false });
+    this.obstacles = this.physics.add.staticGroup();
+    this.createMapGeometry();
 
-    this.hero = new Hero(this, ARENA_WIDTH / 2, ARENA_HEIGHT / 2);
+    this.defenseMaxHp = this.chapter.coreHp;
+    this.defenseHp = this.defenseMaxHp;
+    this.defenseCore = this.physics.add.image(ARENA_WIDTH / 2, ARENA_HEIGHT / 2, 'defense_core')
+      .setImmovable(true).setDepth(7);
+    const coreBody = this.defenseCore.body as Phaser.Physics.Arcade.Body;
+    coreBody.setCircle(29, 11, 11);
 
-    const metaBonuses = MetaProgressionManager.getBonuses();
+    this.hero = new Hero(this, ARENA_WIDTH / 2, ARENA_HEIGHT / 2 + 110);
+
+    const metaState = MetaProgressionManager.getState();
+    const metaBonuses = MetaProgressionManager.getBonuses(metaState);
     this.hero.damageMult *= metaBonuses.damageMult;
     this.hero.maxHp += metaBonuses.maxHpBonus;
     this.hero.hp = this.hero.maxHp;
@@ -135,7 +168,8 @@ export class ArenaScene extends Phaser.Scene {
 
     this.snd = SoundManager.get();
     this.tutorial = new TutorialManager(this);
-    this.upgradeMgr = new UpgradeManager();
+    this.upgradeMgr = new UpgradeManager(metaState.unlockedSkills);
+    this.upgradeMgr.initializeOperative(this.hero, this.operativeId);
     this.runRecorder = new RunRecorder();
 
     this.setupCollisions();
@@ -154,7 +188,7 @@ export class ArenaScene extends Phaser.Scene {
       for (const id of saved) this.upgradeMgr.applyById(this.hero, id);
     }
 
-    this.waveMgr = new WaveManager(this, this.currentLevel, this.enemies);
+    this.waveMgr = new WaveManager(this, this.currentLevel, this.enemies, this.endless);
     this.waveMgr.startNextWave();
 
     this.tutorial.start();
@@ -171,47 +205,54 @@ export class ArenaScene extends Phaser.Scene {
 
   private drawArena(): void {
     const g = this.add.graphics();
-    // Layered background
-    g.fillStyle(0x080c14);
+    const palette = this.chapter.colors;
+    g.fillStyle(palette.ground);
     g.fillRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
 
-    // Gradient center glow
     for (let r = 350; r > 0; r -= 25) {
-      g.fillStyle(0x0f1d35, 0.025);
+      g.fillStyle(palette.accent, 0.012);
       g.fillCircle(ARENA_WIDTH / 2, ARENA_HEIGHT / 2, r);
     }
 
-    // Main grid
-    g.lineStyle(1, 0x1a2a42, 0.15);
+    g.lineStyle(1, palette.grid, 0.2);
     for (let x = 0; x <= ARENA_WIDTH; x += 80) g.lineBetween(x, 0, x, ARENA_HEIGHT);
     for (let y = 0; y <= ARENA_HEIGHT; y += 80) g.lineBetween(0, y, ARENA_WIDTH, y);
-
-    // Fine sub-grid
-    g.lineStyle(1, 0x0e1a2e, 0.08);
+    g.lineStyle(1, palette.detail, 0.09);
     for (let x = 40; x < ARENA_WIDTH; x += 80) g.lineBetween(x, 0, x, ARENA_HEIGHT);
     for (let y = 40; y < ARENA_HEIGHT; y += 80) g.lineBetween(0, y, ARENA_WIDTH, y);
 
-    // Corner glow accents
-    const corners = [
-      [0, 0], [ARENA_WIDTH, 0],
-      [0, ARENA_HEIGHT], [ARENA_WIDTH, ARENA_HEIGHT],
-    ];
-    for (const [cx, cy] of corners) {
-      for (let r = 120; r > 0; r -= 20) {
-        g.fillStyle(0x0d2847, 0.03);
-        g.fillCircle(cx, cy, r);
-      }
+    for (const zone of this.chapter.hazards) {
+      g.fillStyle(palette.hazard, 0.08);
+      g.fillRoundedRect(zone.x - zone.width / 2, zone.y - zone.height / 2, zone.width, zone.height, 12);
+      g.lineStyle(2, palette.hazard, 0.24);
+      g.strokeRoundedRect(zone.x - zone.width / 2, zone.y - zone.height / 2, zone.width, zone.height, 12);
     }
 
-    // Boundary glow
-    g.lineStyle(4, 0x1e40af, 0.35);
+    for (const obstacle of this.chapter.obstacles) {
+      g.fillStyle(palette.detail, 0.9);
+      g.fillRoundedRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height, 10);
+      g.fillStyle(0xffffff, 0.035);
+      g.fillRoundedRect(obstacle.x - obstacle.width / 2 + 5, obstacle.y - obstacle.height / 2 + 5, obstacle.width - 10, 10, 4);
+      g.lineStyle(2, palette.accent, 0.35);
+      g.strokeRoundedRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height, 10);
+    }
+
+    for (const lane of this.chapter.spawnPoints) {
+      g.lineStyle(2, palette.accent, 0.16);
+      g.lineBetween(lane.x, lane.y, ARENA_WIDTH / 2, ARENA_HEIGHT / 2);
+      g.fillStyle(palette.accent, 0.7);
+      g.fillCircle(lane.x, lane.y, 10);
+      g.lineStyle(2, palette.accent, 0.45);
+      g.strokeCircle(lane.x, lane.y, 18);
+    }
+
+    g.lineStyle(4, palette.accent, 0.38);
     g.strokeRect(2, 2, ARENA_WIDTH - 4, ARENA_HEIGHT - 4);
-    g.lineStyle(1, 0x3b82f6, 0.12);
+    g.lineStyle(1, palette.accent, 0.14);
     g.strokeRect(6, 6, ARENA_WIDTH - 12, ARENA_HEIGHT - 12);
 
-    // Corner bracket decorations
     const bLen = 30, bOff = 10;
-    g.lineStyle(2, 0x3b82f6, 0.4);
+    g.lineStyle(2, palette.accent, 0.5);
     g.lineBetween(bOff, bOff, bOff + bLen, bOff);
     g.lineBetween(bOff, bOff, bOff, bOff + bLen);
     g.lineBetween(ARENA_WIDTH - bOff, bOff, ARENA_WIDTH - bOff - bLen, bOff);
@@ -221,8 +262,7 @@ export class ArenaScene extends Phaser.Scene {
     g.lineBetween(ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff, ARENA_WIDTH - bOff - bLen, ARENA_HEIGHT - bOff);
     g.lineBetween(ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff, ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff - bLen);
 
-    // Subtle ground details — hex patterns near center
-    g.lineStyle(1, 0x0e1f3a, 0.12);
+    g.lineStyle(1, palette.accent, 0.14);
     const cx0 = ARENA_WIDTH / 2, cy0 = ARENA_HEIGHT / 2;
     for (let ring = 1; ring <= 3; ring++) {
       const r = ring * 120;
@@ -234,13 +274,20 @@ export class ArenaScene extends Phaser.Scene {
       }
     }
 
-    // Center cross marker
-    g.lineStyle(1, 0x1e3a5f, 0.2);
+    g.lineStyle(1, palette.accent, 0.35);
     g.lineBetween(cx0 - 15, cy0, cx0 + 15, cy0);
     g.lineBetween(cx0, cy0 - 15, cx0, cy0 + 15);
     g.strokeCircle(cx0, cy0, 8);
 
     g.setDepth(-1);
+  }
+
+  private createMapGeometry(): void {
+    for (const obstacle of this.chapter.obstacles) {
+      const bodyRect = this.add.rectangle(obstacle.x, obstacle.y, obstacle.width, obstacle.height, 0, 0);
+      this.physics.add.existing(bodyRect, true);
+      this.obstacles.add(bodyRect);
+    }
   }
 
   private createBgParticles(): void {
@@ -269,9 +316,70 @@ export class ArenaScene extends Phaser.Scene {
       d.y -= d.spd * 0.016;
       if (d.y < -10) { d.y = ARENA_HEIGHT + 10; d.x = Math.random() * ARENA_WIDTH; }
       const pulse = d.a + Math.sin(time * 0.002 + d.x) * 0.03;
-      g.fillStyle(0x3b82f6, pulse);
+      g.fillStyle(this.chapter.colors.accent, pulse);
       g.fillCircle(d.x, d.y, d.r);
     }
+  }
+
+  private hazardPhase(time: number): number {
+    if (this.chapter.hazardKind === 'tide') return Math.floor(time / 5000) % 2;
+    if (this.chapter.hazardKind === 'pulse') return Math.floor(time / 6000) % 2;
+    return 0;
+  }
+
+  private isHazardZoneActive(zone: { phase?: number }, time: number): boolean {
+    if (this.chapter.hazardKind === 'sand') return true;
+    if (this.chapter.hazardKind === 'tide') return (zone.phase ?? 0) === this.hazardPhase(time);
+    if (this.chapter.hazardKind === 'pulse') {
+      return (zone.phase ?? 0) === this.hazardPhase(time) && time % 6000 >= 5100;
+    }
+    return false;
+  }
+
+  private updateMapHazards(time: number): void {
+    const g = this.hazardGfx;
+    g.clear();
+    const cycle = time % 6000;
+    for (const zone of this.chapter.hazards) {
+      const active = this.isHazardZoneActive(zone, time);
+      const warning = this.chapter.hazardKind === 'pulse'
+        && (zone.phase ?? 0) === this.hazardPhase(time)
+        && cycle >= 4200;
+      const alpha = active ? 0.28 + Math.sin(time * 0.025) * 0.08 : warning ? 0.1 + Math.sin(time * 0.014) * 0.07 : 0.035;
+      g.fillStyle(this.chapter.colors.hazard, alpha);
+      g.fillRoundedRect(zone.x - zone.width / 2, zone.y - zone.height / 2, zone.width, zone.height, 10);
+      g.lineStyle(active ? 3 : 1, active ? 0xffffff : this.chapter.colors.hazard, active ? 0.7 : 0.28);
+      g.strokeRoundedRect(zone.x - zone.width / 2, zone.y - zone.height / 2, zone.width, zone.height, 10);
+    }
+    if (this.defenseCore?.active) {
+      const pulse = 1 + Math.sin(time * 0.004) * 0.04;
+      this.defenseCore.setScale(pulse);
+    }
+  }
+
+  private applyEnvironmentVelocity(
+    x: number, y: number, body: Phaser.Physics.Arcade.Body, time: number, hero: boolean,
+  ): void {
+    const zone = this.chapter.hazards.find(item => pointInRect(x, y, item) && this.isHazardZoneActive(item, time));
+    if (!zone) return;
+    if (this.chapter.hazardKind === 'sand') body.velocity.scale(hero ? 0.76 : 0.88);
+    if (this.chapter.hazardKind === 'tide') body.velocity.scale(0.72);
+  }
+
+  private applyPulseDamage(time: number): void {
+    if (this.chapter.hazardKind !== 'pulse' || time < this.pulseDamageAt) return;
+    const activeZones = this.chapter.hazards.filter(zone => this.isHazardZoneActive(zone, time));
+    if (!activeZones.length) return;
+    this.pulseDamageAt = time + 650;
+    if (activeZones.some(zone => pointInRect(this.hero.x, this.hero.y, zone))) this.hero.takeDamage(6);
+    for (const child of this.enemies.getChildren()) {
+      const enemy = child as Enemy;
+      if (!enemy.active || !activeZones.some(zone => pointInRect(enemy.x, enemy.y, zone))) continue;
+      const damage = enemy.isBoss ? 12 : 20;
+      enemy.takeDamage(damage);
+      this.showDmgNum(enemy.x, enemy.y - 20, damage);
+    }
+    this.cameras.main.flash(50, 160, 80, 255, true);
   }
 
   /* ────────────────── Physics ────────────────── */
@@ -286,6 +394,21 @@ export class ArenaScene extends Phaser.Scene {
       this.onHeroTouchEnemy as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
     this.physics.add.overlap(this.hero, this.xpGems,
       this.onCollectGem as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
+    this.physics.add.collider(this.hero, this.obstacles);
+    this.physics.add.collider(this.enemies, this.obstacles);
+    this.physics.add.collider(this.defenseCore, this.enemies,
+      this.onEnemyTouchDefense as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
+    this.physics.add.overlap(this.defenseCore, this.enemyBullets,
+      this.onEnemyBulletHitDefense as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
+    this.physics.add.collider(this.playerBullets, this.obstacles,
+      this.onBulletHitObstacle as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
+    this.physics.add.collider(this.enemyBullets, this.obstacles,
+      this.onBulletHitObstacle as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
+  }
+
+  private onBulletHitObstacle(bulletObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
+    const bullet = bulletObj as unknown as Projectile;
+    if (bullet.active) bullet.recycle();
   }
 
   private onBulletHitEnemy(bulletObj: Phaser.Types.Physics.Arcade.GameObjectWithBody, enemyObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
@@ -388,6 +511,48 @@ export class ArenaScene extends Phaser.Scene {
     } catch (err) { console.error('[onEnemyBulletHitHero]', err); }
   }
 
+  private onEnemyBulletHitDefense(_coreObj: Phaser.Types.Physics.Arcade.GameObjectWithBody, bulletObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
+    if (this.dead) return;
+    const bullet = bulletObj as unknown as Projectile;
+    if (!bullet.active || bullet.damage <= 0) return;
+    const damage = bullet.damage;
+    bullet.recycle();
+    this.damageDefense(damage);
+  }
+
+  private onEnemyTouchDefense(_coreObj: Phaser.Types.Physics.Arcade.GameObjectWithBody, enemyObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
+    if (this.dead) return;
+    const enemy = enemyObj as unknown as Enemy;
+    if (!enemy.active) return;
+    const nextHitAt = (enemy.getData('defenseHitAt') as number | undefined) ?? 0;
+    if (this.time.now < nextHitAt) return;
+    enemy.setData('defenseHitAt', this.time.now + 1100);
+    this.damageDefense(enemy.dmg);
+    enemy.knockback(this.defenseCore.x, this.defenseCore.y, 90);
+  }
+
+  private damageDefense(amount: number): void {
+    if (this.dead || this.time.now < this.defenseInvUntil) return;
+    const damage = Math.max(1, Math.round(amount));
+    this.defenseHp = Math.max(0, this.defenseHp - damage);
+    this.defenseInvUntil = this.time.now + 90;
+    this.defenseCore.setTintFill(0xff4455);
+    this.time.delayedCall(90, () => { if (this.defenseCore.active) this.defenseCore.clearTint(); });
+    this.showDmgNum(this.defenseCore.x, this.defenseCore.y - 52, damage, true);
+    this.snd.heroHit();
+    this.throttledShake(80, 0.005);
+    if (this.defenseHp <= 0) this.onDefenseDestroyed();
+  }
+
+  private repairDefense(ratio: number): void {
+    const amount = ratio >= 1 ? this.defenseMaxHp : Math.round(this.defenseMaxHp * Math.max(0, ratio));
+    this.defenseHp = Math.min(this.defenseMaxHp, this.defenseHp + amount);
+    if (this.defenseCore?.active) {
+      this.defenseCore.setTint(0x86efac);
+      this.time.delayedCall(180, () => { if (this.defenseCore.active) this.defenseCore.clearTint(); });
+    }
+  }
+
   private onHeroTouchEnemy(_heroObj: Phaser.Types.Physics.Arcade.GameObjectWithBody, enemyObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
     try {
       if (this.dead) return;
@@ -486,6 +651,14 @@ export class ArenaScene extends Phaser.Scene {
     this.minimapGfx = this.add.graphics().setScrollFactor(0).setDepth(110);
     this.offscreenGfx = this.add.graphics().setScrollFactor(0).setDepth(95);
     this.crosshairGfx = this.add.graphics().setScrollFactor(0).setDepth(120);
+    this.defenseHudGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
+    this.hazardGfx = this.add.graphics().setDepth(2);
+    this.defenseText = this.add.text(352, 26, '', {
+      fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
+    }).setScrollFactor(0).setDepth(102).setOrigin(0.5);
+    this.chapterText = this.add.text(GAME_WIDTH / 2, 34, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#64748b',
+    }).setScrollFactor(0).setDepth(100).setOrigin(0.5, 0);
   }
 
   /* ────────────────── UI Update ────────────────── */
@@ -557,7 +730,7 @@ export class ArenaScene extends Phaser.Scene {
     const lvl = this.hero.getSkillLevel(this.hero.activeSkillId);
     const buildPath = this.upgradeMgr.getBuildPath();
     const buildPrefix = buildPath
-      ? `${this.upgradeMgr.isEvolved() ? EVOLUTION_INFO[buildPath].name : BUILD_INFO[buildPath].name + '协议'} · `
+      ? `${this.upgradeMgr.isEvolved() ? EVOLUTION_INFO[buildPath].name : BUILD_INFO[buildPath].name} · `
       : '';
     const skillStr = this.hero.unlockedSkills.length > 1
       ? `${buildPrefix}${skillName} Lv${lvl} [Q]`
@@ -600,12 +773,28 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     // Wave & Score (top center + right)
-    const modeLabel = this.endless ? `无尽 ${this.currentLevel}` : '突围行动';
+    const modeLabel = this.endless ? `无尽 ${this.currentLevel}` : `第 ${this.chapter.id} 章`;
     const waveName = this.currentWaveName ? ` · ${this.currentWaveName}` : '';
     this.waveText.setText(`${modeLabel}   ${this.waveMgr.wave}/${this.waveMgr.totalWaves}${waveName}   剩余 ${this.waveMgr.aliveCount}`);
+    this.chapterText.setText(`${this.chapter.name} · ${getOperative(this.operativeId).name} · ${this.chapter.specialName}`);
     this.scoreText.setText(`${this.score} 分   ${this.kills} 杀`);
-    const totalSec = Math.floor(this.activeRunMs / 1000);
+    const totalSec = Math.floor((this.elapsedBeforeChapterMs + this.activeRunMs) / 1000);
     this.runTimerText.setText(`${String(Math.floor(totalSec / 60)).padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`);
+
+    const dg = this.defenseHudGfx;
+    dg.clear();
+    const dbx = 260, dby = 16, dbw = 184, dbh = 18;
+    dg.fillStyle(0x0a0e17, 0.88);
+    dg.fillRoundedRect(dbx - 8, dby - 8, dbw + 16, 34, 6);
+    dg.fillStyle(0x1f2937);
+    dg.fillRoundedRect(dbx, dby, dbw, dbh, 3);
+    const defensePct = Math.max(0, this.defenseHp / this.defenseMaxHp);
+    const defenseColor = defensePct > 0.5 ? this.chapter.colors.accent : defensePct > 0.25 ? 0xf59e0b : 0xef4444;
+    dg.fillStyle(defenseColor);
+    dg.fillRoundedRect(dbx, dby, Math.max(4, dbw * defensePct), dbh, 3);
+    dg.lineStyle(1, this.chapter.colors.accent, 0.55);
+    dg.strokeRoundedRect(dbx, dby, dbw, dbh, 3);
+    this.defenseText.setText(`防线 ${Math.ceil(this.defenseHp)} / ${this.defenseMaxHp}`).setPosition(dbx + dbw / 2, dby + dbh / 2 + 1);
 
     const lines: string[] = [];
     if (activeSkill) {
@@ -706,6 +895,17 @@ export class ArenaScene extends Phaser.Scene {
     mg.lineStyle(1, 0x3b82f6, 0.4);
     mg.strokeRect(mx + cam.scrollX * sx, my + cam.scrollY * sy, GAME_WIDTH * sx, GAME_HEIGHT * sy);
 
+    mg.fillStyle(this.chapter.colors.detail, 0.8);
+    for (const obstacle of this.chapter.obstacles) {
+      mg.fillRect(
+        mx + (obstacle.x - obstacle.width / 2) * sx,
+        my + (obstacle.y - obstacle.height / 2) * sy,
+        obstacle.width * sx, obstacle.height * sy,
+      );
+    }
+    mg.fillStyle(this.chapter.colors.accent, 0.75);
+    for (const lane of this.chapter.spawnPoints) mg.fillCircle(mx + lane.x * sx, my + lane.y * sy, 2);
+
     // Enemies
     for (const c of this.enemies.getChildren()) {
       const e = c as Enemy;
@@ -721,6 +921,8 @@ export class ArenaScene extends Phaser.Scene {
     mg.fillCircle(hx, hy, 3);
     mg.lineStyle(1, 0x93c5fd, 0.7);
     mg.strokeCircle(hx, hy, 4);
+    mg.fillStyle(0xfbbf24);
+    mg.fillRect(mx + this.defenseCore.x * sx - 2, my + this.defenseCore.y * sy - 2, 4, 4);
   }
 
   private drawEnemyHpBars(): void {
@@ -771,7 +973,7 @@ export class ArenaScene extends Phaser.Scene {
     g.fillRoundedRect(x, y, Math.max(4, width * pct), height, 3);
     g.fillStyle(0xffffff, 0.15);
     g.fillRoundedRect(x + 1, y + 1, Math.max(2, width * pct - 2), 4, 2);
-    this.bossNameText.setText(`军团核心  ${Math.ceil(boss.hp)} / ${boss.maxHp}`).setVisible(true);
+    this.bossNameText.setText(`${(boss.getData('bossName') as string | undefined) ?? '战区首领'}  ${Math.ceil(boss.hp)} / ${boss.maxHp}`).setVisible(true);
   }
 
   private drawCrosshair(): void {
@@ -830,6 +1032,10 @@ export class ArenaScene extends Phaser.Scene {
     this.events.on('enemyDeath', this.onEnemyDeath, this);
     this.events.on('enemySplit', this.onEnemySplit, this);
     this.events.on('enemySummon', this.onEnemySummon, this);
+    this.events.on('enemyBlastTelegraph', this.onEnemyBlastTelegraph, this);
+    this.events.on('enemyBlast', this.onEnemyBlast, this);
+    this.events.on('enemySupportPulse', this.onEnemySupportPulse, this);
+    this.events.on('defenseRepair', (ev: { ratio: number }) => this.repairDefense(ev.ratio));
     this.events.on('waveStart', this.onWaveStart, this);
     this.events.on('waveComplete', this.onWaveComplete, this);
     this.events.on('levelComplete', this.onLevelComplete, this);
@@ -875,15 +1081,23 @@ export class ArenaScene extends Phaser.Scene {
     } catch (err) { console.error('[onEnemyFire]', err); }
   }
 
-  private onBossTelegraph(ev: { x: number; y: number; angle: number; duration: number }): void {
-    const length = 900;
-    const endX = ev.x + Math.cos(ev.angle) * length;
-    const endY = ev.y + Math.sin(ev.angle) * length;
+  private onBossTelegraph(ev: { x: number; y: number; angle: number; duration: number; length: number; width: number }): void {
+    const endX = ev.x + Math.cos(ev.angle) * ev.length;
+    const endY = ev.y + Math.sin(ev.angle) * ev.length;
+    const px = Math.cos(ev.angle + Math.PI / 2) * ev.width / 2;
+    const py = Math.sin(ev.angle + Math.PI / 2) * ev.width / 2;
     const warning = this.add.graphics().setDepth(14);
-    warning.lineStyle(10, 0xef4444, 0.08);
+    warning.fillStyle(0xef4444, 0.14);
+    warning.fillPoints([
+      new Phaser.Geom.Point(ev.x + px, ev.y + py),
+      new Phaser.Geom.Point(endX + px, endY + py),
+      new Phaser.Geom.Point(endX - px, endY - py),
+      new Phaser.Geom.Point(ev.x - px, ev.y - py),
+    ], true);
+    warning.lineStyle(2, 0xff8a65, 0.9);
     warning.lineBetween(ev.x, ev.y, endX, endY);
-    warning.lineStyle(2, 0xff6b6b, 0.85);
-    warning.lineBetween(ev.x, ev.y, endX, endY);
+    warning.lineStyle(2, 0xffc107, 0.7);
+    warning.strokeCircle(endX, endY, ev.width / 2);
     warning.fillStyle(0xffaa44, 0.9);
     warning.fillCircle(ev.x, ev.y, 12);
     this.tweens.add({
@@ -894,7 +1108,37 @@ export class ArenaScene extends Phaser.Scene {
       repeat: Math.max(1, Math.floor(ev.duration / 240) - 1),
     });
     this.time.delayedCall(ev.duration, () => warning.destroy());
-    this.announce('冲锋预警 · 闪避！', 0xef4444, Math.min(700, ev.duration));
+    this.announce(`锁定冲锋 · ${Math.round(ev.length)} 距离`, 0xef4444, Math.min(850, ev.duration));
+  }
+
+  private onEnemyBlastTelegraph(ev: { x: number; y: number; radius: number; duration: number }): void {
+    const warning = this.add.circle(ev.x, ev.y, ev.radius, 0xf43f5e, 0.08).setDepth(13)
+      .setStrokeStyle(3, 0xfb7185, 0.9);
+    this.tweens.add({
+      targets: warning, alpha: { from: 0.2, to: 0.85 }, scaleX: { from: 0.75, to: 1 }, scaleY: { from: 0.75, to: 1 },
+      duration: ev.duration, onComplete: () => warning.destroy(),
+    });
+  }
+
+  private onEnemyBlast(ev: { x: number; y: number; radius: number; damage: number }): void {
+    const blast = this.add.circle(ev.x, ev.y, 12, 0xff3355, 0.8).setDepth(18);
+    this.tweens.add({ targets: blast, radius: ev.radius, alpha: 0, duration: 260, onComplete: () => blast.destroy() });
+    if (Phaser.Math.Distance.Between(ev.x, ev.y, this.hero.x, this.hero.y) <= ev.radius) this.hero.takeDamage(ev.damage);
+    if (Phaser.Math.Distance.Between(ev.x, ev.y, this.defenseCore.x, this.defenseCore.y) <= ev.radius) this.damageDefense(ev.damage);
+    this.cameras.main.shake(140, 0.008);
+  }
+
+  private onEnemySupportPulse(ev: { x: number; y: number; radius: number; amount: number }): void {
+    let healed = 0;
+    for (const child of this.enemies.getChildren()) {
+      const enemy = child as Enemy;
+      if (!enemy.active || Phaser.Math.Distance.Between(ev.x, ev.y, enemy.x, enemy.y) > ev.radius) continue;
+      healed += enemy.heal(ev.amount);
+    }
+    const pulse = this.add.circle(ev.x, ev.y, 15, 0x22d3ee, 0.12).setDepth(12)
+      .setStrokeStyle(2, 0x67e8f9, 0.8);
+    this.tweens.add({ targets: pulse, radius: ev.radius, alpha: 0, duration: 450, onComplete: () => pulse.destroy() });
+    if (healed > 0) this.showDmgNum(ev.x, ev.y - 34, -healed, false, false);
   }
 
   private spawnBullet(opts: BulletOpts): void {
@@ -979,6 +1223,11 @@ export class ArenaScene extends Phaser.Scene {
           this.snd.skillTimeRift();
           this.doSkillTimeRift(ev.x, ev.y, stats.damage * this.hero.damageMult, stats.radius, stats.duration, skill.color);
           if (ev.level >= 2) this.hero.shieldStacks += 1;
+          break;
+        }
+        case 'sentry': {
+          this.snd.skillBarrage();
+          this.doSkillSentry(ev.x, ev.y, stats.damage * this.hero.damageMult, stats.radius, stats.duration, ev.level, skill.color);
           break;
         }
       }
@@ -1120,6 +1369,46 @@ export class ArenaScene extends Phaser.Scene {
     });
   }
 
+  private doSkillSentry(
+    x: number, y: number, damage: number, radius: number, duration: number, level: number, color: number,
+  ): void {
+    const base = this.add.circle(x, y, 17, 0x083344, 0.95).setDepth(11).setStrokeStyle(2, color, 0.9);
+    const head = this.add.rectangle(x, y, 24, 7, color, 0.9).setDepth(12);
+    const rangeRing = this.add.circle(x, y, radius, color, 0.025).setDepth(3).setStrokeStyle(1, color, 0.18);
+    const interval = Math.max(150, 320 - level * 28);
+    const timer = this.time.addEvent({
+      delay: interval,
+      repeat: Math.max(0, Math.floor(duration / interval) - 1),
+      callback: () => {
+        if (this.dead || !base.active) return;
+        let nearest: Enemy | null = null;
+        let nearestDistance = radius;
+        for (const child of this.enemies.getChildren()) {
+          const enemy = child as Enemy;
+          if (!enemy.active) continue;
+          const distance = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+          if (distance < nearestDistance) { nearest = enemy; nearestDistance = distance; }
+        }
+        if (!nearest) return;
+        const angle = Phaser.Math.Angle.Between(x, y, nearest.x, nearest.y);
+        head.setRotation(angle);
+        this.spawnBullet({
+          x: x + Math.cos(angle) * 18, y: y + Math.sin(angle) * 18,
+          angle, speed: this.hero.bulletSpeed * 0.85, damage,
+          piercing: level >= 3, homing: true, owner: 'player',
+        });
+        this.muzzleFlash(x + Math.cos(angle) * 18, y + Math.sin(angle) * 18);
+      },
+    });
+    this.time.delayedCall(duration, () => {
+      timer.remove(false);
+      for (const object of [base, head, rangeRing]) {
+        if (object.active) this.tweens.add({ targets: object, alpha: 0, duration: 180, onComplete: () => object.destroy() });
+      }
+    });
+    this.announce('蜂群哨戒部署', color, 850);
+  }
+
   private onSkillSwitch(ev: { skillId: string }): void {
     const skill = getSkill(ev.skillId);
     if (!skill) return;
@@ -1157,17 +1446,28 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onHeroDeath(): void {
+    this.finishDefeat('先锋阵亡');
+  }
+
+  private onDefenseDestroyed(): void {
+    this.finishDefeat('防线失守');
+  }
+
+  private finishDefeat(reason: string): void {
+    if (this.dead) return;
     this.dead = true;
     this.hitlagUntil = 0;
     this.physics.pause();
     this.snd.heroDeath();
     this.cameras.main.shake(400, 0.015);
     this.cameras.main.flash(300, 255, 0, 0, true);
-    this.deathParticles(this.hero.x, this.hero.y);
+    const focusX = reason === '防线失守' ? this.defenseCore.x : this.hero.x;
+    const focusY = reason === '防线失守' ? this.defenseCore.y : this.hero.y;
+    this.deathParticles(focusX, focusY);
     this.tutorial.destroy();
 
     // Death message overlay
-    const deathText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.38, '阵亡', {
+    const deathText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.38, reason, {
       fontSize: '48px', fontFamily: 'monospace', fontStyle: 'bold',
       color: '#ef4444', stroke: '#000', strokeThickness: 6,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
@@ -1183,7 +1483,7 @@ export class ArenaScene extends Phaser.Scene {
     this.cameras.main.zoomTo(1.2, 1500, 'Sine.easeIn');
 
     const build = this.upgradeMgr.getBuildPath();
-    const durationSec = Math.round(this.activeRunMs / 1000);
+    const durationSec = Math.round((this.elapsedBeforeChapterMs + this.activeRunMs) / 1000);
     const newHighScore = ScoreManager.isNewHighScore(this.score);
     const profile = this.runRecorder.finish(build, this.hero.maxHp);
     const reward = MetaProgressionManager.recordRun({
@@ -1194,6 +1494,7 @@ export class ArenaScene extends Phaser.Scene {
       score: this.score, kills: this.kills,
       wave: this.waveMgr.wave, level: this.currentLevel,
       endless: this.endless, durationSec, build, newHighScore, profile, reward,
+      defeatReason: reason, operativeId: this.operativeId,
     };
     ScoreManager.saveScore({
       score: this.score, kills: this.kills,
@@ -1305,6 +1606,9 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onWaveComplete(ev: { wave: number; total: number }): void {
+    if (this.defenseHp > 0 && this.defenseHp < this.defenseMaxHp) {
+      this.repairDefense(0.08);
+    }
     if (ev.wave >= ev.total) {
       this.waveMgr.scheduleNextWave(this.time.now);
       return;
@@ -1313,14 +1617,31 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onLevelComplete(ev: { level: number }): void {
+    if (this.dead) return;
+    if (!this.endless && ev.level < WAVE_CFG.levels) {
+      this.paused = true;
+      this.physics.pause();
+      this.hero.heal(Math.round(this.hero.maxHp * 0.25));
+      this.registry.set('appliedUpgrades', this.upgradeMgr.getAppliedIds());
+      const unlock = MetaProgressionManager.recordChapterClear(ev.level);
+      this.showChapterClear(unlock);
+      this.time.delayedCall(2300, () => {
+        if (this.dead) return;
+        this.paused = false;
+        this.showUpgradeUI('level');
+      });
+      return;
+    }
+
     if (!this.endless) {
       this.dead = true;
       this.tutorial.destroy();
       this.snd.victory();
-      this.announce('🏆 突围成功！军团核心已摧毁', 0x22c55e, 3000);
+      MetaProgressionManager.recordChapterClear(ev.level);
+      this.announce('🏆 四大战区已守住 · 军团母巢摧毁', 0x22c55e, 3000);
       this.slowMoFinish(true);
       const build = this.upgradeMgr.getBuildPath();
-      const durationSec = Math.round(this.activeRunMs / 1000);
+      const durationSec = Math.round((this.elapsedBeforeChapterMs + this.activeRunMs) / 1000);
       const newHighScore = ScoreManager.isNewHighScore(this.score);
       const profile = this.runRecorder.finish(build, this.hero.maxHp);
       const reward = MetaProgressionManager.recordRun({
@@ -1330,6 +1651,7 @@ export class ArenaScene extends Phaser.Scene {
       const data = {
         score: this.score, kills: this.kills, wave: this.waveMgr.totalWaves, level: ev.level,
         victory: true, endless: false, durationSec, build, newHighScore, profile, reward,
+        operativeId: this.operativeId,
       };
       ScoreManager.saveScore({
         score: this.score, kills: this.kills, level: ev.level,
@@ -1342,16 +1664,22 @@ export class ArenaScene extends Phaser.Scene {
       return;
     }
     this.hero.heal(this.hero.maxHp);
-    if (this.endless) {
-      this.announce(`无尽 ${ev.level} 通过！敌人更强了...`, 0xfbbf24, 2000);
-    } else {
-      this.announce(`关卡 ${ev.level} 通过！`, 0x22c55e, 2000);
-    }
+    this.announce(`无尽 ${ev.level} 通过！下一战区威胁提升`, 0xfbbf24, 2000);
     const showUpgrade = () => {
       if (this.dead) return;
       this.showUpgradeUI('level');
     };
     window.setTimeout(() => { try { showUpgrade(); } catch (_) { /* noop */ } }, 2500);
+  }
+
+  private showChapterClear(unlock: ChapterUnlockResult): void {
+    const lines = [`第 ${unlock.chapter} 章完成 · ${this.chapter.name}`];
+    if (unlock.operative) lines.push(`新兵种：${getOperative(unlock.operative).name}`);
+    if (unlock.skill) lines.push(`新技能蓝图：${getSkill(unlock.skill)?.name ?? unlock.skill}`);
+    if (!unlock.firstClear) lines.push('重复通关：战术资料已回收');
+    this.announce(lines.join('\n'), this.chapter.colors.accent, 2100);
+    this.snd.victory();
+    this.cameras.main.flash(160, 100, 255, 160, true);
   }
 
   /* ────────────────── XP Gems ────────────────── */
@@ -1557,14 +1885,19 @@ export class ArenaScene extends Phaser.Scene {
     const choices = this.upgradeMgr.pickThree(pool, this.hero);
     if (choices.length === 0) {
       if (pool === 'level') {
+        this.paused = true;
+        this.physics.pause();
         this.registry.set('appliedUpgrades', this.upgradeMgr.getAppliedIds());
         const nextLvl = this.currentLevel + 1;
         const sc = this.score;
+        const kills = this.kills;
         const endless = this.endless;
+        const operativeId = this.operativeId;
+        const elapsedMs = this.elapsedBeforeChapterMs + this.activeRunMs;
         const sceneRef = this.scene;
-        window.setTimeout(() => {
-          try { sceneRef.start('ArenaScene', { level: nextLvl, score: sc, endless }); } catch (_) { /* noop */ }
-        }, 800);
+        this.time.delayedCall(350, () => {
+          try { sceneRef.start('ArenaScene', { level: nextLvl, score: sc, kills, endless, operativeId, elapsedMs }); } catch (_) { /* noop */ }
+        });
       } else {
         this.waveMgr.scheduleNextWave(this.time.now);
       }
@@ -1579,10 +1912,10 @@ export class ArenaScene extends Phaser.Scene {
 
     const buildPath = this.upgradeMgr.getBuildPath();
     const title = pool === 'level'
-      ? '无尽强化'
+      ? (this.endless ? '无尽强化' : '章节战利品')
       : buildPath
-        ? `${BUILD_INFO[buildPath].name}协议 · 选择改装`
-        : '选择作战协议';
+        ? `${BUILD_INFO[buildPath].name} · 选择改装`
+        : '选择战地改装';
     const titleText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.18, title, {
       fontSize: '24px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
@@ -1799,19 +2132,27 @@ export class ArenaScene extends Phaser.Scene {
 
   private finishUpgrade(pool: 'wave' | 'level'): void {
     this.upgrading = false;
-    this.physics.resume();
     this.hitlagUntil = 0;
 
     if (pool === 'level') {
+      // Keep the cleared battlefield frozen until the next scene owns control.
+      // Otherwise surviving projectiles (or developer fast-forward enemies) can
+      // kill the player during the chapter-transition delay.
+      this.paused = true;
+      this.physics.pause();
       this.registry.set('appliedUpgrades', this.upgradeMgr.getAppliedIds());
       const nextLvl = this.currentLevel + 1;
       const sc = this.score;
+      const kills = this.kills;
       const endless = this.endless;
+      const operativeId = this.operativeId;
+      const elapsedMs = this.elapsedBeforeChapterMs + this.activeRunMs;
       const sceneRef = this.scene;
-      window.setTimeout(() => {
-        try { sceneRef.start('ArenaScene', { level: nextLvl, score: sc, endless }); } catch (_) { /* noop */ }
-      }, 1200);
+      this.time.delayedCall(450, () => {
+        try { sceneRef.start('ArenaScene', { level: nextLvl, score: sc, kills, endless, operativeId, elapsedMs }); } catch (_) { /* noop */ }
+      });
     } else {
+      this.physics.resume();
       this.waveMgr.scheduleNextWave(this.time.now);
     }
   }
@@ -1852,7 +2193,7 @@ export class ArenaScene extends Phaser.Scene {
       fontSize: '28px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502);
     const build = this.upgradeMgr.getBuildPath();
-    const status = this.add.text(cx, cy - 18, `${this.waveMgr.wave}/${this.waveMgr.totalWaves} 波  ·  ${build ? BUILD_INFO[build].name + '协议' : '基础武装'}`, {
+    const status = this.add.text(cx, cy - 18, `${this.chapter.name}  ·  ${this.waveMgr.wave}/${this.waveMgr.totalWaves} 波  ·  ${build ? BUILD_INFO[build].name : '基础武装'}`, {
       fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502);
     const hint = this.add.text(cx, cy + 34, 'ESC 继续   ·   M 返回主菜单', {
@@ -1909,6 +2250,7 @@ export class ArenaScene extends Phaser.Scene {
     // UI and visuals ALWAYS update — even during death / upgrade / tutorial
     this.updateUI(time);
     this.updateBgParticles(time);
+    this.updateMapHazards(time);
 
     if (this.dead || this.upgrading || this.paused) return;
 
@@ -1917,6 +2259,7 @@ export class ArenaScene extends Phaser.Scene {
       this.activeRunMs += _delta;
       this.hero.tick(time, _delta);
       const heroBody = this.hero.body as Phaser.Physics.Arcade.Body;
+      this.applyEnvironmentVelocity(this.hero.x, this.hero.y, heroBody, time, true);
       const pointer = this.input.activePointer;
       this.runRecorder.recordFrame(
         _delta,
@@ -1924,6 +2267,7 @@ export class ArenaScene extends Phaser.Scene {
         pointer.isDown && !pointer.rightButtonDown(),
       );
       this.updateEnemies(time, _delta);
+      this.applyPulseDamage(time);
       this.updateBullets(time);
       this.magnetXpGems();
       this.waveMgr.update(time, _delta);
@@ -1942,7 +2286,14 @@ export class ArenaScene extends Phaser.Scene {
     [...this.enemies.getChildren()].forEach(c => {
       const e = c as Enemy;
       if (!e.active) return;
-      e.tick(time, delta, this.hero.x, this.hero.y);
+      const heroDistance = Phaser.Math.Distance.Between(e.x, e.y, this.hero.x, this.hero.y);
+      const targetHero = heroDistance < (e.isBoss ? 240 : 165);
+      e.tick(
+        time, delta,
+        targetHero ? this.hero.x : this.defenseCore.x,
+        targetHero ? this.hero.y : this.defenseCore.y,
+      );
+      this.applyEnvironmentVelocity(e.x, e.y, e.body as Phaser.Physics.Arcade.Body, time, false);
 
       // Elite dodge: evade incoming player bullets
       if (e.hasDodge && !e.dodging && time > 0) {

@@ -3,6 +3,8 @@ import { resolve } from 'path';
 
 export default defineConfig({
   root: 'src',
+  // Relative asset URLs work both in a browser and inside the packaged app.
+  base: './',
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

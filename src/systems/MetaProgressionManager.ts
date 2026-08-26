@@ -1,5 +1,7 @@
 import type { BuildPath } from '../data/upgrades';
 import type { CombatProfile } from './RunRecorder';
+import type { OperativeId } from '../data/operatives';
+import { WAVE_CFG } from '../config/gameConfig';
 
 export type WorkshopModuleId = 'arsenal' | 'armor' | 'reactor';
 
@@ -12,7 +14,7 @@ export interface WorkshopModuleDef {
 }
 
 export interface MetaState {
-  version: 1;
+  version: 2;
   shadowCores: number;
   modules: Record<WorkshopModuleId, number>;
   totalRuns: number;
@@ -21,7 +23,19 @@ export interface MetaState {
   bestWave: number;
   bestVictorySec: number | null;
   clearedBuilds: BuildPath[];
+  highestChapterUnlocked: number;
+  clearedChapters: number[];
+  unlockedOperatives: OperativeId[];
+  unlockedSkills: string[];
   lastProfile: CombatProfile | null;
+}
+
+export interface ChapterUnlockResult {
+  chapter: number;
+  firstClear: boolean;
+  nextChapter: number;
+  operative?: OperativeId;
+  skill?: string;
 }
 
 export interface RunSummary {
@@ -53,11 +67,13 @@ export const WORKSHOP_MODULES: WorkshopModuleDef[] = [
 ];
 
 const STORAGE_KEY = 'shadowlegion_meta_v1';
-const VALID_BUILDS: BuildPath[] = ['nova', 'storm', 'rift'];
+const VALID_BUILDS: BuildPath[] = ['nova', 'storm', 'rift', 'engineer'];
+const VALID_OPERATIVES: OperativeId[] = ['ranger', 'gunner', 'warden', 'engineer'];
+const VALID_SKILLS = ['burst', 'barrage', 'timerift', 'sentry'];
 
 export function createDefaultMetaState(): MetaState {
   return {
-    version: 1,
+    version: 2,
     shadowCores: 0,
     modules: { arsenal: 0, armor: 0, reactor: 0 },
     totalRuns: 0,
@@ -66,6 +82,10 @@ export function createDefaultMetaState(): MetaState {
     bestWave: 0,
     bestVictorySec: null,
     clearedBuilds: [],
+    highestChapterUnlocked: 1,
+    clearedChapters: [],
+    unlockedOperatives: ['ranger'],
+    unlockedSkills: ['burst'],
     lastProfile: null,
   };
 }
@@ -77,7 +97,7 @@ export function workshopUpgradeCost(currentRank: number): number {
 
 export function calculateRunReward(summary: Pick<RunSummary, 'wave' | 'level' | 'victory' | 'endless'>, isNewBuild: boolean): Omit<RunReward, 'total'> {
   const effectiveWave = summary.endless
-    ? Math.max(1, (Math.max(1, summary.level) - 1) * 8 + summary.wave)
+    ? Math.max(1, (Math.max(1, summary.level) - 1) * WAVE_CFG.perLevel + summary.wave)
     : summary.wave;
   const progressReward = Math.min(6, Math.floor(Math.max(0, effectiveWave - 1) / 2));
   const victoryReward = summary.victory ? 4 : 0;
@@ -110,6 +130,40 @@ export class MetaProgressionManager {
 
   static getWorkshopLevel(state = this.getState()): number {
     return state.modules.arsenal + state.modules.armor + state.modules.reactor;
+  }
+
+  static recordChapterClear(chapter: number): ChapterUnlockResult {
+    const state = this.getState();
+    const cleared = Math.max(1, Math.min(WAVE_CFG.levels, Math.floor(chapter)));
+    const firstClear = !state.clearedChapters.includes(cleared);
+    if (firstClear) state.clearedChapters.push(cleared);
+    state.highestChapterUnlocked = Math.max(state.highestChapterUnlocked, Math.min(WAVE_CFG.levels, cleared + 1));
+
+    const result: ChapterUnlockResult = {
+      chapter: cleared,
+      firstClear,
+      nextChapter: state.highestChapterUnlocked,
+    };
+    const unlocks: Partial<Record<number, { operative: OperativeId; skill: string }>> = {
+      1: { operative: 'gunner', skill: 'barrage' },
+      2: { operative: 'warden', skill: 'timerift' },
+      3: { operative: 'engineer', skill: 'sentry' },
+    };
+    const unlock = unlocks[cleared];
+    if (unlock) {
+      if (!state.unlockedOperatives.includes(unlock.operative)) state.unlockedOperatives.push(unlock.operative);
+      if (!state.unlockedSkills.includes(unlock.skill)) state.unlockedSkills.push(unlock.skill);
+      if (firstClear) {
+        result.operative = unlock.operative;
+        result.skill = unlock.skill;
+      }
+    }
+    this.save(state);
+    return result;
+  }
+
+  static isOperativeUnlocked(id: OperativeId, state = this.getState()): boolean {
+    return state.unlockedOperatives.includes(id);
   }
 
   static recordRun(summary: RunSummary): RunReward {
@@ -170,6 +224,29 @@ export class MetaProgressionManager {
     const clearedBuilds = Array.isArray(src.clearedBuilds)
       ? [...new Set(src.clearedBuilds.filter((item): item is BuildPath => VALID_BUILDS.includes(item as BuildPath)))]
       : [];
+    const highestChapterUnlocked = typeof src.highestChapterUnlocked === 'number'
+      ? Math.max(1, Math.min(WAVE_CFG.levels, Math.floor(src.highestChapterUnlocked)))
+      : (num('wins') > 0 ? 2 : 1);
+    const clearedChapters = Array.isArray(src.clearedChapters)
+      ? [...new Set(src.clearedChapters.filter((item): item is number => typeof item === 'number' && item >= 1 && item <= WAVE_CFG.levels))]
+      : [];
+    const unlockedOperatives = Array.isArray(src.unlockedOperatives)
+      ? [...new Set(src.unlockedOperatives.filter((item): item is OperativeId => VALID_OPERATIVES.includes(item as OperativeId)))]
+      : ['ranger'] as OperativeId[];
+    const unlockedSkills = Array.isArray(src.unlockedSkills)
+      ? [...new Set(src.unlockedSkills.filter((item): item is string => VALID_SKILLS.includes(item as string)))]
+      : ['burst'];
+    if (!unlockedOperatives.includes('ranger')) unlockedOperatives.unshift('ranger');
+    if (!unlockedSkills.includes('burst')) unlockedSkills.unshift('burst');
+    // Progress is the source of truth during v1 -> v2 migration. This also repairs
+    // partially written saves without ever taking an earned unlock away.
+    const earnedOperatives: OperativeId[] = ['ranger'];
+    const earnedSkills = ['burst'];
+    if (highestChapterUnlocked >= 2) { earnedOperatives.push('gunner'); earnedSkills.push('barrage'); }
+    if (highestChapterUnlocked >= 3) { earnedOperatives.push('warden'); earnedSkills.push('timerift'); }
+    if (highestChapterUnlocked >= 4) { earnedOperatives.push('engineer'); earnedSkills.push('sentry'); }
+    earnedOperatives.forEach(id => { if (!unlockedOperatives.includes(id)) unlockedOperatives.push(id); });
+    earnedSkills.forEach(id => { if (!unlockedSkills.includes(id)) unlockedSkills.push(id); });
     const bestVictorySec = typeof src.bestVictorySec === 'number' && src.bestVictorySec > 0
       ? Math.floor(src.bestVictorySec)
       : null;
@@ -178,11 +255,12 @@ export class MetaProgressionManager {
       : null;
 
     return {
-      version: 1,
+      version: 2,
       shadowCores: num('shadowCores'),
       modules: { arsenal: clampRank('arsenal'), armor: clampRank('armor'), reactor: clampRank('reactor') },
       totalRuns: num('totalRuns'), wins: num('wins'), totalKills: num('totalKills'),
-      bestWave: num('bestWave'), bestVictorySec, clearedBuilds, lastProfile,
+      bestWave: num('bestWave'), bestVictorySec, clearedBuilds,
+      highestChapterUnlocked, clearedChapters, unlockedOperatives, unlockedSkills, lastProfile,
     };
   }
 }

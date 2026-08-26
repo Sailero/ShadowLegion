@@ -6,6 +6,9 @@ import {
 import { SKILLS, getSkill, getSkillStatsForLevel } from '../data/skills';
 import { WAVE_UPGRADES, LEVEL_UPGRADES, EVOLUTION_INFO } from '../data/upgrades';
 import { LEVEL_WAVES } from '../data/enemies';
+import { CHAPTERS, pointInRect } from '../data/chapters';
+import { OPERATIVES } from '../data/operatives';
+import { BOSS_CHARGE_PROFILE } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
 import {
   calculateRunReward, createDefaultMetaState, WORKSHOP_MAX_RANK, workshopUpgradeCost,
@@ -88,14 +91,13 @@ export function runDataTests(): Result[] {
     }
   });
 
-  t('Three build protocols exist', () => {
-    const allIds = [...WAVE_UPGRADES, ...LEVEL_UPGRADES].map(u => u.id);
-    const coreIds = ['core_nova', 'core_storm', 'core_rift'];
-    for (const id of coreIds) {
-      assert(allIds.includes(id), `upgrade ${id} missing`);
+  t('Four operative specialties exist', () => {
+    assert(OPERATIVES.length === 4, 'must have four operatives');
+    assert(new Set(OPERATIVES.map(item => item.id)).size === 4, 'duplicate operative id');
+    assert(Object.keys(EVOLUTION_INFO).length === 4, 'must have four evolutions');
+    for (const operative of OPERATIVES) {
+      assert(Boolean(getSkill(operative.signatureSkill)), `${operative.id} signature skill missing`);
     }
-    assert(WAVE_UPGRADES.filter(u => u.isCore).length === 3, 'must have exactly 3 cores');
-    assert(Object.keys(EVOLUTION_INFO).length === 3, 'must have three evolutions');
   });
 
   t('Upgrade categories valid', () => {
@@ -115,14 +117,34 @@ export function runDataTests(): Result[] {
     }
   });
 
-  t('Phase 1 run uses advanced enemies', () => {
-    const phaseTypes = new Set<string>();
-    for (const w of LEVEL_WAVES[0]) {
-      for (const s of w.spawns) phaseTypes.add(s.type);
-      if (w.bossType) phaseTypes.add(w.bossType);
+  t('Campaign gradually introduces all enemy roles', () => {
+    const campaignTypes = new Set<string>();
+    for (const level of LEVEL_WAVES) {
+      for (const w of level) {
+        for (const s of w.spawns) campaignTypes.add(s.type);
+        if (w.bossType) campaignTypes.add(w.bossType);
+      }
     }
-    assert(phaseTypes.has('ninja'), 'Phase 1 missing ninja');
-    assert(phaseTypes.has('summoner'), 'Phase 1 missing summoner boss');
+    for (const type of Object.keys(ENEMY_TYPES)) assert(campaignTypes.has(type), `campaign missing ${type}`);
+    assert(!LEVEL_WAVES[0].some(w => w.spawns.some(s => s.type === 'medic')), 'medic should not appear in chapter 1');
+  });
+
+  t('Chapter maps have distinct lanes, cover and mechanics', () => {
+    assert(CHAPTERS.length === WAVE_CFG.levels, 'chapter/config count mismatch');
+    assert(new Set(CHAPTERS.map(chapter => chapter.hazardKind)).size === 4, 'chapter hazards should be distinct');
+    for (const chapter of CHAPTERS) {
+      assert(chapter.spawnPoints.length >= 2, `chapter ${chapter.id} needs lanes`);
+      assert(chapter.obstacles.length >= 4, `chapter ${chapter.id} needs cover`);
+      assert(chapter.coreHp > 0, `chapter ${chapter.id} core hp`);
+    }
+    assert(pointInRect(CHAPTERS[1].hazards[0].x, CHAPTERS[1].hazards[0].y, CHAPTERS[1].hazards[0]), 'hazard containment');
+  });
+
+  t('Boss telegraph matches charge profile', () => {
+    const length = BOSS_CHARGE_PROFILE.baseSpeed * BOSS_CHARGE_PROFILE.durationMs / 1000;
+    assert(length >= 200 && length <= 400, `charge length ${length}`);
+    assert(BOSS_CHARGE_PROFILE.windupMs >= 800, 'boss warning too short');
+    assert(BOSS_CHARGE_PROFILE.width >= 60, 'boss corridor too narrow');
   });
 
   t('Balance: kills to charge', () => {
@@ -145,6 +167,9 @@ export function runDataTests(): Result[] {
     assert(meta.shadowCores === 0 && meta.totalRuns === 0, 'meta counters');
     assert(Object.values(meta.modules).every(rank => rank === 0), 'module defaults');
     assert(meta.clearedBuilds.length === 0, 'build clears');
+    assert(meta.highestChapterUnlocked === 1, 'chapter default');
+    assert(meta.unlockedOperatives.length === 1 && meta.unlockedOperatives[0] === 'ranger', 'operative default');
+    assert(meta.unlockedSkills.includes('burst'), 'burst should start unlocked');
   });
 
   t('Workshop costs rise and cap', () => {
@@ -155,9 +180,9 @@ export function runDataTests(): Result[] {
 
   t('Run rewards favor progress and first clears', () => {
     const loss = calculateRunReward({ wave: 3, level: 1, victory: false, endless: false }, false);
-    const win = calculateRunReward({ wave: 8, level: 1, victory: true, endless: false }, true);
+    const win = calculateRunReward({ wave: 5, level: 4, victory: true, endless: false }, true);
     assert(loss.earned === 1, `wave 3 loss reward=${loss.earned}`);
-    assert(win.earned === 10 && win.newBuildClear, `first clear reward=${win.earned}`);
+    assert(win.earned === 9 && win.newBuildClear, `first clear reward=${win.earned}`);
   });
 
   t('Run recorder creates bounded Shadow profile', () => {
@@ -176,13 +201,17 @@ export function runDataTests(): Result[] {
 
   t('Three matching path upgrades trigger one evolution', () => {
     const hero = {
+      unlockedSkills: ['burst'],
+      activeSkillId: 'burst',
       explosiveShot: 0,
       critChance: 0,
       damageMult: 1,
+      dashCooldown: 1000,
       skillLevels: { burst: 1 },
     } as unknown as Hero;
     const manager = new UpgradeManager();
-    for (const id of ['core_nova', 'crit', 'explosive', 'skill_burst_up']) {
+    manager.initializeOperative(hero, 'ranger');
+    for (const id of ['crit', 'explosive', 'skill_burst_up']) {
       const upgrade = WAVE_UPGRADES.find(item => item.id === id);
       assert(Boolean(upgrade), `upgrade ${id} missing`);
       manager.apply(hero, upgrade!);
@@ -190,7 +219,7 @@ export function runDataTests(): Result[] {
     assert(manager.isEvolved(), 'nova should evolve after three path upgrades');
     assert(manager.getPathUpgradeCount() === 3, 'path upgrade count should be 3');
     assert(manager.consumeEvolution() === 'nova', 'nova evolution feedback missing');
-    assert(hero.explosiveShot >= 3, 'nova evolution should strengthen explosions');
+    assert(hero.explosiveShot >= 3, 'ranger evolution should strengthen explosions');
   });
 
   return R;
@@ -255,6 +284,10 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
     assert(scene.scene.manager.keys.WorkshopScene !== undefined, 'WorkshopScene missing');
   });
 
+  t('Loadout scene registered', () => {
+    assert(scene.scene.manager.keys.LoadoutScene !== undefined, 'LoadoutScene missing');
+  });
+
   t('Dead flag is false', () => {
     assert(s.dead === false, 'dead is true');
   });
@@ -293,12 +326,18 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
   t('[HP] takeDamage reduces HP', () => {
     const origHp = s.hero.hp;
     const origInvUntil = s.hero.invUntil;
+    const origShields = s.hero.shieldStacks;
+    const origDodge = s.hero.dodgeChance;
     s.hero.invUntil = 0; // clear invincibility
+    s.hero.shieldStacks = 0;
+    s.hero.dodgeChance = 0;
     const took = s.hero.takeDamage(10);
     assert(took === true, 'takeDamage should return true');
     assert(s.hero.hp === origHp - 10, `hp: expected ${origHp - 10}, got ${s.hero.hp}`);
     s.hero.hp = origHp;
     s.hero.invUntil = origInvUntil;
+    s.hero.shieldStacks = origShields;
+    s.hero.dodgeChance = origDodge;
   });
 
   t('[HP] invincible blocks damage', () => {
@@ -351,7 +390,7 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
   });
 
   t('[Skill] skill level within bounds', () => {
-    for (const sid of ['burst', 'barrage', 'timerift']) {
+    for (const sid of ['burst', 'barrage', 'timerift', 'sentry']) {
       const lvl = s.hero.getSkillLevel(sid);
       assert(typeof lvl === 'number' && lvl >= 0, `${sid} level invalid: ${lvl}`);
     }
@@ -386,7 +425,8 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
 
   // ── Collision Module Tests ──
   t('[Collision] handlers registered', () => {
-    assert(scene.physics.world.colliders.getActive().length >= 4, 'expected at least 4 colliders');
+    const count = scene.physics.world.colliders.getActive().length;
+    assert(count >= 4, `expected at least 4 colliders, got ${count}`);
   });
 
   // ── Enemy Module Tests ──

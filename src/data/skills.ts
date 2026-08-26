@@ -60,6 +60,20 @@ export const SKILLS: SkillDef[] = [
       { damage: 10, radius: 320, duration: 4000, cooldown: 0, desc: 'Lv3: 320范围4秒 + 闪避+5% + 护盾+1' },
     ],
   },
+  {
+    id: 'sentry',
+    name: '蜂群哨戒',
+    desc: '部署自动索敌的临时火力节点',
+    chargeCost: 90,
+    color: 0x22d3ee,
+    maxLevel: 5,
+    growthDesc: '升级：射程、单发伤害与驻场时间提升',
+    levels: [
+      { damage: 7, radius: 260, duration: 5000, cooldown: 0, desc: 'Lv1: 260射程 · 5秒自动射击' },
+      { damage: 10, radius: 310, duration: 6000, cooldown: 0, desc: 'Lv2: 310射程 · 6秒 · 更快锁敌' },
+      { damage: 14, radius: 360, duration: 7000, cooldown: 0, desc: 'Lv3: 360射程 · 7秒 · 穿透弹' },
+    ],
+  },
 ];
 
 export function getSkill(id: string): SkillDef | undefined {
@@ -95,6 +109,14 @@ export function getSkillStatsForLevel(id: string, level: number): SkillLevel | n
         radius: base.radius + extra * 20,
         duration: base.duration + extra * 300,
         desc: `Lv${lvl}: ${base.radius + extra * 20}范围 ${((base.duration + extra * 300) / 1000).toFixed(1)}秒`,
+      };
+    case 'sentry':
+      return {
+        ...base,
+        damage: base.damage + extra * 3,
+        radius: base.radius + extra * 25,
+        duration: base.duration + extra * 400,
+        desc: `Lv${lvl}: ${base.radius + extra * 25}射程 ${((base.duration + extra * 400) / 1000).toFixed(1)}秒`,
       };
     default:
       return base;

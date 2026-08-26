@@ -8,6 +8,7 @@ export class SpriteFactory {
     this.bullets(scene);
     this.xpGem(scene);
     this.particles(scene);
+    this.defenseCore(scene);
   }
 
   private static g(scene: Phaser.Scene): Phaser.GameObjects.Graphics {
@@ -125,6 +126,33 @@ export class SpriteFactory {
     g.destroy();
 
     g = this.g(scene);
+    g.fillStyle(COLORS.bomberDark);
+    g.fillCircle(16, 17, 13);
+    g.fillStyle(COLORS.bomber);
+    g.fillCircle(16, 15, 11);
+    g.lineStyle(2, 0xfda4af);
+    g.strokeCircle(16, 15, 8);
+    g.fillStyle(0xfef2f2);
+    g.fillTriangle(16, 7, 11, 19, 21, 19);
+    g.fillStyle(0x7f1d1d);
+    g.fillCircle(16, 15, 3);
+    g.generateTexture('enemy_bomber', 32, 32);
+    g.destroy();
+
+    g = this.g(scene);
+    g.fillStyle(COLORS.medicDark);
+    g.fillRoundedRect(4, 5, 25, 25, 6);
+    g.fillStyle(COLORS.medic);
+    g.fillRoundedRect(4, 3, 25, 25, 6);
+    g.fillStyle(0xecfeff);
+    g.fillRect(14, 7, 5, 17);
+    g.fillRect(8, 13, 17, 5);
+    g.lineStyle(1, 0x67e8f9);
+    g.strokeRoundedRect(4, 3, 25, 25, 6);
+    g.generateTexture('enemy_medic', 34, 34);
+    g.destroy();
+
+    g = this.g(scene);
     g.lineStyle(3, COLORS.eliteGlow, 0.7);
     g.strokeCircle(24, 24, 22);
     g.lineStyle(1, 0xfca5a5, 0.4);
@@ -188,6 +216,27 @@ export class SpriteFactory {
     g.fillStyle(0xef4444);
     g.fillCircle(2, 2, 2);
     g.generateTexture('particle_red', 4, 4);
+    g.destroy();
+  }
+
+  private static defenseCore(scene: Phaser.Scene): void {
+    const g = this.g(scene);
+    for (let radius = 38; radius >= 16; radius -= 7) {
+      g.fillStyle(0x3b82f6, 0.05 + (38 - radius) * 0.01);
+      g.fillCircle(40, 40, radius);
+    }
+    g.lineStyle(3, 0x60a5fa, 0.9);
+    g.strokeCircle(40, 40, 25);
+    g.lineStyle(2, 0x93c5fd, 0.75);
+    g.strokeCircle(40, 40, 15);
+    g.fillStyle(0xfbbf24, 0.95);
+    g.fillPoints([
+      new Phaser.Geom.Point(40, 20), new Phaser.Geom.Point(53, 40),
+      new Phaser.Geom.Point(40, 60), new Phaser.Geom.Point(27, 40),
+    ], true);
+    g.fillStyle(0xffffff, 0.85);
+    g.fillCircle(40, 40, 6);
+    g.generateTexture('defense_core', 80, 80);
     g.destroy();
   }
 }

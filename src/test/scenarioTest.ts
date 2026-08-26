@@ -33,9 +33,33 @@ export function attachScenarioTests(scene: Phaser.Scene): void {
     scene.events.emit('levelComplete', { level: s.currentLevel || 1 });
     console.log('[DEV] Run completion triggered');
   };
+  const jumpToBoss = () => {
+    const enemies = s.enemies?.getChildren?.() ?? [];
+    for (const child of [...enemies]) {
+      if (child?.active) child.destroy();
+    }
+    const manager = s.waveMgr;
+    if (!manager) return;
+    // Keep the scene alive long enough for visual telegraph sampling.
+    s.defenseInvUntil = Number.MAX_SAFE_INTEGER;
+    if (s.hero) s.hero.invUntil = Number.MAX_SAFE_INTEGER;
+    manager.wave = Math.max(0, manager.totalWaves - 1);
+    manager.pendingSpawns = [];
+    manager.spawning = false;
+    manager.waveActive = false;
+    manager.betweenWaves = false;
+    manager.allWavesDone = false;
+    manager.startNextWave();
+    console.log('[DEV] Boss wave started');
+  };
   scene.input.keyboard?.on('keydown-F8', defeatWave);
   scene.input.keyboard?.on('keydown-F7', fillCharge);
   scene.input.keyboard?.on('keydown-F6', completeRun);
+  // Letter aliases are reliable in browsers that reserve function keys.
+  scene.input.keyboard?.on('keydown-K', defeatWave);
+  scene.input.keyboard?.on('keydown-C', fillCharge);
+  scene.input.keyboard?.on('keydown-N', completeRun);
+  scene.input.keyboard?.on('keydown-B', jumpToBoss);
 
   function check(name: string, cond: boolean, detail?: string) {
     log.push({ time: Date.now() - startTime, name, ok: cond, detail });
@@ -131,6 +155,10 @@ export function attachScenarioTests(scene: Phaser.Scene): void {
     scene.input.keyboard?.off('keydown-F8', defeatWave);
     scene.input.keyboard?.off('keydown-F7', fillCharge);
     scene.input.keyboard?.off('keydown-F6', completeRun);
+    scene.input.keyboard?.off('keydown-K', defeatWave);
+    scene.input.keyboard?.off('keydown-C', fillCharge);
+    scene.input.keyboard?.off('keydown-N', completeRun);
+    scene.input.keyboard?.off('keydown-B', jumpToBoss);
     printLog();
   });
 
