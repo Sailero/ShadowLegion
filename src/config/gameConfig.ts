@@ -118,8 +118,9 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
   ninja: {
     key: 'ninja', name: '忍者',
     color: 0x14b8a6, colorDark: 0x0d9488,
-    hp: 30, speed: 160, damage: 18, bodyRadius: 9,
-    xp: 10, score: 18,
+    hp: 35, speed: 200, damage: 22, bodyRadius: 9,
+    bulletDamage: 14, bulletSpeed: 280,
+    xp: 12, score: 22,
   },
   summoner: {
     key: 'summoner', name: '召唤师',
@@ -134,14 +135,15 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
 export const ELITE = { hp: 2.5, speed: 1.3, damage: 1.6, xp: 3, score: 3 };
 
 export const WAVE_CFG = {
-  perLevel: 10,
-  levels: 3,
+  // Phase 1 is deliberately one complete, replayable short run.
+  perLevel: 8,
+  levels: 1,
   spawnMargin: 120,
-  delayMs: 2000,
-  spawnInterval: 120,
-  bossHp: 6,
+  delayMs: 1200,
+  spawnInterval: 150,
+  bossHp: 4.5,
   bossSize: 1.7,
-  bossDmg: 2.0,
+  bossDmg: 1.65,
   bossSpeed: 0.85,
 };
 

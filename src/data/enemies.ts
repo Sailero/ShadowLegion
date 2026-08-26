@@ -9,54 +9,28 @@ export interface WaveDef {
   spawns: WaveSpawn[];
   isBoss?: boolean;
   bossType?: string;
+  name: string;
+  hint: string;
 }
 
 const S = (type: string, min: number, max: number, elite = false): WaveSpawn =>
   ({ type, min, max, elite });
 
-const W = (...spawns: WaveSpawn[]): WaveDef => ({ spawns });
+const W = (name: string, hint: string, ...spawns: WaveSpawn[]): WaveDef => ({ spawns, name, hint });
 
-const Boss = (bossType: string, ...spawns: WaveSpawn[]): WaveDef =>
-  ({ spawns, isBoss: true, bossType });
+const Boss = (name: string, hint: string, bossType: string, ...spawns: WaveSpawn[]): WaveDef =>
+  ({ spawns, isBoss: true, bossType, name, hint });
 
 export const LEVEL_WAVES: WaveDef[][] = [
-  // Level 1 — gentle introduction
+  // Phase 1: a complete 6–10 minute run with a readable difficulty curve.
   [
-    W(S('slime', 3, 4)),
-    W(S('slime', 4, 5), S('bat', 1, 2)),
-    W(S('slime', 4, 6), S('bat', 2, 3)),
-    W(S('slime', 5, 6), S('bat', 2, 4), S('archer', 1, 1)),
-    W(S('slime', 5, 7), S('bat', 3, 4), S('archer', 1, 2)),
-    W(S('slime', 5, 7), S('bat', 3, 5), S('archer', 2, 3)),
-    W(S('slime', 6, 8), S('bat', 4, 5), S('archer', 2, 3), S('tank', 1, 1)),
-    W(S('slime', 6, 8), S('bat', 4, 6), S('archer', 2, 3), S('tank', 1, 2)),
-    W(S('slime', 7, 9), S('bat', 4, 6), S('archer', 3, 4), S('tank', 1, 2)),
-    Boss('tank', S('slime', 4, 4), S('bat', 3, 3), S('archer', 2, 2)),
-  ],
-  // Level 2 — harder with elites
-  [
-    W(S('slime', 6, 8), S('bat', 3, 5), S('archer', 2, 3)),
-    W(S('slime', 7, 9), S('bat', 4, 6), S('archer', 2, 4), S('tank', 1, 1)),
-    W(S('slime', 7, 9), S('bat', 4, 6), S('archer', 3, 4), S('tank', 1, 2)),
-    W(S('slime', 8, 10), S('bat', 5, 7), S('archer', 3, 5), S('tank', 2, 2)),
-    W(S('slime', 8, 10), S('bat', 5, 7), S('archer', 3, 5), S('tank', 2, 3), S('bat', 1, 1, true)),
-    W(S('slime', 9, 11), S('bat', 6, 8), S('archer', 4, 5), S('tank', 2, 3), S('slime', 1, 2, true), S('ninja', 1, 2)),
-    W(S('slime', 9, 12), S('bat', 6, 8), S('archer', 4, 6), S('tank', 2, 3), S('archer', 1, 1, true), S('ninja', 1, 3)),
-    W(S('slime', 10, 12), S('bat', 7, 9), S('archer', 4, 6), S('tank', 3, 4), S('tank', 1, 1, true), S('ninja', 1, 3)),
-    W(S('slime', 10, 13), S('bat', 7, 9), S('archer', 5, 7), S('tank', 3, 4), S('bat', 1, 2, true), S('ninja', 1, 3)),
-    Boss('archer', S('slime', 6, 6), S('bat', 4, 4), S('archer', 3, 3), S('tank', 2, 2), S('slime', 1, 1, true)),
-  ],
-  // Level 3 — full challenge
-  [
-    W(S('slime', 8, 10), S('bat', 5, 7), S('archer', 3, 5), S('tank', 2, 3)),
-    W(S('slime', 9, 11), S('bat', 6, 8), S('archer', 4, 5), S('tank', 2, 3), S('slime', 1, 2, true)),
-    W(S('slime', 10, 12), S('bat', 7, 9), S('archer', 4, 6), S('tank', 3, 4), S('bat', 1, 2, true), S('ninja', 1, 2)),
-    W(S('slime', 10, 13), S('bat', 7, 9), S('archer', 5, 6), S('tank', 3, 4), S('archer', 1, 2, true), S('ninja', 1, 2)),
-    W(S('slime', 11, 14), S('bat', 8, 10), S('archer', 5, 7), S('tank', 3, 4), S('tank', 1, 2, true), S('ninja', 1, 2), S('ninja', 2, 3)),
-    W(S('slime', 12, 14), S('bat', 8, 10), S('archer', 5, 7), S('tank', 4, 5), S('slime', 2, 3, true), S('ninja', 2, 3)),
-    W(S('slime', 12, 15), S('bat', 9, 11), S('archer', 6, 8), S('tank', 4, 5), S('bat', 2, 3, true), S('ninja', 2, 3), S('summoner', 1, 1)),
-    W(S('slime', 13, 16), S('bat', 9, 12), S('archer', 6, 8), S('tank', 4, 5), S('archer', 2, 3, true), S('ninja', 2, 3), S('summoner', 1, 1)),
-    W(S('slime', 14, 16), S('bat', 10, 12), S('archer', 7, 9), S('tank', 5, 6), S('tank', 2, 3, true), S('ninja', 2, 3), S('summoner', 1, 2)),
-    Boss('tank', S('slime', 8, 8), S('bat', 6, 6), S('archer', 5, 5), S('tank', 3, 3), S('slime', 2, 2, true), S('archer', 1, 1, true), S('ninja', 2, 2), S('summoner', 1, 1)),
+    W('接触', '熟悉移动与射击', S('slime', 4, 4)),
+    W('侧翼', '高速敌人会绕向你的侧面', S('slime', 4, 5), S('bat', 2, 3)),
+    W('火力线', '优先处理橙色远程单位', S('slime', 3, 4), S('bat', 3, 4), S('archer', 2, 2)),
+    W('破阵', '重甲逼近时保留闪避', S('slime', 4, 5), S('archer', 2, 3), S('tank', 1, 1, true)),
+    W('猎杀者', '青色忍者会突进并闪避子弹', S('bat', 4, 5), S('tank', 1, 2), S('ninja', 2, 2)),
+    W('交叉火力', '移动中寻找弹幕缺口', S('slime', 5, 6), S('bat', 4, 5), S('archer', 3, 3), S('ninja', 1, 2)),
+    W('最终防线', '精英与混编小队同时入场', S('slime', 5, 6), S('bat', 4, 5), S('archer', 3, 4), S('tank', 2, 2), S('ninja', 2, 2), S('bat', 1, 1, true)),
+    Boss('军团核心', '观察红色预警线，闪避首领冲锋', 'summoner', S('slime', 4, 4), S('bat', 3, 3), S('archer', 2, 2), S('tank', 1, 1)),
   ],
 ];

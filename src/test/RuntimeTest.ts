@@ -3,7 +3,7 @@ import {
   GAME_WIDTH, GAME_HEIGHT, ARENA_WIDTH, ARENA_HEIGHT,
   HERO_CFG, ENEMY_TYPES, WAVE_CFG,
 } from '../config/gameConfig';
-import { SKILLS, getSkill } from '../data/skills';
+import { SKILLS, getSkill, getSkillStatsForLevel } from '../data/skills';
 import { WAVE_UPGRADES, LEVEL_UPGRADES } from '../data/upgrades';
 import { LEVEL_WAVES } from '../data/enemies';
 import { Projectile } from '../entities/Projectile';
@@ -49,7 +49,7 @@ export function runDataTests(): Result[] {
 
   t('Skills valid', () => {
     for (const s of SKILLS) {
-      assert(s.levels.length === s.maxLevel, `${s.id} levels`);
+      assert(s.levels.length > 0 && s.maxLevel >= s.levels.length, `${s.id} levels`);
       assert(s.chargeCost > 0, `${s.id} cost`);
       for (let i = 0; i < s.levels.length; i++) {
         assert(s.levels[i].damage >= 0 && s.levels[i].radius >= 0, `${s.id} L${i + 1}`);
@@ -59,11 +59,8 @@ export function runDataTests(): Result[] {
 
   t('Skill level bounds (level 0 safety)', () => {
     for (const s of SKILLS) {
-      const lvl0 = Math.max(0, Math.min(0, s.maxLevel) - 1);
-      assert(lvl0 >= 0, `${s.id} level 0 index should clamp to 0, got ${lvl0}`);
-      assert(s.levels[lvl0] !== undefined, `${s.id} levels[${lvl0}] undefined`);
-      const lvlOver = Math.max(0, Math.min(s.maxLevel + 1, s.maxLevel) - 1);
-      assert(s.levels[lvlOver] !== undefined, `${s.id} levels[${lvlOver}] undefined`);
+      assert(getSkillStatsForLevel(s.id, 0) !== null, `${s.id} level 0 should resolve`);
+      assert(getSkillStatsForLevel(s.id, s.maxLevel + 10) !== null, `${s.id} overflow should clamp`);
     }
   });
 
@@ -85,14 +82,13 @@ export function runDataTests(): Result[] {
     }
   });
 
-  t('New upgrades exist', () => {
+  t('Three build protocols exist', () => {
     const allIds = [...WAVE_UPGRADES, ...LEVEL_UPGRADES].map(u => u.id);
-    const newIds = ['lifesteal','crit','explosive','ricochet','frost_shot','berserk',
-                    'thorns','second_wind','dodge','afterimage','dash_reset',
-                    'xp_magnet_burst','combo_dmg','overcharge','perm_crit','perm_regen'];
-    for (const id of newIds) {
+    const coreIds = ['core_nova', 'core_storm', 'core_rift'];
+    for (const id of coreIds) {
       assert(allIds.includes(id), `upgrade ${id} missing`);
     }
+    assert(WAVE_UPGRADES.filter(u => u.isCore).length === 3, 'must have exactly 3 cores');
   });
 
   t('Upgrade categories valid', () => {
@@ -112,13 +108,14 @@ export function runDataTests(): Result[] {
     }
   });
 
-  t('Level 3 has new enemy types', () => {
-    const l3Types = new Set<string>();
-    for (const w of LEVEL_WAVES[2]) {
-      for (const s of w.spawns) l3Types.add(s.type);
+  t('Phase 1 run uses advanced enemies', () => {
+    const phaseTypes = new Set<string>();
+    for (const w of LEVEL_WAVES[0]) {
+      for (const s of w.spawns) phaseTypes.add(s.type);
+      if (w.bossType) phaseTypes.add(w.bossType);
     }
-    assert(l3Types.has('ninja'), 'Level 3 missing ninja');
-    assert(l3Types.has('summoner'), 'Level 3 missing summoner');
+    assert(phaseTypes.has('ninja'), 'Phase 1 missing ninja');
+    assert(phaseTypes.has('summoner'), 'Phase 1 missing summoner boss');
   });
 
   t('Balance: kills to charge', () => {
@@ -155,7 +152,7 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
 
   t('Physics world running', () => {
     const w = scene.physics.world;
-    assert(!w.isPaused, 'physics paused');
+    assert(w.isPaused === Boolean(s.tutorial?.isActive), `physics/tutorial mismatch: paused=${w.isPaused}`);
     assert(w.timeScale <= 1, `timeScale=${w.timeScale}, expected <= 1`);
   });
 
@@ -206,16 +203,22 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
     assert(s.physics.world.timeScale === 1, `timeScale = ${s.physics.world.timeScale}`);
   });
 
-  t('Hero has new upgrade properties', () => {
+  t('Hero has stackable upgrade properties', () => {
     assert(typeof s.hero.critChance === 'number', 'critChance missing');
-    assert(typeof s.hero.lifesteal === 'boolean', 'lifesteal missing');
-    assert(typeof s.hero.explosiveShot === 'boolean', 'explosiveShot missing');
-    assert(typeof s.hero.frostShot === 'boolean', 'frostShot missing');
-    assert(typeof s.hero.berserk === 'boolean', 'berserk missing');
+    assert(typeof s.hero.lifesteal === 'number', 'lifesteal should be number');
+    assert(typeof s.hero.explosiveShot === 'number', 'explosiveShot should be number');
+    assert(typeof s.hero.frostShot === 'number', 'frostShot should be number');
+    assert(typeof s.hero.berserk === 'number', 'berserk should be number');
     assert(typeof s.hero.thorns === 'number', 'thorns missing');
     assert(typeof s.hero.dodgeChance === 'number', 'dodgeChance missing');
-    assert(typeof s.hero.overcharge === 'boolean', 'overcharge missing');
+    assert(typeof s.hero.overcharge === 'number', 'overcharge should be number');
     assert(typeof s.hero.regenPerSec === 'number', 'regenPerSec missing');
+    assert(typeof s.hero.shieldStacks === 'number', 'shieldStacks missing');
+    assert(typeof s.hero.ricochetShot === 'number', 'ricochetShot should be number');
+    assert(typeof s.hero.comboDmg === 'number', 'comboDmg should be number');
+    assert(typeof s.hero.afterimage === 'number', 'afterimage should be number');
+    assert(typeof s.hero.dashDamageMult === 'number', 'dashDamageMult missing');
+    assert(typeof s.hero.pierceRetain === 'number', 'pierceRetain missing');
   });
 
   // ── HP Module Tests ──
@@ -266,7 +269,7 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
   t('[Energy] addCharge caps at chargeMax', () => {
     s.hero.charge = 0;
     s.hero.addCharge(9999);
-    const max = s.hero.overcharge ? Math.round(s.hero.chargeMax * 1.5) : s.hero.chargeMax;
+    const max = s.hero.overcharge > 0 ? Math.round(s.hero.chargeMax * (1 + s.hero.overcharge * 0.2)) : s.hero.chargeMax;
     assert(s.hero.charge === max, `expected ${max}, got ${s.hero.charge}`);
     s.hero.charge = 0;
   });

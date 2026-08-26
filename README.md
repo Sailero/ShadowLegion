@@ -1,75 +1,52 @@
-# Shadow Legion - 影之军团
+# Shadow Legion / 影之军团
 
-> 俯视角动作生存游戏，融合行为克隆驱动的AI进化系统
+一款正在验证中的俯视角动作生存游戏。当前版本先保证经典战斗、局内构筑和 Boss 战能够独立成立；下一阶段再验证“敌军会识别玩家打法，并以可读的协同战术回应”是否真的比随机敌人更好玩。
 
-## 概述
+## 当前可玩版本
 
-Shadow Legion 是一款基于 Phaser 3 的 2D 俯视角动作生存游戏。玩家操控英雄在竞技场中对抗逐波袭来的敌人，通过击杀获取经验、解锁技能和升级来不断变强。
+- 一局 8 波：从基础接触、侧翼与远程压制，逐步进入混编战，最终摧毁“军团核心”。
+- 3 条明确构筑：爆裂、弹幕、时隙；首波后选择协议，后续升级以本流派为主并保留通用生存选项。
+- 6 种职责敌人：追击、侧翼、远程、重甲、猎杀、召唤；包含精英和独立 Boss 血条。
+- 完整流程：单屏教程、波次提示、危险预警、暂停、死亡/胜利结算、排行榜、快速重开和无尽演练。
+- 手感反馈：闪避无敌帧、拖影、击退、暴击/伤害数字、粒子、屏幕震动、程序化音效和首领冲锋预警线。
 
-**核心创新**：Phase 2 将引入"影子军团"系统——系统记录玩家行为并生成模仿玩家风格的 AI 分身，实现"与无数个自己并肩作战或对战"的独特体验。
+这是第一阶段的“可盲测候选版”，不是已经通过市场验证的成品。尚需 10–20 名非开发者完成平衡、理解度和重开意愿测试。
 
-## 快速开始
+## 运行
 
 ```bash
 npm install
-npm run dev      # 开发服务器
-npm run build    # 生产构建
+npm run dev
+npm run build
 ```
 
-## 游戏操作
+## PC 操作
 
 | 操作 | 按键 |
-|------|------|
+|---|---|
 | 移动 | WASD |
-| 瞄准/射击 | 鼠标（自动射击） |
-| 闪避翻滚 | Shift |
-| 释放技能 | Space |
-| 切换技能 | Q |
+| 瞄准并持续射击 | 按住鼠标左键 |
+| 闪避 | Shift |
+| 主动技能 | Space（能量充满后） |
+| 切换已解锁技能 | Q |
+| 选择升级 | 1 / 2 / 3 或鼠标 |
+| 暂停 | Esc |
 
-## 当前内容 (Phase 1)
+## 技术与验证
 
-- **6 种敌人**：史莱姆、蝙蝠、弓箭手、重甲、忍者、召唤师
-- **精英怪系统**：闪避、突进、智能避弹等高级 AI
-- **Boss 战**：冲锋、环形弹幕、散射等多阶段攻击
-- **3 种主动技能**：能量爆发、弹幕、时间裂缝（可升级）
-- **20+ 升级选项**：暴击、吸血、爆炸弹、弹射、冰冻等
-- **3 关 30 波 + 无尽模式**
-- **互动新手教程**
-- **程序化音效系统**（Web Audio API）
-
-## 技术栈
-
-| 技术 | 说明 |
-|------|------|
-| Phaser 3 | HTML5 2D 游戏框架 |
-| TypeScript | 类型安全开发 |
-| Vite | 快速构建工具 |
-
-## 项目结构
-
-```
-Game/
-├── docs/                   # 文档
-│   ├── research/           # 市场调研 & AI研究
-│   ├── design/             # 设计文档
-│   └── changelog.md        # 变更日志
-├── src/
-│   ├── config/             # 游戏配置 (gameConfig.ts)
-│   ├── data/               # 数据定义 (敌人/技能/升级)
-│   ├── entities/           # 游戏实体 (Hero/Enemy/Projectile)
-│   ├── scenes/             # Phaser 场景
-│   ├── systems/            # 系统 (波次/升级/音效/教程)
-│   ├── utils/              # 工具 (SpriteFactory)
-│   └── test/               # 运行时测试
-└── package.json
-```
+- Phaser 3 + TypeScript + Vite
+- `npm run build` 同时执行 TypeScript 检查和生产构建
+- 开发环境运行时测试：数据 16/16、场景 27/27
+- 开发环境调试键：F8 清除本波敌人、F7 充满技能、F6 直接验收胜利流程
 
 ## 文档
 
-- [Phase 2 自博弈设计](docs/design/phase2-self-play-plan.md)
-- [AI 策略研究](docs/research/drivatar-and-player-strategy-research.md)
-- [市场对比分析](docs/research/market-comparison-v0.3.md)
-- [变更日志](docs/changelog.md)
+从 [docs/README.md](docs/README.md) 开始。当前只维护四份产品事实文档：
+
+- [第一阶段可玩切片](docs/design/phase1-playable-slice.md)
+- [五阶段产品路线图](docs/design/development-roadmap-v2.md)
+- [AI 战术导演方向](docs/design/core-ai-gameplay-direction.md)
+- [市场与智能对手调研](docs/research/market-and-ai-review-2026.md)
 
 ## 许可
 

@@ -1,3 +1,5 @@
+import type { BuildPath } from '../data/upgrades';
+
 export interface ScoreEntry {
   score: number;
   kills: number;
@@ -5,6 +7,8 @@ export interface ScoreEntry {
   wave: number;
   date: string;
   endless: boolean;
+  durationSec?: number;
+  build?: BuildPath | null;
 }
 
 export class ScoreManager {
@@ -70,7 +74,9 @@ export class ScoreManager {
       typeof entry.level === 'number' &&
       typeof entry.wave === 'number' &&
       typeof entry.date === 'string' &&
-      typeof entry.endless === 'boolean'
+      typeof entry.endless === 'boolean' &&
+      (entry.durationSec === undefined || typeof entry.durationSec === 'number') &&
+      (entry.build === undefined || entry.build === null || ['nova', 'storm', 'rift'].includes(entry.build as string))
     );
   }
 }

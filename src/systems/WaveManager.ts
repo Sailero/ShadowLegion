@@ -21,18 +21,21 @@ export class WaveManager {
 
   constructor(scene: Phaser.Scene, level: number, enemies: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
-    this.level = Math.min(level, WAVE_CFG.levels) - 1;
-    this.waves = LEVEL_WAVES[this.level] || LEVEL_WAVES[0];
+    this.level = Math.max(1, level);
+    const levelIndex = Math.min(this.level, WAVE_CFG.levels) - 1;
+    this.waves = LEVEL_WAVES[levelIndex] || LEVEL_WAVES[0];
     this.enemies = enemies;
     if (level > WAVE_CFG.levels) {
       this.endlessScale = 1 + (level - WAVE_CFG.levels) * 0.25;
     }
   }
 
+  get totalWaves(): number { return this.waves.length; }
+
   startNextWave(): void {
     if (this.wave >= this.waves.length) {
       this.allWavesDone = true;
-      this.scene.events.emit('levelComplete', { level: this.level + 1 });
+      this.scene.events.emit('levelComplete', { level: this.level });
       return;
     }
 
@@ -56,7 +59,13 @@ export class WaveManager {
     this.aliveCount = this.pendingSpawns.length;
     this.spawnTimer = 0;
 
-    this.scene.events.emit('waveStart', { wave: this.wave, total: this.waves.length, isBoss: def.isBoss });
+    this.scene.events.emit('waveStart', {
+      wave: this.wave,
+      total: this.waves.length,
+      isBoss: def.isBoss,
+      name: def.name,
+      hint: def.hint,
+    });
   }
 
   update(time: number, delta: number): void {

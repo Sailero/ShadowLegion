@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
 import { SoundManager } from '../systems/SoundManager';
 import { ScoreManager } from '../systems/ScoreManager';
+import { BUILD_INFO } from '../data/upgrades';
+import type { BuildPath } from '../data/upgrades';
 
 export class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOverScene'); }
@@ -9,12 +11,17 @@ export class GameOverScene extends Phaser.Scene {
   create(data: {
     score?: number; kills?: number; wave?: number;
     level?: number; victory?: boolean; endless?: boolean;
+    durationSec?: number; build?: BuildPath | null; newHighScore?: boolean;
   }) {
-    const { score = 0, kills = 0, wave = 0, level = 1, victory = false, endless = false } = data;
+    const {
+      score = 0, kills = 0, wave = 0, level = 1,
+      victory = false, endless = false, durationSec = 0,
+      build = null, newHighScore = false,
+    } = data;
     const snd = SoundManager.get();
     this.cameras.main.setBackgroundColor(0x080c14);
 
-    const isNew = ScoreManager.isNewHighScore(score);
+    const isNew = newHighScore;
 
     const glow = this.add.graphics();
     for (let r = 180; r > 0; r -= 25) {
@@ -50,12 +57,13 @@ export class GameOverScene extends Phaser.Scene {
     const stats = [
       { label: '分数', value: ScoreManager.formatScore(score), color: '#fbbf24' },
       { label: '击杀', value: `${kills}`, color: '#4ade80' },
-      { label: '进度', value: endless ? `∞-${level}` : `${level}-${wave}`, color: '#60a5fa' },
+      { label: '用时', value: `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}`, color: '#60a5fa' },
+      { label: '构筑', value: build ? BUILD_INFO[build].name : '未定', color: build ? `#${BUILD_INFO[build].color.toString(16).padStart(6, '0')}` : '#94a3b8' },
     ];
 
     const statsY = GAME_HEIGHT * 0.28;
-    const statsGap = 120;
-    const startX = GAME_WIDTH / 2 - statsGap;
+    const statsGap = 130;
+    const startX = GAME_WIDTH / 2 - statsGap * 1.5;
 
     stats.forEach((s, i) => {
       const sx = startX + i * statsGap;
@@ -91,7 +99,7 @@ export class GameOverScene extends Phaser.Scene {
           fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold',
           color: isThisRun ? '#fbbf24' : '#94a3b8',
         });
-        this.add.text(GAME_WIDTH / 2 + 50, ey, `L${entry.level}`, {
+        this.add.text(GAME_WIDTH / 2 + 35, ey, entry.endless ? `∞${entry.level}` : `${entry.wave}/8`, {
           fontSize: '12px', fontFamily: 'monospace',
           color: '#475569',
         });

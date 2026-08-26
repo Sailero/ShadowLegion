@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { HERO_CFG, ARENA_WIDTH, ARENA_HEIGHT } from '../config/gameConfig';
-import { SKILLS, getSkill } from '../data/skills';
+import { getSkill, getSkillStatsForLevel } from '../data/skills';
 
 export interface FireEvent {
   x: number;
@@ -39,7 +39,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   private dashEnd = 0;
   private dashVx = 0;
   private dashVy = 0;
-  dashDamage = 0;
+  dashDamage = 0; // legacy; use dashDamageMult for scaling
 
   /* ── Skill system ── */
   charge = 0;
@@ -57,30 +57,33 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   /* ── TimeRift state ── */
   timeRiftEndTime = 0;
 
-  hasShield = false;
+  shieldStacks = 0;
   critChance = 0;
-  lifesteal = false;
-  explosiveShot = false;
-  ricochetShot = false;
-  frostShot = false;
-  berserk = false;
+  lifesteal = 0;
+  explosiveShot = 0;
+  ricochetShot = 0;
+  frostShot = 0;
+  berserk = 0;
   thorns = 0;
-  secondWind = false;
+  secondWind = 0;
   dodgeChance = 0;
-  afterimage = false;
-  dashResetOnKill = false;
-  xpMagnetOnSkill = false;
-  comboDmg = false;
-  overcharge = false;
+  afterimage = 0;
+  dashResetOnKill = 0;
+  xpMagnetOnSkill = 0;
+  comboDmg = 0;
+  overcharge = 0;
   regenPerSec = 0;
+  pierceRetain = 0.6;
+  dashDamageMult = 0;
   private lastDamageTaken = 0;
   private regenTimer = 0;
+  private swTimer = 0;
   speedMult = 1;
   damageMult = 1;
   atkSpdMult = 1;
   magnetRadius: number;
 
-  private invUntil = 0;
+  invUntil = 0;
   keys!: Record<string, Phaser.Input.Keyboard.Key>;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -191,28 +194,30 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    // Second wind: regen after 3s out of combat
-    if (this.secondWind && time - this.lastDamageTaken > 3000 && this.hp < this.maxHp) {
-      this.regenTimer += dt;
-      if (this.regenTimer >= 0.5) {
-        this.regenTimer -= 0.5;
-        this.hp = Math.min(this.maxHp, Math.round(this.hp + this.maxHp * 0.01));
-      }
-    } else if (this.regenPerSec > 0 && this.hp < this.maxHp) {
+    if (this.regenPerSec > 0 && this.hp < this.maxHp) {
       this.regenTimer += dt;
       if (this.regenTimer >= 1) {
         this.regenTimer -= 1;
         this.hp = Math.min(this.maxHp, Math.round(this.hp + this.regenPerSec));
       }
     }
+    if (this.secondWind > 0 && time - this.lastDamageTaken > 3000 && this.hp < this.maxHp) {
+      this.swTimer += dt;
+      if (this.swTimer >= 0.5) {
+        this.swTimer -= 0.5;
+        this.hp = Math.min(this.maxHp, Math.round(this.hp + this.maxHp * 0.01 * this.secondWind));
+      }
+    } else {
+      this.swTimer = 0;
+    }
 
     // Barrage auto-fire
     if (this.isBarrageActive && time > this.lastBarrageFire + this.barrageInterval) {
       this.lastBarrageFire = time;
       const lvl = Math.max(1, this.getSkillLevel('barrage'));
-      const dirs = lvl >= 3 ? 16 : lvl >= 2 ? 12 : 8;
-      const skillDef = getSkill('barrage')!;
-      const dmg = skillDef.levels[lvl - 1].damage * this.damageMult;
+      const dirs = 6 + lvl * 2;
+      const stats = getSkillStatsForLevel('barrage', lvl);
+      const dmg = (stats?.damage ?? 5) * this.damageMult;
       for (let i = 0; i < dirs; i++) {
         const a = (Math.PI * 2 / dirs) * i + time * 0.001;
         this.scene.events.emit('heroFire', {
@@ -292,8 +297,8 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   takeDamage(amount: number): boolean {
     if (this.isInvincible) return false;
 
-    if (this.hasShield) {
-      this.hasShield = false;
+    if (this.shieldStacks > 0) {
+      this.shieldStacks--;
       this.scene.events.emit('shieldBreak', { x: this.x, y: this.y });
       return false;
     }
@@ -317,7 +322,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   }
 
   addCharge(amount: number): void {
-    const max = this.overcharge ? Math.round(this.chargeMax * 1.5) : this.chargeMax;
+    const max = this.overcharge > 0 ? Math.round(this.chargeMax * (1 + this.overcharge * 0.2)) : this.chargeMax;
     this.charge = Math.min(max, this.charge + amount);
   }
 

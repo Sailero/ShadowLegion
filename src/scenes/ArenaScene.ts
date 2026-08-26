@@ -3,7 +3,7 @@ import {
   GAME_WIDTH, GAME_HEIGHT, ARENA_WIDTH, ARENA_HEIGHT,
   COLORS, HERO_CFG, ENEMY_TYPES,
 } from '../config/gameConfig';
-import { CATEGORY_COLORS } from '../data/upgrades';
+import { BUILD_INFO, CATEGORY_COLORS } from '../data/upgrades';
 import { Hero, FireEvent } from '../entities/Hero';
 import { Enemy } from '../entities/Enemy';
 import { Projectile, BulletOpts } from '../entities/Projectile';
@@ -12,7 +12,7 @@ import { UpgradeManager } from '../systems/UpgradeManager';
 import { SoundManager } from '../systems/SoundManager';
 import { TutorialManager } from '../systems/TutorialManager';
 import { ScoreManager } from '../systems/ScoreManager';
-import { getSkill } from '../data/skills';
+import { getSkill, getSkillStatsForLevel } from '../data/skills';
 import type { UpgradeDef } from '../data/upgrades';
 
 const MAX_PARTICLES = 30;
@@ -31,22 +31,34 @@ export class ArenaScene extends Phaser.Scene {
   private hpGfx!: Phaser.GameObjects.Graphics;
   private barGfx!: Phaser.GameObjects.Graphics;
   private enemyHpGfx!: Phaser.GameObjects.Graphics;
+  private shieldGfx!: Phaser.GameObjects.Graphics;
   private minimapGfx!: Phaser.GameObjects.Graphics;
   private offscreenGfx!: Phaser.GameObjects.Graphics;
   private hpText!: Phaser.GameObjects.Text;
+  private shieldCountText?: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
   private infoText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private waveProgressGfx!: Phaser.GameObjects.Graphics;
+  private bossHudGfx!: Phaser.GameObjects.Graphics;
+  private bossNameText!: Phaser.GameObjects.Text;
+  private runTimerText!: Phaser.GameObjects.Text;
+  private crosshairGfx!: Phaser.GameObjects.Graphics;
 
   /* ── State ── */
   private score = 0;
   private kills = 0;
   private currentLevel = 1;
   private upgrading = false;
+  private paused = false;
   private dead = false;
   private upgradeUI: Phaser.GameObjects.GameObject[] = [];
+  private pauseUI: Phaser.GameObjects.GameObject[] = [];
+  private upgradeHotkeys: Array<{ event: string; handler: () => void }> = [];
+  private pauseMenuHandler?: () => void;
+  private activeRunMs = 0;
+  private currentWaveName = '';
 
   /* ── Hitlag ── */
   private hitlagUntil = 0;
@@ -83,6 +95,7 @@ export class ArenaScene extends Phaser.Scene {
     this.score = data.score || 0;
     this.kills = 0;
     this.upgrading = false;
+    this.paused = false;
     this.dead = false;
     this.comboCount = 0;
     this.hitlagUntil = 0;
@@ -90,6 +103,8 @@ export class ArenaScene extends Phaser.Scene {
     this.waveEnemyTotal = 0;
     this.riftCenter = { x: 0, y: 0 };
     this.riftRadius = 0;
+    this.activeRunMs = 0;
+    this.currentWaveName = '';
     this.endless = data.endless || false;
     if (this.currentLevel === 1 && !this.endless) {
       this.registry.remove('appliedUpgrades');
@@ -117,6 +132,12 @@ export class ArenaScene extends Phaser.Scene {
     this.setupCamera();
     this.createUI();
     this.bindEvents();
+    this.input.keyboard?.on('keydown-ESC', this.togglePause, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.off('keydown-ESC', this.togglePause, this);
+      this.clearUpgradeHotkeys();
+      this.clearPauseUI();
+    });
 
     const saved = this.registry.get('appliedUpgrades') as string[] | undefined;
     if (saved) {
@@ -132,7 +153,7 @@ export class ArenaScene extends Phaser.Scene {
 
     if (this.input.mouse) this.input.mouse.disableContextMenu();
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-      if (ptr.rightButtonDown()) this.hero.dash(this.time.now);
+      if (!this.paused && ptr.rightButtonDown()) this.hero.dash(this.time.now);
     });
   }
 
@@ -181,18 +202,33 @@ export class ArenaScene extends Phaser.Scene {
     // Corner bracket decorations
     const bLen = 30, bOff = 10;
     g.lineStyle(2, 0x3b82f6, 0.4);
-    // Top-left
     g.lineBetween(bOff, bOff, bOff + bLen, bOff);
     g.lineBetween(bOff, bOff, bOff, bOff + bLen);
-    // Top-right
     g.lineBetween(ARENA_WIDTH - bOff, bOff, ARENA_WIDTH - bOff - bLen, bOff);
     g.lineBetween(ARENA_WIDTH - bOff, bOff, ARENA_WIDTH - bOff, bOff + bLen);
-    // Bottom-left
     g.lineBetween(bOff, ARENA_HEIGHT - bOff, bOff + bLen, ARENA_HEIGHT - bOff);
     g.lineBetween(bOff, ARENA_HEIGHT - bOff, bOff, ARENA_HEIGHT - bOff - bLen);
-    // Bottom-right
     g.lineBetween(ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff, ARENA_WIDTH - bOff - bLen, ARENA_HEIGHT - bOff);
     g.lineBetween(ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff, ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff - bLen);
+
+    // Subtle ground details — hex patterns near center
+    g.lineStyle(1, 0x0e1f3a, 0.12);
+    const cx0 = ARENA_WIDTH / 2, cy0 = ARENA_HEIGHT / 2;
+    for (let ring = 1; ring <= 3; ring++) {
+      const r = ring * 120;
+      for (let i = 0; i < 6; i++) {
+        const a1 = (Math.PI / 3) * i - Math.PI / 6;
+        const a2 = (Math.PI / 3) * (i + 1) - Math.PI / 6;
+        g.lineBetween(cx0 + Math.cos(a1) * r, cy0 + Math.sin(a1) * r,
+                      cx0 + Math.cos(a2) * r, cy0 + Math.sin(a2) * r);
+      }
+    }
+
+    // Center cross marker
+    g.lineStyle(1, 0x1e3a5f, 0.2);
+    g.lineBetween(cx0 - 15, cy0, cx0 + 15, cy0);
+    g.lineBetween(cx0, cy0 - 15, cx0, cy0 + 15);
+    g.strokeCircle(cx0, cy0, 8);
 
     g.setDepth(-1);
   }
@@ -233,7 +269,8 @@ export class ArenaScene extends Phaser.Scene {
   private setupCollisions(): void {
     this.physics.add.overlap(this.playerBullets, this.enemies,
       this.onBulletHitEnemy as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
-    this.physics.add.overlap(this.enemyBullets, this.hero,
+    // Hero (sprite) must be object1, group must be object2 — Phaser calls callback(sprite, groupChild)
+    this.physics.add.overlap(this.hero, this.enemyBullets,
       this.onEnemyBulletHitHero as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
     this.physics.add.overlap(this.hero, this.enemies,
       this.onHeroTouchEnemy as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
@@ -257,14 +294,24 @@ export class ArenaScene extends Phaser.Scene {
 
       let dmg = bullet.damage;
 
-      // Berserk: +80% damage when low HP
-      if (this.hero.berserk && this.hero.hp < this.hero.maxHp * 0.3) {
-        dmg = Math.round(dmg * 1.8);
+      // Pierce damage retention: scale based on how many enemies already pierced
+      if (bullet.piercing && bullet.hitSet.size > 1) {
+        dmg = Math.round(dmg * Math.pow(this.hero.pierceRetain, bullet.hitSet.size - 1));
       }
-      // Combo damage: +30% when combo >= 10
-      if (this.hero.comboDmg && this.comboCount >= 10) {
-        dmg = Math.round(dmg * 1.3);
+
+      // Berserk: +50% per stack when low HP
+      if (this.hero.berserk > 0 && this.hero.hp < this.hero.maxHp * 0.3) {
+        dmg = Math.round(dmg * (1 + 0.5 * this.hero.berserk));
       }
+
+      // Combo: threshold = max(3, 10 - stacks*2), bonus = 1 + stacks*0.10
+      if (this.hero.comboDmg > 0) {
+        const threshold = Math.max(3, 10 - this.hero.comboDmg * 2);
+        if (this.comboCount >= threshold) {
+          dmg = Math.round(dmg * (1 + 0.10 * this.hero.comboDmg));
+        }
+      }
+
       // Critical hit
       if (this.hero.critChance > 0 && Math.random() < this.hero.critChance) {
         dmg *= 2;
@@ -273,28 +320,34 @@ export class ArenaScene extends Phaser.Scene {
         this.showDmgNum(enemy.x, enemy.y - 20, dmg);
       }
 
-      enemy.knockback(bullet.x, bullet.y, 60);
+      enemy.knockback(bullet.x, bullet.y, 80);
       const killed = enemy.takeDamage(dmg);
       this.hitParticles(enemy.x, enemy.y, enemy.cfg.color);
-
-      // Frost shot: slow enemy
-      if (this.hero.frostShot && !killed && enemy.active) {
-        this.applyFrost(enemy);
+      if (!killed && enemy.active) {
+        this.tweens.add({ targets: enemy, scaleX: 1.25, scaleY: 0.8, duration: 50, yoyo: true });
       }
 
-      // Lifesteal
-      if (this.hero.lifesteal && this.hero.hp < this.hero.maxHp) {
-        this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + Math.ceil(this.hero.maxHp * 0.01));
+      // Frost: slow strength = 0.5 - stacks*0.05 (min 0.15), duration = 1000 + stacks*300
+      if (this.hero.frostShot > 0 && !killed && enemy.active) {
+        this.applyFrost(enemy, this.hero.frostShot);
       }
 
-      // Explosive shot: AoE on hit
-      if (this.hero.explosiveShot) {
-        this.doExplosion(enemy.x, enemy.y, 60, Math.round(dmg * 0.4), enemy);
+      // Lifesteal: +1% maxHP per stack
+      if (this.hero.lifesteal > 0 && this.hero.hp < this.hero.maxHp) {
+        const healAmt = Math.ceil(this.hero.maxHp * 0.01 * this.hero.lifesteal);
+        this.hero.heal(healAmt);
       }
 
-      // Ricochet: on kill, bullet bounces to nearby enemy
-      if (killed && this.hero.ricochetShot && bullet.owner === 'player') {
-        this.doRicochet(enemy.x, enemy.y, dmg * 0.7, enemy);
+      // Explosive: radius = 40 + stacks*15, damage = dmg * 0.3 * stacks
+      if (this.hero.explosiveShot > 0) {
+        const aeRadius = 40 + this.hero.explosiveShot * 15;
+        const aeDmg = Math.round(dmg * 0.3 * this.hero.explosiveShot);
+        this.doExplosion(enemy.x, enemy.y, aeRadius, aeDmg, enemy);
+      }
+
+      // Ricochet: bounce count = stacks
+      if (killed && this.hero.ricochetShot > 0 && bullet.owner === 'player') {
+        this.doRicochetChain(enemy.x, enemy.y, dmg * 0.6, enemy, this.hero.ricochetShot);
       }
 
       // Dash reset on kill
@@ -309,16 +362,18 @@ export class ArenaScene extends Phaser.Scene {
     } catch (err) { console.error('[onBulletHitEnemy]', err); }
   }
 
-  private onEnemyBulletHitHero(bulletObj: Phaser.Types.Physics.Arcade.GameObjectWithBody, _heroObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
+  private onEnemyBulletHitHero(_heroObj: Phaser.Types.Physics.Arcade.GameObjectWithBody, bulletObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
     try {
       if (this.dead) return;
       const bullet = bulletObj as unknown as Projectile;
       if (!bullet.active) return;
       const dmg = bullet.damage;
+      if (!dmg || dmg <= 0) return;
       bullet.recycle();
       const took = this.hero.takeDamage(dmg);
       if (took) {
         this.snd.heroHit();
+        this.cameras.main.shake(80, 0.005);
       }
     } catch (err) { console.error('[onEnemyBulletHitHero]', err); }
   }
@@ -329,9 +384,11 @@ export class ArenaScene extends Phaser.Scene {
       const enemy = enemyObj as unknown as Enemy;
       if (!enemy.active) return;
 
-      if (this.hero.isDashing && this.hero.dashDamage > 0) {
-        enemy.takeDamage(this.hero.dashDamage);
+      if (this.hero.isDashing && this.hero.dashDamageMult > 0) {
+        const dashDmg = Math.round(this.hero.bulletDamage * this.hero.damageMult * this.hero.dashDamageMult);
+        enemy.takeDamage(dashDmg);
         enemy.knockback(this.hero.x, this.hero.y, 100);
+        this.showDmgNum(enemy.x, enemy.y - 20, dashDmg);
         return;
       }
 
@@ -367,7 +424,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private setupCamera(): void {
     this.cameras.main.setBounds(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
-    this.cameras.main.startFollow(this.hero, true, 0.09, 0.09);
+    this.cameras.main.startFollow(this.hero, true, 0.18, 0.18);
     this.cameras.main.setBackgroundColor(COLORS.bg);
   }
 
@@ -377,6 +434,7 @@ export class ArenaScene extends Phaser.Scene {
     this.hpGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.barGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.enemyHpGfx = this.add.graphics().setDepth(50);
+    this.shieldGfx = this.add.graphics().setDepth(12);
 
     this.hpText = this.add.text(125, 26, '', {
       fontSize: '13px', fontFamily: 'monospace', color: '#fff', fontStyle: 'bold',
@@ -394,9 +452,15 @@ export class ArenaScene extends Phaser.Scene {
       fontSize: '14px', fontFamily: 'monospace', color: '#94a3b8',
     }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
 
-    this.infoText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 16, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#fbbf24', fontStyle: 'bold',
-      stroke: '#000', strokeThickness: 2,
+    this.runTimerText = this.add.text(GAME_WIDTH - 14, 34, '', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#475569',
+    }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
+
+    this.infoText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 8, '', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#fbbf24',
+      stroke: '#000', strokeThickness: 3,
+      align: 'center', lineSpacing: 2,
+      wordWrap: { width: GAME_WIDTH - 40 },
     }).setScrollFactor(0).setDepth(100).setOrigin(0.5, 1);
 
     this.comboText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70, '', {
@@ -405,8 +469,13 @@ export class ArenaScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(105).setOrigin(0.5).setAlpha(0);
 
     this.waveProgressGfx = this.add.graphics().setScrollFactor(0).setDepth(99);
+    this.bossHudGfx = this.add.graphics().setScrollFactor(0).setDepth(106);
+    this.bossNameText = this.add.text(GAME_WIDTH / 2, 50, '', {
+      fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fca5a5',
+    }).setScrollFactor(0).setDepth(107).setOrigin(0.5).setVisible(false);
     this.minimapGfx = this.add.graphics().setScrollFactor(0).setDepth(110);
     this.offscreenGfx = this.add.graphics().setScrollFactor(0).setDepth(95);
+    this.crosshairGfx = this.add.graphics().setScrollFactor(0).setDepth(120);
   }
 
   /* ────────────────── UI Update ────────────────── */
@@ -476,7 +545,11 @@ export class ArenaScene extends Phaser.Scene {
 
     const skillName = activeSkill?.name ?? '技能';
     const lvl = this.hero.getSkillLevel(this.hero.activeSkillId);
-    const skillStr = this.hero.unlockedSkills.length > 1 ? `${skillName} Lv${lvl} [Q]` : `${skillName} Lv${lvl}`;
+    const buildPath = this.upgradeMgr.getBuildPath();
+    const buildPrefix = buildPath ? `${BUILD_INFO[buildPath].name}协议 · ` : '';
+    const skillStr = this.hero.unlockedSkills.length > 1
+      ? `${buildPrefix}${skillName} Lv${lvl} [Q]`
+      : `${buildPrefix}${skillName} Lv${lvl}`;
     this.skillNameText.setText(skillStr);
     this.skillNameText.setPosition(cx + 2, cy + ch + 6);
 
@@ -490,12 +563,18 @@ export class ArenaScene extends Phaser.Scene {
     cg.lineStyle(1, 0x374151, 0.5);
     cg.strokeRoundedRect(dx, dy, dw, ch, 3);
 
-    // Shield indicator
-    if (this.hero.hasShield) {
-      cg.lineStyle(2, 0x60a5fa, 0.4 + Math.sin(time * 0.005) * 0.2);
-      cg.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 40);
-      cg.lineStyle(1, 0x60a5fa, 0.15);
-      cg.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 44);
+    // Shield drawn in world space to follow hero exactly
+    this.shieldGfx.clear();
+    if (this.hero.shieldStacks > 0) {
+      const sa = 0.4 + Math.sin(time * 0.005) * 0.2;
+      const hx = this.hero.x, hy = this.hero.y;
+      for (let si = 0; si < Math.min(this.hero.shieldStacks, 5); si++) {
+        this.shieldGfx.lineStyle(2, 0x60a5fa, sa * (1 - si * 0.15));
+        this.shieldGfx.strokeCircle(hx, hy, 22 + si * 5);
+      }
+      if (this.hero.shieldStacks > 1) {
+        this.shieldCountText?.setText(`×${this.hero.shieldStacks}`);
+      }
     }
 
     // Barrage/TimeRift active indicator
@@ -509,29 +588,30 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     // Wave & Score (top center + right)
-    this.waveText.setText(`关卡 ${this.currentLevel}   波次 ${this.waveMgr.wave}/10   剩余 ${this.waveMgr.aliveCount}`);
+    const modeLabel = this.endless ? `无尽 ${this.currentLevel}` : '突围行动';
+    const waveName = this.currentWaveName ? ` · ${this.currentWaveName}` : '';
+    this.waveText.setText(`${modeLabel}   ${this.waveMgr.wave}/${this.waveMgr.totalWaves}${waveName}   剩余 ${this.waveMgr.aliveCount}`);
     this.scoreText.setText(`${this.score} 分   ${this.kills} 杀`);
+    const totalSec = Math.floor(this.activeRunMs / 1000);
+    this.runTimerText.setText(`${String(Math.floor(totalSec / 60)).padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`);
 
-    // Tips (bottom) — always show skill info and controls
-    const tips: string[] = [];
+    const lines: string[] = [];
     if (activeSkill) {
-      const sLvl = Math.max(0, lvl - 1);
-      const sStats = activeSkill.levels[sLvl];
-      const desc = sStats?.desc || activeSkill.desc;
-      if (chargePct >= 1) {
-        tips.push(`[ SPACE ] ${skillName} — ${desc}  ✦就绪✦`);
-      } else {
-        tips.push(`${skillName}: ${desc}  ⚡${Math.round(chargePct * 100)}%`);
-      }
+      const chargeStr = chargePct >= 1 ? '✦ 就绪 ✦' : `⚡${Math.round(chargePct * 100)}%`;
+      lines.push(`${skillName} Lv${lvl}  ${chargeStr}  ${chargePct >= 1 ? '[ SPACE 释放 ]' : ''}`);
     }
-    if (this.hero.unlockedSkills.length > 1) tips.push('[ Q ] 切换');
-    tips.push('[ SHIFT ] 闪避');
-    this.infoText.setText(tips.join('   '));
+    const controls: string[] = [];
+    if (this.hero.unlockedSkills.length > 1) controls.push('Q切换');
+    controls.push('SHIFT闪避', 'ESC暂停');
+    lines.push(controls.join('  |  '));
+    this.infoText.setText(lines.join('\n'));
 
     this.drawWaveProgress();
     this.drawOffscreenIndicators();
     this.drawMinimap();
     this.drawEnemyHpBars();
+    this.drawBossHud();
+    this.drawCrosshair();
     this.updateCombo(time);
   }
 
@@ -653,6 +733,51 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
+  private drawBossHud(): void {
+    const boss = this.enemies.getChildren().find(child => {
+      const enemy = child as Enemy;
+      return enemy.active && enemy.isBoss;
+    }) as Enemy | undefined;
+
+    const g = this.bossHudGfx;
+    g.clear();
+    if (!boss) {
+      this.bossNameText.setVisible(false);
+      return;
+    }
+
+    const width = 360;
+    const height = 12;
+    const x = (GAME_WIDTH - width) / 2;
+    const y = 68;
+    const pct = Math.max(0, boss.hp / boss.maxHp);
+    g.fillStyle(0x020617, 0.9);
+    g.fillRoundedRect(x - 3, y - 3, width + 6, height + 6, 5);
+    g.fillStyle(0x3f1118);
+    g.fillRoundedRect(x, y, width, height, 3);
+    g.fillStyle(0xef4444);
+    g.fillRoundedRect(x, y, Math.max(4, width * pct), height, 3);
+    g.fillStyle(0xffffff, 0.15);
+    g.fillRoundedRect(x + 1, y + 1, Math.max(2, width * pct - 2), 4, 2);
+    this.bossNameText.setText(`军团核心  ${Math.ceil(boss.hp)} / ${boss.maxHp}`).setVisible(true);
+  }
+
+  private drawCrosshair(): void {
+    const g = this.crosshairGfx;
+    g.clear();
+    if (this.dead || this.upgrading || this.paused || this.tutorial.isActive) return;
+    const pointer = this.input.activePointer;
+    if (!pointer.active) return;
+    const x = pointer.x;
+    const y = pointer.y;
+    g.lineStyle(1.5, pointer.isDown ? 0xfbbf24 : 0x93c5fd, 0.8);
+    g.strokeCircle(x, y, 9);
+    g.lineBetween(x - 14, y, x - 6, y);
+    g.lineBetween(x + 6, y, x + 14, y);
+    g.lineBetween(x, y - 14, x, y - 6);
+    g.lineBetween(x, y + 6, x, y + 14);
+  }
+
   private updateCombo(time: number): void {
     if (this.comboCount > 1 && time < this.comboResetTime) {
       const remaining = (this.comboResetTime - time) / this.comboDuration;
@@ -682,6 +807,7 @@ export class ArenaScene extends Phaser.Scene {
   private bindEvents(): void {
     this.events.on('heroFire', this.onHeroFire, this);
     this.events.on('enemyFire', this.onEnemyFire, this);
+    this.events.on('bossTelegraph', this.onBossTelegraph, this);
     this.events.on('heroDash', this.onDash, this);
     this.events.on('heroSkill', this.onSkillUse, this);
     this.events.on('skillSwitch', this.onSkillSwitch, this);
@@ -736,6 +862,28 @@ export class ArenaScene extends Phaser.Scene {
     } catch (err) { console.error('[onEnemyFire]', err); }
   }
 
+  private onBossTelegraph(ev: { x: number; y: number; angle: number; duration: number }): void {
+    const length = 900;
+    const endX = ev.x + Math.cos(ev.angle) * length;
+    const endY = ev.y + Math.sin(ev.angle) * length;
+    const warning = this.add.graphics().setDepth(14);
+    warning.lineStyle(10, 0xef4444, 0.08);
+    warning.lineBetween(ev.x, ev.y, endX, endY);
+    warning.lineStyle(2, 0xff6b6b, 0.85);
+    warning.lineBetween(ev.x, ev.y, endX, endY);
+    warning.fillStyle(0xffaa44, 0.9);
+    warning.fillCircle(ev.x, ev.y, 12);
+    this.tweens.add({
+      targets: warning,
+      alpha: { from: 0.25, to: 1 },
+      duration: 120,
+      yoyo: true,
+      repeat: Math.max(1, Math.floor(ev.duration / 240) - 1),
+    });
+    this.time.delayedCall(ev.duration, () => warning.destroy());
+    this.announce('冲锋预警 · 闪避！', 0xef4444, Math.min(700, ev.duration));
+  }
+
   private spawnBullet(opts: BulletOpts): void {
     const group = opts.owner === 'player' ? this.playerBullets : this.enemyBullets;
     const maxPool = opts.owner === 'player' ? 200 : 100;
@@ -774,12 +922,13 @@ export class ArenaScene extends Phaser.Scene {
       });
     }
 
-    // Afterimage: leave an exploding clone at start position
-    if (this.hero.afterimage) {
+    if (this.hero.afterimage > 0) {
+      const aiDmg = Math.round(this.hero.bulletDamage * this.hero.damageMult * 0.5 * this.hero.afterimage);
+      const aiRadius = 60 + this.hero.afterimage * 10;
       this.time.delayedCall(100, () => {
-        this.doExplosion(ev.x, ev.y, 80, Math.round(this.hero.bulletDamage * this.hero.damageMult * 1.5));
+        this.doExplosion(ev.x, ev.y, aiRadius, aiDmg);
         const flash = this.add.circle(ev.x, ev.y, 10, 0x93c5fd, 0.8).setDepth(16);
-        this.tweens.add({ targets: flash, radius: 80, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
+        this.tweens.add({ targets: flash, radius: aiRadius, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
       });
     }
   }
@@ -789,121 +938,120 @@ export class ArenaScene extends Phaser.Scene {
       if (this.dead) return;
       const skill = getSkill(ev.skillId);
       if (!skill) return;
-      const lvl = Math.max(0, Math.min(ev.level, skill.maxLevel) - 1);
-      const stats = skill.levels[lvl];
+      const stats = getSkillStatsForLevel(ev.skillId, ev.level);
       if (!stats) return;
 
       this.tutorial.onSkillUse();
       switch (ev.skillId) {
-        case 'burst':
+        case 'burst': {
           this.snd.skillBurst();
-          this.doSkillBurst(ev.x, ev.y, stats.damage * this.hero.damageMult, stats.radius, skill.color);
+          const burstMul = 1 + ev.level * 0.5;
+          const burstDmg = Math.round(this.hero.bulletDamage * this.hero.damageMult * burstMul);
+          this.doSkillBurst(ev.x, ev.y, burstDmg, skill.color);
+          if (ev.level >= 3) {
+            this.hero.heal(Math.round(this.hero.maxHp * 0.05));
+          }
           break;
-        case 'barrage':
+        }
+        case 'barrage': {
           this.snd.skillBarrage();
           this.hero.barrageEndTime = this.time.now + stats.duration;
           this.announce('弹幕风暴!', skill.color, 1000);
           this.cameras.main.flash(80, 255, 80, 80, true);
           break;
-        case 'timerift':
+        }
+        case 'timerift': {
           this.snd.skillTimeRift();
           this.doSkillTimeRift(ev.x, ev.y, stats.damage * this.hero.damageMult, stats.radius, stats.duration, skill.color);
+          if (ev.level >= 2) this.hero.shieldStacks += 1;
           break;
+        }
       }
 
-      // XP magnet on skill use
-      if (this.hero.xpMagnetOnSkill) {
+      // XP magnet on skill use: speed scales with stacks
+      if (this.hero.xpMagnetOnSkill > 0) {
+        const magnetSpd = 400 + this.hero.xpMagnetOnSkill * 100;
         [...this.xpGems.getChildren()].forEach(c => {
           const gem = c as Phaser.Physics.Arcade.Sprite;
           if (!gem.active) return;
           const a = Phaser.Math.Angle.Between(gem.x, gem.y, this.hero.x, this.hero.y);
-          const spd = 500;
-          (gem.body as Phaser.Physics.Arcade.Body).setVelocity(Math.cos(a) * spd, Math.sin(a) * spd);
+          (gem.body as Phaser.Physics.Arcade.Body).setVelocity(Math.cos(a) * magnetSpd, Math.sin(a) * magnetSpd);
         });
       }
     } catch (err) { console.error('[onSkillUse]', err); }
   }
 
-  private doSkillBurst(x: number, y: number, damage: number, radius: number, color: number): void {
-    const expandR = radius * 1.4;
+  private doSkillBurst(x: number, y: number, damage: number, color: number): void {
+    // Full-screen shockwave: damages ALL enemies on screen
+    const cam = this.cameras.main;
+    const screenW = cam.width;
+    const screenH = cam.height;
+    const maxR = Math.sqrt(screenW * screenW + screenH * screenH) / 2;
 
-    // Shockwave ring expanding outward
-    const ring = this.add.circle(x, y, radius * 0.3, 0xffffff, 0.8).setDepth(16);
-    ring.setStrokeStyle(4, color, 1);
+    // Expanding shockwave ring
+    const ring = this.add.circle(x, y, 30, 0xffffff, 0.8).setDepth(16);
+    ring.setStrokeStyle(5, color, 1);
     this.tweens.add({
-      targets: ring,
-      radius: expandR,
-      alpha: 0,
-      duration: 400,
+      targets: ring, radius: maxR, alpha: 0, duration: 500,
       ease: 'Quad.easeOut',
-      onUpdate: () => {
-        ring.setStrokeStyle(4, color, ring.alpha);
-      },
+      onUpdate: () => ring.setStrokeStyle(5, color, ring.alpha),
       onComplete: () => ring.destroy(),
     });
 
-    // Inner flash
-    const flash = this.add.circle(x, y, radius * 0.8, color, 0.35).setDepth(15);
+    const ring2 = this.add.circle(x, y, 20, color, 0.3).setDepth(15);
     this.tweens.add({
-      targets: flash,
-      radius: expandR,
-      alpha: 0,
-      duration: 300,
+      targets: ring2, radius: maxR * 0.7, alpha: 0, duration: 400,
       ease: 'Cubic.easeOut',
-      onComplete: () => flash.destroy(),
+      onComplete: () => ring2.destroy(),
     });
 
-    // Bright center burst
-    const center = this.add.circle(x, y, 20, 0xffffff, 0.9).setDepth(17);
+    const center = this.add.circle(x, y, 25, 0xffffff, 0.9).setDepth(17);
     this.tweens.add({
-      targets: center,
-      scaleX: 3, scaleY: 3,
-      alpha: 0,
-      duration: 250,
+      targets: center, scaleX: 4, scaleY: 4, alpha: 0, duration: 300,
       ease: 'Quad.easeOut',
       onComplete: () => center.destroy(),
     });
 
-    // Radial lines
-    for (let i = 0; i < 12; i++) {
-      const a = (Math.PI * 2 / 12) * i;
-      const len = radius * 0.6 + Math.random() * radius * 0.5;
-      const line = this.add.line(
-        0, 0,
-        x + Math.cos(a) * 15, y + Math.sin(a) * 15,
+    for (let i = 0; i < 16; i++) {
+      const a = (Math.PI * 2 / 16) * i;
+      const len = 150 + Math.random() * 300;
+      const line = this.add.line(0, 0,
+        x + Math.cos(a) * 20, y + Math.sin(a) * 20,
         x + Math.cos(a) * len, y + Math.sin(a) * len,
-        color, 0.7,
-      ).setDepth(15).setLineWidth(2);
+        color, 0.7).setDepth(15).setLineWidth(2);
       this.tweens.add({
-        targets: line, alpha: 0, duration: 250 + Math.random() * 100,
+        targets: line, alpha: 0, duration: 300 + Math.random() * 150,
         onComplete: () => line.destroy(),
       });
     }
 
-    // Particles
     if (this.activeParticleCount < MAX_PARTICLES) {
       this.activeParticleCount++;
       const emitter = this.add.particles(x, y, 'particle_yellow', {
-        speed: { min: 100, max: 300 }, scale: { start: 1.5, end: 0 },
-        lifespan: 350, tint: color, quantity: 12, emitting: false,
+        speed: { min: 150, max: 400 }, scale: { start: 1.8, end: 0 },
+        lifespan: 400, tint: color, quantity: 16, emitting: false,
       });
-      emitter.explode(12);
+      emitter.explode(16);
       emitter.setDepth(18);
-      this.time.delayedCall(400, () => { emitter.destroy(); this.activeParticleCount--; });
+      this.time.delayedCall(450, () => { emitter.destroy(); this.activeParticleCount--; });
     }
 
-    this.cameras.main.shake(150, 0.01);
-    this.cameras.main.flash(80, 255, 200, 50, true);
+    this.cameras.main.shake(200, 0.015);
+    this.cameras.main.flash(100, 255, 200, 50, true);
 
+    const dmg = Math.max(1, Math.round(damage));
+    let hitCount = 0;
     [...this.enemies.getChildren()].forEach(c => {
       const e = c as Enemy;
       if (!e.active) return;
-      if (Phaser.Math.Distance.Between(x, y, e.x, e.y) < radius + e.cfg.bodyRadius) {
-        e.takeDamage(damage);
-        e.knockback(x, y, 150);
-        this.showDmgNum(e.x, e.y - 20, damage);
-      }
+      e.takeDamage(dmg);
+      e.knockback(x, y, 200);
+      this.showDmgNum(e.x, e.y - 20, dmg);
+      hitCount++;
     });
+    if (hitCount > 0) {
+      this.announce(`爆发 ×${hitCount}   ${dmg}伤害`, 0xfbbf24, 800);
+    }
   }
 
   private doSkillTimeRift(x: number, y: number, damage: number, radius: number, duration: number, color: number): void {
@@ -934,11 +1082,14 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     this.tweens.add({
-      targets: rift, alpha: { from: 0.8, to: 0.1 }, angle: 45,
-      duration: duration, onComplete: () => rift.destroy(),
+      targets: rift, alpha: { from: 0.8, to: 0.1 },
+      scaleX: { from: 1, to: 1.15 }, scaleY: { from: 1, to: 1.15 },
+      duration: duration, ease: 'Sine.easeInOut',
+      onComplete: () => rift.destroy(),
     });
     this.tweens.add({
-      targets: distort, alpha: { from: 0.5, to: 0 }, angle: -30,
+      targets: distort, alpha: { from: 0.5, to: 0 },
+      scaleX: { from: 1, to: 0.85 }, scaleY: { from: 1, to: 0.85 },
       duration: duration * 0.8, onComplete: () => distort.destroy(),
     });
 
@@ -1015,15 +1166,18 @@ export class ArenaScene extends Phaser.Scene {
     // Camera slow zoom
     this.cameras.main.zoomTo(1.2, 1500, 'Sine.easeIn');
 
+    const build = this.upgradeMgr.getBuildPath();
+    const durationSec = Math.round(this.activeRunMs / 1000);
+    const newHighScore = ScoreManager.isNewHighScore(this.score);
     const data = {
       score: this.score, kills: this.kills,
       wave: this.waveMgr.wave, level: this.currentLevel,
-      endless: this.endless,
+      endless: this.endless, durationSec, build, newHighScore,
     };
     ScoreManager.saveScore({
       score: this.score, kills: this.kills,
       level: this.currentLevel, wave: this.waveMgr.wave,
-      endless: this.endless,
+      endless: this.endless, durationSec, build,
     });
     const sceneRef = this.scene;
     window.setTimeout(() => {
@@ -1116,14 +1270,15 @@ export class ArenaScene extends Phaser.Scene {
     this.snd.hit();
   }
 
-  private onWaveStart(ev: { wave: number; total: number; isBoss?: boolean }): void {
+  private onWaveStart(ev: { wave: number; total: number; isBoss?: boolean; name: string; hint: string }): void {
     this.waveEnemyTotal = this.waveMgr.aliveCount;
+    this.currentWaveName = ev.name;
     if (ev.isBoss) {
-      this.announce('⚠ BOSS 来袭！', 0xef4444, 2000);
+      this.announce(`⚠ ${ev.name}\n${ev.hint}`, 0xef4444, 2400);
       this.cameras.main.shake(300, 0.004);
       this.snd.bossAlert();
     } else {
-      this.announce(`波次 ${ev.wave}`, 0xfbbf24, 1000);
+      this.announce(`${ev.wave}/${ev.total} · ${ev.name}\n${ev.hint}`, 0xfbbf24, 1500);
       this.snd.waveStart();
     }
   }
@@ -1137,17 +1292,23 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onLevelComplete(ev: { level: number }): void {
-    if (ev.level >= 3 && !this.endless) {
+    if (!this.endless) {
       this.dead = true;
       this.tutorial.destroy();
       this.snd.victory();
-      this.announce('🏆 通关成功！进入无尽模式可继续挑战', 0x22c55e, 3000);
+      this.announce('🏆 突围成功！军团核心已摧毁', 0x22c55e, 3000);
       this.slowMoFinish(true);
+      const build = this.upgradeMgr.getBuildPath();
+      const durationSec = Math.round(this.activeRunMs / 1000);
+      const newHighScore = ScoreManager.isNewHighScore(this.score);
       const data = {
-        score: this.score, kills: this.kills, wave: 10, level: ev.level,
-        victory: true, endless: false,
+        score: this.score, kills: this.kills, wave: this.waveMgr.totalWaves, level: ev.level,
+        victory: true, endless: false, durationSec, build, newHighScore,
       };
-      ScoreManager.saveScore({ score: this.score, kills: this.kills, level: ev.level, wave: 10, endless: false });
+      ScoreManager.saveScore({
+        score: this.score, kills: this.kills, level: ev.level,
+        wave: this.waveMgr.totalWaves, endless: false, durationSec, build,
+      });
       const sceneRef = this.scene;
       window.setTimeout(() => {
         try { sceneRef.start('GameOverScene', data); } catch (_) { /* noop */ }
@@ -1214,31 +1375,37 @@ export class ArenaScene extends Phaser.Scene {
       if (now - this.lastDmgNumTime < 60) return;
       this.lastDmgNumTime = now;
     }
-    const label = isCrit ? `${Math.round(dmg)}!` : `${Math.round(dmg)}`;
-    const t = this.add.text(x + Phaser.Math.Between(-8, 8), y, label, {
-      fontSize: isCrit ? '22px' : (isHero ? '18px' : '14px'),
-      fontFamily: 'monospace',
-      color: isCrit ? '#fbbf24' : (isHero ? '#ff6b6b' : '#ffffff'),
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: isCrit ? 3 : 2,
+    const rounded = Math.round(dmg);
+    const isBig = rounded >= 50;
+    const label = isCrit ? `${rounded}!` : `${rounded}`;
+    const size = isCrit ? '24px' : isBig ? '18px' : (isHero ? '18px' : '14px');
+    const color = isCrit ? '#fbbf24' : isBig ? '#ff9f43' : (isHero ? '#ff6b6b' : '#ffffff');
+    const t = this.add.text(x + Phaser.Math.Between(-10, 10), y, label, {
+      fontSize: size, fontFamily: 'monospace', fontStyle: 'bold',
+      color, stroke: '#000000', strokeThickness: isCrit ? 4 : (isBig ? 3 : 2),
     }).setOrigin(0.5).setDepth(60);
-    const dur = isCrit ? 700 : 500;
-    this.tweens.add({ targets: t, y: y - (isCrit ? 45 : 30), alpha: 0, duration: dur, onComplete: () => t.destroy() });
-    if (isCrit) {
-      this.tweens.add({ targets: t, scaleX: 1.4, scaleY: 1.4, duration: 120, yoyo: true });
+    const dur = isCrit ? 800 : (isBig ? 650 : 500);
+    const rise = isCrit ? 50 : (isBig ? 40 : 30);
+    this.tweens.add({ targets: t, y: y - rise, alpha: 0, duration: dur, onComplete: () => t.destroy() });
+    if (isCrit || isBig) {
+      this.tweens.add({ targets: t, scaleX: 1.5, scaleY: 1.5, duration: 100, yoyo: true });
     }
   }
 
   /* ────────────────── New Upgrade Combat Effects ────────────────── */
 
-  private applyFrost(enemy: Enemy): void {
+  private applyFrost(enemy: Enemy, stacks = 1): void {
+    if ((enemy as any)._frosted) return;
+    (enemy as any)._frosted = true;
     const origSpd = enemy.spd;
-    enemy.spd *= 0.5;
+    const slowFactor = Math.max(0.15, 0.5 - stacks * 0.05);
+    const dur = 1000 + stacks * 300;
+    enemy.spd *= slowFactor;
     enemy.setTint(0x87ceeb);
-    this.time.delayedCall(1000, () => {
+    this.time.delayedCall(dur, () => {
       if (enemy.active && enemy.scene) {
         enemy.spd = origSpd;
+        (enemy as any)._frosted = false;
         enemy.clearTint();
         if (enemy.isElite || enemy.isBoss) enemy.setTint(0xffffff);
       }
@@ -1260,21 +1427,32 @@ export class ArenaScene extends Phaser.Scene {
     });
   }
 
-  private doRicochet(x: number, y: number, damage: number, exclude: Enemy): void {
-    let nearest: Enemy | null = null;
-    let minD = 200;
-    [...this.enemies.getChildren()].forEach(c => {
-      const e = c as Enemy;
-      if (!e.active || e === exclude) return;
-      const d = Phaser.Math.Distance.Between(x, y, e.x, e.y);
-      if (d < minD) { minD = d; nearest = e; }
-    });
-    if (!nearest) return;
-    const ne = nearest as Enemy;
-    const line = this.add.line(0, 0, x, y, ne.x, ne.y, 0xfbbf24, 0.6).setDepth(15);
-    this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
-    ne.takeDamage(Math.round(damage));
-    this.showDmgNum(ne.x, ne.y - 20, Math.round(damage));
+  private doRicochetChain(x: number, y: number, damage: number, exclude: Enemy, bounces: number): void {
+    const hit = new Set<Enemy>([exclude]);
+    let cx = x, cy = y, curDmg = damage;
+    const children = this.enemies.getChildren();
+
+    for (let b = 0; b < bounces; b++) {
+      let nearest: Enemy | null = null;
+      let minD = 250;
+      for (let i = 0; i < children.length; i++) {
+        const e = children[i] as Enemy;
+        if (!e.active || hit.has(e)) continue;
+        const d = Phaser.Math.Distance.Between(cx, cy, e.x, e.y);
+        if (d < minD) { minD = d; nearest = e; }
+      }
+      if (!nearest) break;
+      const ne: Enemy = nearest;
+      hit.add(ne);
+      const line = this.add.line(0, 0, cx, cy, ne.x, ne.y, 0xfbbf24, 0.6).setDepth(15);
+      this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
+      const roundDmg = Math.round(curDmg);
+      ne.takeDamage(roundDmg);
+      this.showDmgNum(ne.x, ne.y - 20, roundDmg);
+      cx = ne.x;
+      cy = ne.y;
+      curDmg *= 0.7;
+    }
   }
 
   private doThorns(x: number, y: number, damage: number): void {
@@ -1293,22 +1471,33 @@ export class ArenaScene extends Phaser.Scene {
     if (this.activeParticleCount >= MAX_PARTICLES) return;
     this.activeParticleCount++;
     const emitter = this.add.particles(x, y, 'particle_white', {
-      speed: { min: 50, max: 140 }, scale: { start: 0.9, end: 0 },
-      lifespan: 200, tint: color, quantity: 3, emitting: false,
+      speed: { min: 60, max: 180 }, scale: { start: 1.2, end: 0 },
+      lifespan: 250, tint: color, quantity: 5, emitting: false,
+      angle: { min: 0, max: 360 },
     });
-    emitter.explode(3); emitter.setDepth(20);
-    this.time.delayedCall(250, () => { emitter.destroy(); this.activeParticleCount--; });
+    emitter.explode(5); emitter.setDepth(20);
+
+    const flash = this.add.circle(x, y, 6, 0xffffff, 0.7).setDepth(21);
+    this.tweens.add({ targets: flash, alpha: 0, scaleX: 2, scaleY: 2, duration: 120, onComplete: () => flash.destroy() });
+
+    this.time.delayedCall(300, () => { emitter.destroy(); this.activeParticleCount--; });
   }
 
   private deathParticles(x: number, y: number, color?: number): void {
     if (this.activeParticleCount >= MAX_PARTICLES) return;
     this.activeParticleCount++;
+    const c = color ?? 0xffffff;
     const emitter = this.add.particles(x, y, 'particle_white', {
-      speed: { min: 70, max: 220 }, scale: { start: 1.3, end: 0 },
-      lifespan: 450, tint: color ?? 0xffffff, quantity: 8, emitting: false,
+      speed: { min: 80, max: 280 }, scale: { start: 1.5, end: 0 },
+      lifespan: 500, tint: c, quantity: 12, emitting: false,
+      angle: { min: 0, max: 360 },
     });
-    emitter.explode(8); emitter.setDepth(20);
-    this.time.delayedCall(500, () => { emitter.destroy(); this.activeParticleCount--; });
+    emitter.explode(12); emitter.setDepth(20);
+
+    const ring = this.add.circle(x, y, 5, c, 0.6).setDepth(21);
+    this.tweens.add({ targets: ring, radius: 25, alpha: 0, duration: 200, onComplete: () => ring.destroy() });
+
+    this.time.delayedCall(550, () => { emitter.destroy(); this.activeParticleCount--; });
   }
 
   private hitlag(ms: number): void {
@@ -1362,11 +1551,24 @@ export class ArenaScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(300);
     this.upgradeUI.push(overlay);
 
-    const title = pool === 'level' ? '永久强化' : '选择升级';
+    const buildPath = this.upgradeMgr.getBuildPath();
+    const title = pool === 'level'
+      ? '无尽强化'
+      : buildPath
+        ? `${BUILD_INFO[buildPath].name}协议 · 选择改装`
+        : '选择作战协议';
     const titleText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.18, title, {
       fontSize: '24px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
     this.upgradeUI.push(titleText);
+
+    const subtitle = this.add.text(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT * 0.18 + 32,
+      buildPath ? BUILD_INFO[buildPath].promise : '本局后续升级将围绕所选流派出现',
+      { fontSize: '12px', fontFamily: 'monospace', color: '#64748b' },
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(301);
+    this.upgradeUI.push(subtitle);
 
     const cardW = 250, cardH = 140, gap = 18;
     const n = choices.length;
@@ -1392,6 +1594,11 @@ export class ArenaScene extends Phaser.Scene {
       }).setOrigin(0, 0).setScrollFactor(0).setDepth(302);
       this.upgradeUI.push(nt);
 
+      const keyText = this.add.text(cx - cardW / 2 + 12, cy - cardH / 2 + 10, `[${i + 1}]`, {
+        fontSize: '11px', fontFamily: 'monospace', fontStyle: 'bold', color: '#64748b',
+      }).setOrigin(0, 0).setScrollFactor(0).setDepth(302);
+      this.upgradeUI.push(keyText);
+
       const rarityLabel = upg.rarity === 'epic' ? '稀有' : upg.rarity === 'rare' ? '精良' : '';
       if (rarityLabel) {
         const rarityColor = upg.rarity === 'epic' ? '#fbbf24' : '#818cf8';
@@ -1399,6 +1606,14 @@ export class ArenaScene extends Phaser.Scene {
           fontSize: '12px', fontFamily: 'monospace', color: rarityColor,
         }).setOrigin(1, 0).setScrollFactor(0).setDepth(302);
         this.upgradeUI.push(rt);
+      }
+
+      if (upg.maxStacks > 1 && upg.maxStacks < 99) {
+        const stack = this.upgradeMgr.getStacks(upg.id) + 1;
+        const st = this.add.text(cx + cardW / 2 - 14, cy + cardH / 2 - 16, `${stack}/${upg.maxStacks}`, {
+          fontSize: '11px', fontFamily: 'monospace', color: '#475569',
+        }).setOrigin(1, 1).setScrollFactor(0).setDepth(302);
+        this.upgradeUI.push(st);
       }
 
       const dt = this.add.text(cx, cy + 6, upg.desc, {
@@ -1415,6 +1630,14 @@ export class ArenaScene extends Phaser.Scene {
       hitArea.on('pointerout', () => this.drawCard(card, cx, cy, cardW, cardH, catColor, false));
       hitArea.on('pointerdown', () => this.selectUpgrade(upg, pool));
     });
+
+    const keyEvents = ['keydown-ONE', 'keydown-TWO', 'keydown-THREE'];
+    choices.forEach((choice, index) => {
+      const event = keyEvents[index];
+      const handler = () => this.selectUpgrade(choice, pool);
+      this.input.keyboard?.on(event, handler);
+      this.upgradeHotkeys.push({ event, handler });
+    });
   }
 
   private drawCard(g: Phaser.GameObjects.Graphics, cx: number, cy: number, w: number, h: number, catColor: number, hover: boolean): void {
@@ -1430,17 +1653,10 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private selectUpgrade(upg: UpgradeDef, pool: 'wave' | 'level'): void {
+    if (!this.upgrading) return;
     this.snd.upgrade();
     this.upgradeMgr.apply(this.hero, upg);
     this.clearUpgradeUI();
-
-    // Show skill preview popup for skill unlocks
-    const isSkillUnlock = ['skill_barrage', 'skill_timerift'].includes(upg.id);
-    if (isSkillUnlock) {
-      this.showSkillPreview(upg, pool);
-      return;
-    }
-
     this.announce(`获得: ${upg.name}`, CATEGORY_COLORS[upg.category] || 0xffffff, 1000);
     this.finishUpgrade(pool);
   }
@@ -1495,13 +1711,18 @@ export class ArenaScene extends Phaser.Scene {
     previewUI.push(ring2);
     previewTweens.push(this.tweens.add({ targets: ring2, radius: 45, alpha: 0, duration: 1200, repeat: -1, delay: 400, ease: 'Quad.easeOut' }));
 
-    const levelsY = cy + 60;
-    for (let i = 0; i < skill.levels.length; i++) {
-      const lvlText = this.add.text(cx, levelsY + i * 22, `Lv${i + 1}: ${skill.levels[i].desc}`, {
-        fontSize: '12px', fontFamily: 'monospace', color: i === 0 ? '#e2e8f0' : '#64748b',
+    const levelsY = cy + 55;
+    const displayLevels = Math.min(3, skill.levels.length);
+    for (let i = 0; i < displayLevels; i++) {
+      const lvlText = this.add.text(cx, levelsY + i * 20, skill.levels[i].desc, {
+        fontSize: '11px', fontFamily: 'monospace', color: i === 0 ? '#e2e8f0' : '#64748b',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
       previewUI.push(lvlText);
     }
+    const growthText = this.add.text(cx, levelsY + displayLevels * 20 + 4, `∞ ${skill.growthDesc}`, {
+      fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
+    previewUI.push(growthText);
 
     const hint = this.add.text(cx, cy + cardH / 2 - 65, '充能满后按 [ SPACE ] 释放  |  [ Q ] 切换技能', {
       fontSize: '11px', fontFamily: 'monospace', color: '#60a5fa',
@@ -1560,8 +1781,72 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private clearUpgradeUI(): void {
+    this.clearUpgradeHotkeys();
     this.upgradeUI.forEach(obj => obj.destroy());
     this.upgradeUI = [];
+  }
+
+  private clearUpgradeHotkeys(): void {
+    for (const { event, handler } of this.upgradeHotkeys) {
+      this.input.keyboard?.off(event, handler);
+    }
+    this.upgradeHotkeys = [];
+  }
+
+  private togglePause(): void {
+    if (this.dead || this.upgrading || this.tutorial.isActive) return;
+    this.paused = !this.paused;
+    if (!this.paused) {
+      this.clearPauseUI();
+      this.physics.resume();
+      return;
+    }
+
+    this.physics.pause();
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+    const overlay = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x02050a, 0.76)
+      .setScrollFactor(0).setDepth(500);
+    const panel = this.add.graphics().setScrollFactor(0).setDepth(501);
+    panel.fillStyle(0x0f172a, 0.98);
+    panel.fillRoundedRect(cx - 180, cy - 115, 360, 230, 12);
+    panel.lineStyle(1.5, 0x3b82f6, 0.65);
+    panel.strokeRoundedRect(cx - 180, cy - 115, 360, 230, 12);
+    const title = this.add.text(cx, cy - 66, '行动暂停', {
+      fontSize: '28px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(502);
+    const build = this.upgradeMgr.getBuildPath();
+    const status = this.add.text(cx, cy - 18, `${this.waveMgr.wave}/${this.waveMgr.totalWaves} 波  ·  ${build ? BUILD_INFO[build].name + '协议' : '基础武装'}`, {
+      fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(502);
+    const hint = this.add.text(cx, cy + 34, 'ESC 继续   ·   M 返回主菜单', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#fbbf24',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(502);
+    const resume = this.add.rectangle(cx, cy + 78, 170, 38, 0x1d4ed8)
+      .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true });
+    const resumeText = this.add.text(cx, cy + 78, '继续行动', {
+      fontSize: '15px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(503);
+    resume.on('pointerdown', () => this.togglePause());
+    this.pauseUI.push(overlay, panel, title, status, hint, resume, resumeText);
+
+    this.pauseMenuHandler = () => {
+      this.paused = false;
+      this.clearPauseUI();
+      this.scene.start('MenuScene');
+    };
+    this.input.keyboard?.once('keydown-M', this.pauseMenuHandler);
+  }
+
+  private clearPauseUI(): void {
+    if (this.pauseMenuHandler) {
+      this.input.keyboard?.off('keydown-M', this.pauseMenuHandler);
+      this.pauseMenuHandler = undefined;
+    }
+    this.pauseUI.forEach(obj => {
+      try { obj.destroy(); } catch { /* already destroyed */ }
+    });
+    this.pauseUI = [];
   }
 
   /* ────────────────── Main Update Loop ────────────────── */
@@ -1589,10 +1874,11 @@ export class ArenaScene extends Phaser.Scene {
     this.updateUI(time);
     this.updateBgParticles(time);
 
-    if (this.dead || this.upgrading) return;
+    if (this.dead || this.upgrading || this.paused) return;
 
     // Game logic — only when alive, not upgrading, and not in tutorial
     if (!this.tutorial.isActive) {
+      this.activeRunMs += _delta;
       this.hero.tick(time, _delta);
       this.updateEnemies(time, _delta);
       this.updateBullets(time);

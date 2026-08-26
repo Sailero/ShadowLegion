@@ -1,114 +1,130 @@
 import Phaser from 'phaser';
 import { Hero } from '../entities/Hero';
-import { UpgradeDef, WAVE_UPGRADES, LEVEL_UPGRADES } from '../data/upgrades';
+import {
+  BuildPath, UpgradeDef, WAVE_UPGRADES, LEVEL_UPGRADES,
+} from '../data/upgrades';
 import { getSkill } from '../data/skills';
 
 export class UpgradeManager {
   private stacks = new Map<string, number>();
   private appliedIds: string[] = [];
+  private buildPath: BuildPath | null = null;
+
+  getStacks(id: string): number { return this.stacks.get(id) || 0; }
+  getBuildPath(): BuildPath | null { return this.buildPath; }
+  getAppliedIds(): string[] { return [...this.appliedIds]; }
 
   pickThree(pool: 'wave' | 'level', hero?: Hero): UpgradeDef[] {
     const source = pool === 'wave' ? WAVE_UPGRADES : LEVEL_UPGRADES;
+
+    if (pool === 'wave' && !this.buildPath) {
+      return Phaser.Utils.Array.Shuffle(source.filter(u => u.isCore)).slice(0, 3);
+    }
+
     const available = source.filter(u => {
-      const cur = this.stacks.get(u.id) || 0;
-      if (cur >= u.maxStacks) return false;
-      if (hero) {
-        if (u.id === 'skill_barrage' && hero.unlockedSkills.includes('barrage')) return false;
-        if (u.id === 'skill_timerift' && hero.unlockedSkills.includes('timerift')) return false;
-        if (u.id === 'skill_barrage_up' && !hero.unlockedSkills.includes('barrage')) return false;
-        if (u.id === 'skill_timerift_up' && !hero.unlockedSkills.includes('timerift')) return false;
-        if (u.id === 'skill_burst_up' && hero.getSkillLevel('burst') >= (getSkill('burst')?.maxLevel ?? 3)) return false;
-        if (u.id === 'skill_barrage_up' && hero.getSkillLevel('barrage') >= (getSkill('barrage')?.maxLevel ?? 3)) return false;
-        if (u.id === 'skill_timerift_up' && hero.getSkillLevel('timerift') >= (getSkill('timerift')?.maxLevel ?? 3)) return false;
-        if (u.id === 'heal' && hero.hp >= hero.maxHp) return false;
-      }
+      if (u.isCore) return false;
+      if (u.path && u.path !== this.buildPath) return false;
+      if (this.getStacks(u.id) >= u.maxStacks) return false;
+      if (hero && u.id === 'heal' && hero.hp >= hero.maxHp * 0.92) return false;
       return true;
     });
 
+    const pathChoices = Phaser.Utils.Array.Shuffle(available.filter(u => u.path === this.buildPath));
+    const utilityChoices = Phaser.Utils.Array.Shuffle(available.filter(u => !u.path));
     const result: UpgradeDef[] = [];
-    const copy = [...available];
-    while (result.length < 3 && copy.length > 0) {
-      const idx = Phaser.Math.Between(0, copy.length - 1);
-      result.push(copy.splice(idx, 1)[0]);
-    }
 
-    return result;
+    // Two identity-building cards and one universal card keeps choices legible.
+    if (pathChoices.length) result.push(pathChoices.shift()!);
+    if (utilityChoices.length) result.push(utilityChoices.shift()!);
+    if (pathChoices.length) result.push(pathChoices.shift()!);
+    else if (utilityChoices.length) result.push(utilityChoices.shift()!);
+
+    return Phaser.Utils.Array.Shuffle(result).slice(0, 3);
   }
 
-  getAppliedIds(): string[] { return [...this.appliedIds]; }
-
   applyById(hero: Hero, id: string): void {
-    const upg = [...WAVE_UPGRADES, ...LEVEL_UPGRADES].find(u => u.id === id);
-    if (upg) this.apply(hero, upg);
+    const upgrade = [...WAVE_UPGRADES, ...LEVEL_UPGRADES].find(u => u.id === id);
+    if (upgrade) this.apply(hero, upgrade);
   }
 
   apply(hero: Hero, upgrade: UpgradeDef): void {
-    const cur = this.stacks.get(upgrade.id) || 0;
-    if (cur >= upgrade.maxStacks) return;
+    const current = this.getStacks(upgrade.id);
+    if (current >= upgrade.maxStacks) return;
 
     this.appliedIds.push(upgrade.id);
-    this.stacks.set(upgrade.id, cur + 1);
+    this.stacks.set(upgrade.id, current + 1);
 
     switch (upgrade.id) {
-      case 'atk_up':       hero.damageMult *= 1.15; break;
-      case 'atkspd_up':    hero.atkSpdMult *= 1.2; break;
-      case 'bulletspd_up': hero.bulletSpeed *= 1.25; break;
-      case 'scatter':      hero.bulletCount = 3; break;
-      case 'pierce':       hero.bulletPiercing = true; break;
-      case 'homing':       hero.bulletHoming = true; break;
-      case 'hp_up':        hero.maxHp += 25; hero.hp = Math.min(hero.hp + 25, hero.maxHp); break;
-      case 'heal':         hero.heal(Math.round(hero.maxHp * 0.3)); break;
-      case 'shield':       hero.hasShield = true; break;
-      case 'spd_up':       hero.speedMult *= 1.12; break;
-      case 'dash_cd':      hero.dashCooldown *= 0.7; break;
-      case 'dash_dmg':     hero.dashDamage = hero.bulletDamage * hero.damageMult * 2; break;
-      case 'magnet':       hero.magnetRadius *= 1.5; break;
-      case 'charge_up':    hero.chargePerKill = Math.round(hero.chargePerKill * 1.5); break;
-
-      case 'lifesteal':    hero.lifesteal = true; break;
-      case 'crit':         hero.critChance += 0.2; break;
-      case 'explosive':    hero.explosiveShot = true; break;
-      case 'ricochet':     hero.ricochetShot = true; break;
-      case 'frost_shot':   hero.frostShot = true; break;
-      case 'berserk':      hero.berserk = true; break;
-      case 'thorns':       hero.thorns += 15; break;
-      case 'second_wind':  hero.secondWind = true; break;
-      case 'dodge':        hero.dodgeChance += 0.15; break;
-      case 'afterimage':   hero.afterimage = true; break;
-      case 'dash_reset':   hero.dashResetOnKill = true; break;
-      case 'xp_magnet_burst': hero.xpMagnetOnSkill = true; break;
-      case 'combo_dmg':    hero.comboDmg = true; break;
-      case 'overcharge':   hero.overcharge = true; break;
-
-      case 'skill_burst_up':
-        hero.skillLevels['burst'] = Math.min((hero.skillLevels['burst'] || 1) + 1, getSkill('burst')?.maxLevel ?? 3);
+      case 'core_nova':
+        this.buildPath = 'nova';
+        hero.explosiveShot = 1;
+        hero.skillLevels.burst = 2;
+        hero.damageMult += 0.05;
         break;
-      case 'skill_barrage':
-        if (!hero.unlockedSkills.includes('barrage')) hero.unlockedSkills.push('barrage');
-        hero.skillLevels['barrage'] = 1;
+      case 'core_storm':
+        this.buildPath = 'storm';
+        hero.bulletCount = 2;
+        hero.atkSpdMult += 0.05;
+        this.unlockSkill(hero, 'barrage');
+        break;
+      case 'core_rift':
+        this.buildPath = 'rift';
+        hero.shieldStacks += 1;
+        hero.dodgeChance = Math.min(0.45, hero.dodgeChance + 0.03);
+        this.unlockSkill(hero, 'timerift');
+        break;
+
+      case 'atk_up': hero.damageMult += 0.18; break;
+      case 'atkspd_up': hero.atkSpdMult += 0.16; break;
+      case 'hp_up': hero.maxHp += 25; hero.heal(25); break;
+      case 'heal': hero.heal(Math.round(hero.maxHp * 0.35)); break;
+      case 'spd_up': hero.speedMult += 0.12; break;
+      case 'charge_up': hero.chargePerKill += 5; break;
+
+      case 'crit': hero.critChance = Math.min(0.6, hero.critChance + 0.14); break;
+      case 'explosive': hero.explosiveShot += 1; break;
+      case 'skill_burst_up':
+        this.raiseSkill(hero, 'burst');
+        hero.critChance = Math.min(0.6, hero.critChance + 0.05);
+        break;
+
+      case 'scatter':
+        hero.bulletCount += 1;
+        hero.spreadAngle = Math.max(0.12, hero.spreadAngle - 0.025);
+        break;
+      case 'pierce':
+        hero.bulletPiercing = true;
+        hero.pierceRetain = Math.min(0.9, hero.pierceRetain + 0.1);
         break;
       case 'skill_barrage_up':
-        hero.skillLevels['barrage'] = Math.min((hero.skillLevels['barrage'] || 1) + 1, getSkill('barrage')?.maxLevel ?? 3);
-        break;
-      case 'skill_timerift':
-        if (!hero.unlockedSkills.includes('timerift')) hero.unlockedSkills.push('timerift');
-        hero.skillLevels['timerift'] = 1;
-        break;
-      case 'skill_timerift_up':
-        hero.skillLevels['timerift'] = Math.min((hero.skillLevels['timerift'] || 1) + 1, getSkill('timerift')?.maxLevel ?? 3);
+        this.raiseSkill(hero, 'barrage');
+        hero.atkSpdMult += 0.08;
         break;
 
-      case 'perm_atk':     hero.bulletDamage += 5; break;
-      case 'perm_hp':      hero.maxHp += 20; hero.hp = Math.min(hero.hp + 20, hero.maxHp); break;
-      case 'perm_spd':     hero.speedMult *= 1.08; break;
-      case 'perm_charge':  hero.chargePerKill = Math.round(hero.chargePerKill * 1.3); break;
-      case 'perm_crit':    hero.critChance += 0.1; break;
-      case 'perm_regen':   hero.regenPerSec += 1; break;
+      case 'frost_shot': hero.frostShot += 1; break;
+      case 'shield': hero.shieldStacks += 1; break;
+      case 'dash_cd': hero.dashCooldown = Math.max(450, Math.round(hero.dashCooldown * 0.82)); break;
+      case 'skill_timerift_up':
+        this.raiseSkill(hero, 'timerift');
+        hero.shieldStacks += 1;
+        break;
     }
   }
 
   reset(): void {
     this.stacks.clear();
     this.appliedIds = [];
+    this.buildPath = null;
+  }
+
+  private unlockSkill(hero: Hero, id: string): void {
+    if (!hero.unlockedSkills.includes(id)) hero.unlockedSkills.push(id);
+    hero.skillLevels[id] = Math.max(1, hero.skillLevels[id] || 0);
+    hero.activeSkillId = id;
+  }
+
+  private raiseSkill(hero: Hero, id: string): void {
+    const max = getSkill(id)?.maxLevel ?? 3;
+    hero.skillLevels[id] = Math.min(max, Math.max(1, hero.skillLevels[id] || 1) + 1);
   }
 }

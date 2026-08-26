@@ -4,6 +4,8 @@
  * every second, logging to browser console.
  */
 
+import Phaser from 'phaser';
+
 interface TestLog { time: number; name: string; ok: boolean; detail?: string }
 
 export function attachScenarioTests(scene: Phaser.Scene): void {
@@ -12,6 +14,28 @@ export function attachScenarioTests(scene: Phaser.Scene): void {
   const log: TestLog[] = [];
   const startTime = Date.now();
   let lastWave = 0;
+
+  // Dev-only keyboard harness. It keeps end-to-end browser verification on the
+  // same public input surface as a player instead of reaching into the scene
+  // from browser automation.
+  const defeatWave = () => {
+    const enemies = s.enemies?.getChildren?.() ?? [];
+    for (const child of [...enemies]) {
+      if (child?.active && typeof child.takeDamage === 'function') child.takeDamage(999999);
+    }
+    console.log(`[DEV] Defeated ${enemies.length} active enemies`);
+  };
+  const fillCharge = () => {
+    if (s.hero) s.hero.charge = s.hero.chargeMax;
+    console.log('[DEV] Skill charge filled');
+  };
+  const completeRun = () => {
+    scene.events.emit('levelComplete', { level: s.currentLevel || 1 });
+    console.log('[DEV] Run completion triggered');
+  };
+  scene.input.keyboard?.on('keydown-F8', defeatWave);
+  scene.input.keyboard?.on('keydown-F7', fillCharge);
+  scene.input.keyboard?.on('keydown-F6', completeRun);
 
   function check(name: string, cond: boolean, detail?: string) {
     log.push({ time: Date.now() - startTime, name, ok: cond, detail });
@@ -101,6 +125,14 @@ export function attachScenarioTests(scene: Phaser.Scene): void {
       console.log(`%c[SCENARIO] All checks passed (${log.length} checks)`, 'color: #22c55e; font-weight: bold');
     }
   }
+
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    clearInterval(timer);
+    scene.input.keyboard?.off('keydown-F8', defeatWave);
+    scene.input.keyboard?.off('keydown-F7', fillCharge);
+    scene.input.keyboard?.off('keydown-F6', completeRun);
+    printLog();
+  });
 
   console.log('%c[SCENARIO] Tests attached to ArenaScene', 'color: #60a5fa');
 }
