@@ -42,13 +42,20 @@ export const WAVE_UPGRADES: UpgradeDef[] = [
   { id: 'skill_timerift_up', name: '裂隙增幅', desc: '时空裂隙 Lv+1，并获得 1 层护盾', category: 'skill', rarity: 'rare', maxStacks: 3, path: 'rift' },
 ];
 
-// Explicitly empty: Phase 1 has no multi-level meta progression.
+// One 8-wave chapter is the complete Phase 1 run; persistent workshop growth
+// lives in MetaProgressionManager rather than in a second in-run level table.
 export const LEVEL_UPGRADES: UpgradeDef[] = [];
 
 export const BUILD_INFO: Record<BuildPath, { name: string; color: number; promise: string }> = {
   nova: { name: '爆裂', color: 0xf97316, promise: '暴击与范围连锁清场' },
   storm: { name: '弹幕', color: 0xef4444, promise: '多弹道持续压制' },
   rift: { name: '时隙', color: 0x818cf8, promise: '减速、护盾与机动控场' },
+};
+
+export const EVOLUTION_INFO: Record<BuildPath, { name: string; desc: string }> = {
+  nova: { name: '超新星', desc: '爆炸、暴击与基础伤害同时跃升' },
+  storm: { name: '赤色风暴', desc: '追加弹道、穿透与攻击速度' },
+  rift: { name: '永恒时隙', desc: '追加护盾、迟滞与闪避循环' },
 };
 
 export const CATEGORY_COLORS: Record<string, number> = {

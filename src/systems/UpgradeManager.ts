@@ -9,10 +9,20 @@ export class UpgradeManager {
   private stacks = new Map<string, number>();
   private appliedIds: string[] = [];
   private buildPath: BuildPath | null = null;
+  private pathUpgradeCount = 0;
+  private evolved = false;
+  private pendingEvolution: BuildPath | null = null;
 
   getStacks(id: string): number { return this.stacks.get(id) || 0; }
   getBuildPath(): BuildPath | null { return this.buildPath; }
   getAppliedIds(): string[] { return [...this.appliedIds]; }
+  getPathUpgradeCount(): number { return this.pathUpgradeCount; }
+  isEvolved(): boolean { return this.evolved; }
+  consumeEvolution(): BuildPath | null {
+    const path = this.pendingEvolution;
+    this.pendingEvolution = null;
+    return path;
+  }
 
   pickThree(pool: 'wave' | 'level', hero?: Hero): UpgradeDef[] {
     const source = pool === 'wave' ? WAVE_UPGRADES : LEVEL_UPGRADES;
@@ -44,7 +54,10 @@ export class UpgradeManager {
 
   applyById(hero: Hero, id: string): void {
     const upgrade = [...WAVE_UPGRADES, ...LEVEL_UPGRADES].find(u => u.id === id);
-    if (upgrade) this.apply(hero, upgrade);
+    if (upgrade) {
+      this.apply(hero, upgrade);
+      this.pendingEvolution = null;
+    }
   }
 
   apply(hero: Hero, upgrade: UpgradeDef): void {
@@ -109,12 +122,20 @@ export class UpgradeManager {
         hero.shieldStacks += 1;
         break;
     }
+
+    if (!upgrade.isCore && upgrade.path && upgrade.path === this.buildPath) {
+      this.pathUpgradeCount++;
+      if (!this.evolved && this.pathUpgradeCount >= 3) this.evolve(hero, upgrade.path);
+    }
   }
 
   reset(): void {
     this.stacks.clear();
     this.appliedIds = [];
     this.buildPath = null;
+    this.pathUpgradeCount = 0;
+    this.evolved = false;
+    this.pendingEvolution = null;
   }
 
   private unlockSkill(hero: Hero, id: string): void {
@@ -126,5 +147,27 @@ export class UpgradeManager {
   private raiseSkill(hero: Hero, id: string): void {
     const max = getSkill(id)?.maxLevel ?? 3;
     hero.skillLevels[id] = Math.min(max, Math.max(1, hero.skillLevels[id] || 1) + 1);
+  }
+
+  private evolve(hero: Hero, path: BuildPath): void {
+    this.evolved = true;
+    this.pendingEvolution = path;
+    switch (path) {
+      case 'nova':
+        hero.explosiveShot += 1;
+        hero.critChance = Math.min(0.65, hero.critChance + 0.1);
+        hero.damageMult += 0.08;
+        break;
+      case 'storm':
+        hero.bulletCount += 1;
+        hero.bulletPiercing = true;
+        hero.atkSpdMult += 0.12;
+        break;
+      case 'rift':
+        hero.shieldStacks += 2;
+        hero.frostShot += 1;
+        hero.dashCooldown = Math.max(450, Math.round(hero.dashCooldown * 0.8));
+        break;
+    }
   }
 }

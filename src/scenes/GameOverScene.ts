@@ -4,6 +4,8 @@ import { SoundManager } from '../systems/SoundManager';
 import { ScoreManager } from '../systems/ScoreManager';
 import { BUILD_INFO } from '../data/upgrades';
 import type { BuildPath } from '../data/upgrades';
+import type { CombatProfile } from '../systems/RunRecorder';
+import type { RunReward } from '../systems/MetaProgressionManager';
 
 export class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOverScene'); }
@@ -12,11 +14,12 @@ export class GameOverScene extends Phaser.Scene {
     score?: number; kills?: number; wave?: number;
     level?: number; victory?: boolean; endless?: boolean;
     durationSec?: number; build?: BuildPath | null; newHighScore?: boolean;
+    profile?: CombatProfile | null; reward?: RunReward | null;
   }) {
     const {
       score = 0, kills = 0, wave = 0, level = 1,
       victory = false, endless = false, durationSec = 0,
-      build = null, newHighScore = false,
+      build = null, newHighScore = false, profile = null, reward = null,
     } = data;
     const snd = SoundManager.get();
     this.cameras.main.setBackgroundColor(0x080c14);
@@ -110,12 +113,57 @@ export class GameOverScene extends Phaser.Scene {
       });
     }
 
+    const panelY = 515;
+    const panelW = 330;
+    const panelH = 112;
+    const drawPanel = (x: number, color: number) => {
+      const panel = this.add.graphics();
+      panel.fillStyle(0x0f172a, 0.96);
+      panel.fillRoundedRect(x - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
+      panel.lineStyle(1, color, 0.55);
+      panel.strokeRoundedRect(x - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
+    };
+
+    const rewardX = GAME_WIDTH / 2 - 180;
+    drawPanel(rewardX, 0xfbbf24);
+    this.add.text(rewardX, panelY - 31, '本局回收', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
+    }).setOrigin(0.5);
+    this.add.text(rewardX, panelY, reward ? `+${reward.earned} 影核` : '+0 影核', {
+      fontSize: '24px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fbbf24',
+    }).setOrigin(0.5);
+    const rewardHint = reward?.newBuildClear
+      ? `新协议首胜奖励  ·  库存 ${reward.total}`
+      : `进度与胜利都会积累  ·  库存 ${reward?.total ?? 0}`;
+    this.add.text(rewardX, panelY + 32, rewardHint, {
+      fontSize: '11px', fontFamily: 'monospace', color: '#64748b',
+    }).setOrigin(0.5);
+
+    const profileX = GAME_WIDTH / 2 + 180;
+    drawPanel(profileX, 0x818cf8);
+    this.add.text(profileX, panelY - 31, '影子行为档案', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
+    }).setOrigin(0.5);
+    this.add.text(profileX, panelY - 2, profile?.style ?? '等待记录', {
+      fontSize: '22px', fontFamily: 'monospace', fontStyle: 'bold', color: '#a78bfa',
+    }).setOrigin(0.5);
+    this.add.text(
+      profileX, panelY + 31,
+      profile
+        ? `机动 ${profile.mobility}  火力 ${profile.firepower}  反应 ${profile.reflex}  技能 ${profile.technique}`
+        : '完成一次有效突围后生成',
+      { fontSize: '11px', fontFamily: 'monospace', color: '#64748b' },
+    ).setOrigin(0.5);
+
     const retryData = { level: 1, endless };
-    const btnY = scores.length > 1 ? GAME_HEIGHT * 0.82 : GAME_HEIGHT * 0.55;
-    this.makeBtn(GAME_WIDTH / 2, btnY, '再来一次', false, snd, () => {
+    const btnY = 680;
+    this.makeBtn(GAME_WIDTH / 2 - 220, btnY, '再来一次', false, snd, () => {
       this.scene.start('ArenaScene', retryData);
     });
-    this.makeBtn(GAME_WIDTH / 2, btnY + 54, '返回菜单', true, snd, () => {
+    this.makeBtn(GAME_WIDTH / 2, btnY, '军团工坊', true, snd, () => {
+      this.scene.start('WorkshopScene');
+    });
+    this.makeBtn(GAME_WIDTH / 2 + 220, btnY, '返回菜单', true, snd, () => {
       this.scene.start('MenuScene');
     });
 

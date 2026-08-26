@@ -4,6 +4,7 @@ import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { ArenaScene } from './scenes/ArenaScene';
 import { GameOverScene } from './scenes/GameOverScene';
+import { WorkshopScene } from './scenes/WorkshopScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -23,7 +24,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, ArenaScene, GameOverScene],
+  scene: [BootScene, MenuScene, ArenaScene, GameOverScene, WorkshopScene],
 };
 
 const game = new Phaser.Game(config);

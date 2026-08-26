@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
 import { SoundManager } from '../systems/SoundManager';
 import { ScoreManager } from '../systems/ScoreManager';
+import { MetaProgressionManager } from '../systems/MetaProgressionManager';
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('MenuScene'); }
@@ -21,7 +22,7 @@ export class MenuScene extends Phaser.Scene {
       stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5).setAlpha(0);
 
-    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.18 + 50, '8 波战术生存 · 第一阶段可玩版', {
+    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.18 + 50, '8 波动作生存 · 每一局都在塑造你的影子', {
       fontSize: '16px', fontFamily: 'monospace', color: '#64748b',
     }).setOrigin(0.5).setAlpha(0);
 
@@ -53,12 +54,25 @@ export class MenuScene extends Phaser.Scene {
       }).setOrigin(0.5);
     });
 
-    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.53, '开始突围', false, snd, () => {
+    const meta = MetaProgressionManager.getState();
+    const workshopLevel = MetaProgressionManager.getWorkshopLevel(meta);
+    const profileText = meta.lastProfile ? `  ·  最近影子 ${meta.lastProfile.style}` : '';
+    this.add.text(
+      GAME_WIDTH / 2, GAME_HEIGHT * 0.47,
+      `◆ 影核 ${meta.shadowCores}  ·  工坊 ${workshopLevel}/15  ·  协议通关 ${meta.clearedBuilds.length}/3${profileText}`,
+      { fontSize: '13px', fontFamily: 'monospace', color: '#a78bfa' },
+    ).setOrigin(0.5);
+
+    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.55, '开始突围', false, snd, () => {
       this.scene.start('ArenaScene', { level: 1, endless: false });
     });
 
-    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.53 + 60, '无尽演练', true, snd, () => {
+    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.55 + 58, '无尽演练', true, snd, () => {
       this.scene.start('ArenaScene', { level: 1, endless: true });
+    });
+
+    this.makeBtn(GAME_WIDTH / 2, GAME_HEIGHT * 0.55 + 116, '军团工坊', true, snd, () => {
+      this.scene.start('WorkshopScene');
     });
 
     const hints = [
@@ -66,7 +80,7 @@ export class MenuScene extends Phaser.Scene {
       'SPACE 释放技能  |  Q 切换技能  |  ESC 暂停',
     ];
     hints.forEach((h, i) => {
-      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.80 + i * 24, h, {
+      this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.84 + i * 22, h, {
         fontSize: '13px', fontFamily: 'monospace', color: '#374151',
       }).setOrigin(0.5);
     });

@@ -3,7 +3,7 @@ import {
   GAME_WIDTH, GAME_HEIGHT, ARENA_WIDTH, ARENA_HEIGHT,
   COLORS, HERO_CFG, ENEMY_TYPES,
 } from '../config/gameConfig';
-import { BUILD_INFO, CATEGORY_COLORS } from '../data/upgrades';
+import { BUILD_INFO, CATEGORY_COLORS, EVOLUTION_INFO } from '../data/upgrades';
 import { Hero, FireEvent } from '../entities/Hero';
 import { Enemy } from '../entities/Enemy';
 import { Projectile, BulletOpts } from '../entities/Projectile';
@@ -12,6 +12,8 @@ import { UpgradeManager } from '../systems/UpgradeManager';
 import { SoundManager } from '../systems/SoundManager';
 import { TutorialManager } from '../systems/TutorialManager';
 import { ScoreManager } from '../systems/ScoreManager';
+import { MetaProgressionManager } from '../systems/MetaProgressionManager';
+import { RunRecorder } from '../systems/RunRecorder';
 import { getSkill, getSkillStatsForLevel } from '../data/skills';
 import type { UpgradeDef } from '../data/upgrades';
 
@@ -81,6 +83,7 @@ export class ArenaScene extends Phaser.Scene {
   /* ── Systems ── */
   private snd!: SoundManager;
   private tutorial!: TutorialManager;
+  private runRecorder!: RunRecorder;
   private endless = false;
   private bgParticles: Phaser.GameObjects.Graphics | null = null;
 
@@ -124,9 +127,16 @@ export class ArenaScene extends Phaser.Scene {
 
     this.hero = new Hero(this, ARENA_WIDTH / 2, ARENA_HEIGHT / 2);
 
+    const metaBonuses = MetaProgressionManager.getBonuses();
+    this.hero.damageMult *= metaBonuses.damageMult;
+    this.hero.maxHp += metaBonuses.maxHpBonus;
+    this.hero.hp = this.hero.maxHp;
+    this.hero.charge = Math.min(this.hero.chargeMax, metaBonuses.startCharge);
+
     this.snd = SoundManager.get();
     this.tutorial = new TutorialManager(this);
     this.upgradeMgr = new UpgradeManager();
+    this.runRecorder = new RunRecorder();
 
     this.setupCollisions();
     this.setupCamera();
@@ -546,7 +556,9 @@ export class ArenaScene extends Phaser.Scene {
     const skillName = activeSkill?.name ?? '技能';
     const lvl = this.hero.getSkillLevel(this.hero.activeSkillId);
     const buildPath = this.upgradeMgr.getBuildPath();
-    const buildPrefix = buildPath ? `${BUILD_INFO[buildPath].name}协议 · ` : '';
+    const buildPrefix = buildPath
+      ? `${this.upgradeMgr.isEvolved() ? EVOLUTION_INFO[buildPath].name : BUILD_INFO[buildPath].name + '协议'} · `
+      : '';
     const skillStr = this.hero.unlockedSkills.length > 1
       ? `${buildPrefix}${skillName} Lv${lvl} [Q]`
       : `${buildPrefix}${skillName} Lv${lvl}`;
@@ -826,6 +838,7 @@ export class ArenaScene extends Phaser.Scene {
   private onHeroFire(ev: FireEvent): void {
     try {
       if (this.dead) return;
+      this.runRecorder.recordShot(ev.count);
       if (ev.count <= 1) {
         this.spawnBullet({ x: ev.x, y: ev.y, angle: ev.angle, speed: ev.speed, damage: ev.damage, piercing: ev.piercing, homing: ev.homing, owner: 'player' });
       } else {
@@ -908,6 +921,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onDash(ev: { x: number; y: number; angle: number }): void {
+    this.runRecorder.recordDash();
     this.snd.dash();
     this.tutorial.onDash();
     for (let i = 0; i < 4; i++) {
@@ -936,6 +950,7 @@ export class ArenaScene extends Phaser.Scene {
   private onSkillUse(ev: { skillId: string; level: number; x: number; y: number }): void {
     try {
       if (this.dead) return;
+      this.runRecorder.recordSkill();
       const skill = getSkill(ev.skillId);
       if (!skill) return;
       const stats = getSkillStatsForLevel(ev.skillId, ev.level);
@@ -1113,6 +1128,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private onHeroHit(ev: { x: number; y: number; damage: number }): void {
     try {
+      this.runRecorder.recordDamage(ev.damage);
       this.cameras.main.shake(80, 0.005);
       this.cameras.main.flash(60, 255, 0, 0, true);
       this.showDmgNum(ev.x, ev.y - 20, ev.damage, true);
@@ -1169,10 +1185,15 @@ export class ArenaScene extends Phaser.Scene {
     const build = this.upgradeMgr.getBuildPath();
     const durationSec = Math.round(this.activeRunMs / 1000);
     const newHighScore = ScoreManager.isNewHighScore(this.score);
+    const profile = this.runRecorder.finish(build, this.hero.maxHp);
+    const reward = MetaProgressionManager.recordRun({
+      wave: this.waveMgr.wave, level: this.currentLevel, kills: this.kills,
+      durationSec, victory: false, endless: this.endless, build, profile,
+    });
     const data = {
       score: this.score, kills: this.kills,
       wave: this.waveMgr.wave, level: this.currentLevel,
-      endless: this.endless, durationSec, build, newHighScore,
+      endless: this.endless, durationSec, build, newHighScore, profile, reward,
     };
     ScoreManager.saveScore({
       score: this.score, kills: this.kills,
@@ -1301,9 +1322,14 @@ export class ArenaScene extends Phaser.Scene {
       const build = this.upgradeMgr.getBuildPath();
       const durationSec = Math.round(this.activeRunMs / 1000);
       const newHighScore = ScoreManager.isNewHighScore(this.score);
+      const profile = this.runRecorder.finish(build, this.hero.maxHp);
+      const reward = MetaProgressionManager.recordRun({
+        wave: this.waveMgr.totalWaves, level: ev.level, kills: this.kills,
+        durationSec, victory: true, endless: false, build, profile,
+      });
       const data = {
         score: this.score, kills: this.kills, wave: this.waveMgr.totalWaves, level: ev.level,
-        victory: true, endless: false, durationSec, build, newHighScore,
+        victory: true, endless: false, durationSec, build, newHighScore, profile, reward,
       };
       ScoreManager.saveScore({
         score: this.score, kills: this.kills, level: ev.level,
@@ -1565,7 +1591,9 @@ export class ArenaScene extends Phaser.Scene {
     const subtitle = this.add.text(
       GAME_WIDTH / 2,
       GAME_HEIGHT * 0.18 + 32,
-      buildPath ? BUILD_INFO[buildPath].promise : '本局后续升级将围绕所选流派出现',
+      buildPath
+        ? `${BUILD_INFO[buildPath].promise} · ${this.upgradeMgr.isEvolved() ? '已超限进化' : `进化 ${Math.min(3, this.upgradeMgr.getPathUpgradeCount())}/3`}`
+        : '本局后续升级将围绕所选流派出现',
       { fontSize: '12px', fontFamily: 'monospace', color: '#64748b' },
     ).setOrigin(0.5).setScrollFactor(0).setDepth(301);
     this.upgradeUI.push(subtitle);
@@ -1656,8 +1684,16 @@ export class ArenaScene extends Phaser.Scene {
     if (!this.upgrading) return;
     this.snd.upgrade();
     this.upgradeMgr.apply(this.hero, upg);
+    const evolvedPath = this.upgradeMgr.consumeEvolution();
     this.clearUpgradeUI();
-    this.announce(`获得: ${upg.name}`, CATEGORY_COLORS[upg.category] || 0xffffff, 1000);
+    if (evolvedPath) {
+      const evolution = EVOLUTION_INFO[evolvedPath];
+      this.announce(`⚡ 超限进化 · ${evolution.name}\n${evolution.desc}`, BUILD_INFO[evolvedPath].color, 1900);
+      this.cameras.main.flash(180, 255, 220, 100, true);
+      this.cameras.main.shake(220, 0.006);
+    } else {
+      this.announce(`获得: ${upg.name}`, CATEGORY_COLORS[upg.category] || 0xffffff, 1000);
+    }
     this.finishUpgrade(pool);
   }
 
@@ -1880,6 +1916,13 @@ export class ArenaScene extends Phaser.Scene {
     if (!this.tutorial.isActive) {
       this.activeRunMs += _delta;
       this.hero.tick(time, _delta);
+      const heroBody = this.hero.body as Phaser.Physics.Arcade.Body;
+      const pointer = this.input.activePointer;
+      this.runRecorder.recordFrame(
+        _delta,
+        heroBody.velocity.length() > 20,
+        pointer.isDown && !pointer.rightButtonDown(),
+      );
       this.updateEnemies(time, _delta);
       this.updateBullets(time);
       this.magnetXpGems();

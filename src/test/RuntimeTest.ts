@@ -4,9 +4,15 @@ import {
   HERO_CFG, ENEMY_TYPES, WAVE_CFG,
 } from '../config/gameConfig';
 import { SKILLS, getSkill, getSkillStatsForLevel } from '../data/skills';
-import { WAVE_UPGRADES, LEVEL_UPGRADES } from '../data/upgrades';
+import { WAVE_UPGRADES, LEVEL_UPGRADES, EVOLUTION_INFO } from '../data/upgrades';
 import { LEVEL_WAVES } from '../data/enemies';
 import { Projectile } from '../entities/Projectile';
+import {
+  calculateRunReward, createDefaultMetaState, WORKSHOP_MAX_RANK, workshopUpgradeCost,
+} from '../systems/MetaProgressionManager';
+import { RunRecorder } from '../systems/RunRecorder';
+import { UpgradeManager } from '../systems/UpgradeManager';
+import type { Hero } from '../entities/Hero';
 
 interface Result { name: string; ok: boolean; msg?: string }
 
@@ -89,6 +95,7 @@ export function runDataTests(): Result[] {
       assert(allIds.includes(id), `upgrade ${id} missing`);
     }
     assert(WAVE_UPGRADES.filter(u => u.isCore).length === 3, 'must have exactly 3 cores');
+    assert(Object.keys(EVOLUTION_INFO).length === 3, 'must have three evolutions');
   });
 
   t('Upgrade categories valid', () => {
@@ -131,6 +138,59 @@ export function runDataTests(): Result[] {
   t('Balance: burst radius effective', () => {
     const r = getSkill('burst')!.levels[0].radius;
     assert(r >= 100, `Burst Lv1 radius ${r} too small`);
+  });
+
+  t('Meta progression defaults valid', () => {
+    const meta = createDefaultMetaState();
+    assert(meta.shadowCores === 0 && meta.totalRuns === 0, 'meta counters');
+    assert(Object.values(meta.modules).every(rank => rank === 0), 'module defaults');
+    assert(meta.clearedBuilds.length === 0, 'build clears');
+  });
+
+  t('Workshop costs rise and cap', () => {
+    assert(workshopUpgradeCost(0) === 2, 'rank 0 cost');
+    assert(workshopUpgradeCost(4) === 6, 'rank 4 cost');
+    assert(workshopUpgradeCost(WORKSHOP_MAX_RANK) === 0, 'max rank cost');
+  });
+
+  t('Run rewards favor progress and first clears', () => {
+    const loss = calculateRunReward({ wave: 3, level: 1, victory: false, endless: false }, false);
+    const win = calculateRunReward({ wave: 8, level: 1, victory: true, endless: false }, true);
+    assert(loss.earned === 1, `wave 3 loss reward=${loss.earned}`);
+    assert(win.earned === 10 && win.newBuildClear, `first clear reward=${win.earned}`);
+  });
+
+  t('Run recorder creates bounded Shadow profile', () => {
+    const recorder = new RunRecorder();
+    for (let i = 0; i < 100; i++) recorder.recordFrame(50, i % 5 !== 0, i % 3 !== 0);
+    recorder.recordShot(40);
+    recorder.recordDash();
+    recorder.recordSkill();
+    recorder.recordDamage(20);
+    const profile = recorder.finish('nova', 120);
+    for (const value of [profile.mobility, profile.firepower, profile.reflex, profile.technique]) {
+      assert(value >= 0 && value <= 100, `profile metric ${value}`);
+    }
+    assert(profile.build === 'nova' && profile.shots === 40, 'profile snapshot');
+  });
+
+  t('Three matching path upgrades trigger one evolution', () => {
+    const hero = {
+      explosiveShot: 0,
+      critChance: 0,
+      damageMult: 1,
+      skillLevels: { burst: 1 },
+    } as unknown as Hero;
+    const manager = new UpgradeManager();
+    for (const id of ['core_nova', 'crit', 'explosive', 'skill_burst_up']) {
+      const upgrade = WAVE_UPGRADES.find(item => item.id === id);
+      assert(Boolean(upgrade), `upgrade ${id} missing`);
+      manager.apply(hero, upgrade!);
+    }
+    assert(manager.isEvolved(), 'nova should evolve after three path upgrades');
+    assert(manager.getPathUpgradeCount() === 3, 'path upgrade count should be 3');
+    assert(manager.consumeEvolution() === 'nova', 'nova evolution feedback missing');
+    assert(hero.explosiveShot >= 3, 'nova evolution should strengthen explosions');
   });
 
   return R;
@@ -185,6 +245,14 @@ export function runSceneTests(scene: Phaser.Scene): Result[] {
 
   t('Tutorial initialized', () => {
     assert(s.tutorial !== undefined, 'tutorial undefined');
+  });
+
+  t('Run recorder initialized', () => {
+    assert(s.runRecorder !== undefined, 'runRecorder undefined');
+  });
+
+  t('Workshop scene registered', () => {
+    assert(scene.scene.manager.keys.WorkshopScene !== undefined, 'WorkshopScene missing');
   });
 
   t('Dead flag is false', () => {
