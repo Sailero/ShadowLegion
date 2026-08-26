@@ -42,12 +42,7 @@ npm run build
 
 ## 文档
 
-从 [docs/README.md](docs/README.md) 开始。当前只维护四份产品事实文档：
-
-- [第一阶段可玩切片](docs/design/phase1-playable-slice.md)
-- [五阶段产品路线图](docs/design/development-roadmap-v2.md)
-- [AI 影子军团方向](docs/design/core-ai-gameplay-direction.md)
-- [市场与智能对手调研](docs/research/market-and-ai-review-2026.md)
+当前只维护一份产品事实文档：[项目总纲](docs/project-master-plan.md)。它统一记录当前实现、完整游戏目标、可玩性与市场判断、AI 影子方案、微信适配、赚钱条件、研发路线和停止条件。
 
 ## 许可
 
