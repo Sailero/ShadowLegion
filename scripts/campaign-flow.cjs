@@ -62,7 +62,8 @@ app.whenReady().then(async () => {
     await pause(1900);
     await evaluate("{const a=window.__sunlitQA.game.scene.getScene('ArenaScene');if(a.upgrading)a.selectUpgrade(a.upgradeMgr.pickThree('level',a.hero)[0],'level');}");
     await waitFor("window.__sunlitQA.game.scene.isActive('ArenaScene')&&window.__sunlitQA.game.scene.getScene('ArenaScene').currentLevel===2",'endless second floor');
-    const endless=await evaluate("{const a=window.__sunlitQA.game.scene.getScene('ArenaScene');({mode:a.mode,level:a.currentLevel,cards:a.upgradeMgr.getAppliedIds().length,operative:a.operativeId})}");
+    await waitFor("{const a=window.__sunlitQA.game.scene.getScene('ArenaScene');a.waveMgr.wave>=1&&a.combatTime>0&&a.enemies.countActive(true)>0}",'second floor actually playing');
+    const endless=await evaluate("{const a=window.__sunlitQA.game.scene.getScene('ArenaScene');({mode:a.mode,level:a.currentLevel,cards:a.upgradeMgr.getAppliedIds().length,operative:a.operativeId,wave:a.waveMgr.wave,combatTime:a.combatTime,enemies:a.enemies.countActive(true)})}");
     if(endless.mode!=='endless'||endless.cards<3||endless.operative!=='engineer')throw new Error('Endless carryover failed');
     await snap('endless-floor-2');
     const state=await evaluate("(async()=>{const{MetaProgressionManager:M}=await import('/systems/MetaProgressionManager.ts');return M.getState()})()");

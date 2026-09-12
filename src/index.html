@@ -38,6 +38,22 @@
     .settings-note { background: #edf0e2; border-radius: 12px; padding: 14px; font-size: 12px; line-height: 1.9; color: #567256; }
     .settings-done { width: 100%; margin-top: 25px; padding: 13px; border: 0; border-radius: 11px; background: #3e7057; color: #fffcf4; font: 600 15px 'Microsoft YaHei', sans-serif; cursor: pointer; }
     .settings-done:hover { background: #2f5c46; }
+    .backup-section { padding: 19px 0; border-top: 1px solid #e2e3d6; }
+    .backup-section h3 { margin: 0 0 10px; font-size: 17px; }
+    .backup-section p { margin: 10px 0; line-height: 1.8; font-size: 12px; }
+    .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .backup-actions button { flex: 1 1 140px; padding: 12px; border: 1px solid #cad1ba; border-radius: 10px; background: #e9eedc; color: #30483e; font: 600 13px 'Microsoft YaHei', sans-serif; cursor: pointer; }
+    .backup-actions button:hover { background: #dce7cf; }
+    .backup-actions button:disabled { color: #77796a; background: #ecebdf; cursor: default; }
+    .backup-actions #backup-confirm { background: #3e7057; color: #fffcf4; }
+    .backup-preview { margin-top: 16px; padding: 17px; border: 1px solid #cbd2bb; border-radius: 12px; background: #f4efdf; }
+    .backup-preview[hidden], .backup-restriction[hidden] { display: none; }
+    .backup-summary { display: flex; justify-content: space-between; gap: 12px; margin: 16px 0; }
+    .backup-summary dt { font-size: 12px; color: #687165; }
+    .backup-summary dd { margin: 6px 0 0; font-weight: 700; font-size: 19px; color: #3e7057; font-variant-numeric: tabular-nums; }
+    .backup-status:empty { display: none; }
+    .backup-section .backup-error { color: #984a37; }
+    .backup-confirm-note { font-weight: 600; }
     .metrics-dialog { width: min(670px, calc(100vw - 36px)); }
     .metrics-dialog h2 { font-size: 25px; }
     .metrics-table-scroll { max-height: 260px; overflow: auto; margin: 0 0 22px; border: 1px solid #e2e3d6; border-radius: 12px; }

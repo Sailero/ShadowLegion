@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMY_TYPES, WAVE_CFG, ARENA_WIDTH, ARENA_HEIGHT } from '../config/gameConfig';
+import { ENEMY_TYPES, WAVE_CFG, ARENA_WIDTH, ARENA_HEIGHT, MAX_ACTIVE_ENEMIES, normalizeRunLevel } from '../config/gameConfig';
 import { LEVEL_WAVES, WaveDef } from '../data/enemies';
 import { ChapterDef, getChapter } from '../data/chapters';
 import { Enemy } from '../entities/Enemy';
@@ -27,7 +27,7 @@ export class WaveManager {
 
   constructor(scene: Phaser.Scene, level: number, enemies: Phaser.Physics.Arcade.Group, endless = false, options: { mode?: GameMode; stageId?: number; trialTier?: number } = {}) {
     this.scene = scene;
-    this.level = Math.max(1, level);
+    this.level = normalizeRunLevel(level, endless);
     const levelIndex = endless
       ? (this.level - 1) % WAVE_CFG.levels
       : Math.min(this.level, WAVE_CFG.levels) - 1;
@@ -39,8 +39,8 @@ export class WaveManager {
       this.chapter = getStageChapter(options.stageId);
     } else if (this.mode === 'shadow') this.waves = getShadowTrialWaves(options.trialTier ?? 1);
     this.enemies = enemies;
-    if (endless && level > WAVE_CFG.levels) {
-      this.endlessScale = 1 + Math.floor((level - 1) / WAVE_CFG.levels) * 0.22;
+    if (endless && this.level > WAVE_CFG.levels) {
+      this.endlessScale = 1 + Math.floor((this.level - 1) / WAVE_CFG.levels) * 0.22;
     }
   }
 
@@ -109,6 +109,12 @@ export class WaveManager {
     if (this.spawning && this.pendingSpawns.length > 0) {
       this.spawnTimer += delta;
       while (this.spawnTimer >= this.spawnIntervalMs && this.pendingSpawns.length > 0) {
+        if (this.enemies.countActive(true) >= MAX_ACTIVE_ENEMIES) {
+          // Keep every authored encounter queued, without accumulating a burst
+          // of overdue spawns while summons occupy the available space.
+          this.spawnTimer = this.spawnIntervalMs;
+          break;
+        }
         this.spawnTimer -= this.spawnIntervalMs;
         const s = this.pendingSpawns.pop()!;
         this.spawnOne(s.type, s.elite, s.boss, s.bossName, s.laneIndex);
@@ -149,7 +155,8 @@ export class WaveManager {
     enemy.dmg = Math.round(enemy.dmg * damageScale);
     enemy.projectileDamageScale = damageScale;
     if (this.endlessScale > 1) {
-      enemy.spd *= (1 + (this.endlessScale - 1) * 0.2);
+      // Further stations grow in toughness, while telegraphs remain dodgeable.
+      enemy.spd *= Math.min(1.65, 1 + (this.endlessScale - 1) * 0.2);
     }
     if (bossName) enemy.setData('bossName', bossName);
     if (type === 'slime' && (isElite || this.endlessScale > 1.2)) {

@@ -1,0 +1,2176 @@
+{
+  "output": "D:\\Code\\Game\\.cache\\render-profile-1789215380945",
+  "sampleMs": 20000,
+  "warmupMs": 5000,
+  "startedAt": "2026-09-12T12:16:20.948Z",
+  "scope": "Dedicated hidden offscreen Electron development QA. No user browser, no CDP, no source changes.",
+  "protocol": [
+    "Menu reference, then an active Arena containing actual spawned enemies, with HP/core refills only to hold the encounter.",
+    "The live Arena is subsequently paused at the scene-system level without a pause overlay. This freezes physics, timers, animation and gameplay together.",
+    "The exact same paused display list is sampled visible / ground-hidden / visible-restored. Only the depth -1 static Graphics visibility changes.",
+    "Ground-hidden screenshots are diagnostic controls, not the intended player presentation. TileSprite, map labels, trees and other Graphics remain visible.",
+    "All timings are inclusive synchronous JavaScript CPU submission spans. Nested spans must not be summed; residuals are calculated per frame.",
+    "rAF and paint intervals include browser/offscreen scheduling. No gl.finish, GPU timer queries, capture or inspector is used during samples."
+  ],
+  "sourceHashes": {
+    "src/main.ts": "ede0d835faba657f3d351f8a57aefc1e37161121a575c75dd578f061e1b5b69b",
+    "src/scenes/ArenaScene.ts": "c3dc5117aa1f97463f06474b4a27384e1f149852390823c2a38065bc1b12fdb9"
+  },
+  "hardware": {
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "logicalCpus": 20,
+    "memoryBytes": 16828952576,
+    "gpuStatus": {
+      "2d_canvas": "enabled",
+      "direct_rendering_display_compositor": "disabled_off_ok",
+      "gpu_compositing": "enabled",
+      "multiple_raster_threads": "enabled_on",
+      "opengl": "enabled_on",
+      "rasterization": "enabled",
+      "raw_draw": "disabled_off_ok",
+      "skia_graphite": "disabled_off",
+      "trees_in_viz": "disabled_off",
+      "video_decode": "enabled",
+      "video_encode": "enabled",
+      "webgl": "enabled",
+      "webgpu": "enabled",
+      "webnn": "disabled_off"
+    }
+  },
+  "versions": {
+    "node": "24.18.1",
+    "acorn": "8.16.0",
+    "ada": "3.4.4",
+    "amaro": "1.1.9",
+    "ares": "1.34.6",
+    "brotli": "1.2.0",
+    "cldr": "48.0",
+    "icu": "78.2",
+    "llhttp": "9.4.3",
+    "merve": "1.2.2",
+    "modules": "149",
+    "napi": "10",
+    "nbytes": "0.1.4",
+    "ncrypto": "0.0.1",
+    "nghttp2": "1.69.0",
+    "nghttp3": "",
+    "ngtcp2": "",
+    "openssl": "0.0.0",
+    "simdjson": "4.6.4",
+    "simdutf": "7.7.0",
+    "sqlite": "3.53.1",
+    "tz": "2025c",
+    "undici": "7.29.0",
+    "unicode": "17.0",
+    "uv": "1.52.1",
+    "uvwasi": "0.0.23",
+    "v8": "15.2.124.13-electron.0",
+    "zlib": "1.3.2.1-motley",
+    "zstd": "1.6.0",
+    "electron": "44.0.0",
+    "chrome": "152.0.7977.54"
+  },
+  "phases": [
+    {
+      "name": "01-menu",
+      "note": "Unmodified Menu reference: useful for the offscreen cadence floor, not content-matched to Arena.",
+      "start": {
+        "scene": "MenuScene",
+        "children": 32
+      },
+      "end": {
+        "scene": "MenuScene",
+        "children": 32
+      },
+      "elapsedMs": 20010.29999999702,
+      "frames": 1201,
+      "frameRate": 60.01909016857213,
+      "raf": {
+        "count": 1200,
+        "mean": 16.66600000000003,
+        "p50": 16.69999999999891,
+        "p95": 16.700000000000728,
+        "p99": 16.80000000000109,
+        "max": 16.80000000000291
+      },
+      "callbackInterval": {
+        "count": 1200,
+        "mean": 16.66608333333085,
+        "p50": 16.700000002980232,
+        "p95": 17.700000002980232,
+        "p99": 18.200000002980232,
+        "max": 18.700000002980232
+      },
+      "paintInterval": {
+        "count": 1200,
+        "mean": 16.665679000000008,
+        "p50": 16.630300000000716,
+        "p95": 20.532900000001973,
+        "p99": 23.74750000000131,
+        "max": 39.844199999999546
+      },
+      "cpu": {
+        "gameStep": {
+          "count": 1201,
+          "mean": 4.219733555487153,
+          "p50": 3.7000000029802322,
+          "p95": 6.600000008940697,
+          "p99": 8.100000008940697,
+          "max": 11.799999997019768
+        },
+        "sceneUpdate": {
+          "count": 1201,
+          "mean": 0.01690258109301552,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "arenaUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "physicsUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "physicsPost": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_preupdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_update": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_postupdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "heroUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "shadowUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "enemyUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "bulletUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "waveUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "hudUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "bgParticlesUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "hazardsUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "renderCpu": {
+          "count": 1201,
+          "mean": 4.155703580610262,
+          "p50": 3.7000000029802322,
+          "p95": 6.5,
+          "p99": 8.099999994039536,
+          "max": 11.700000002980232
+        },
+        "sceneRender": {
+          "count": 1201,
+          "mean": 4.087593672116234,
+          "p50": 3.6000000089406967,
+          "p95": 6.4000000059604645,
+          "p99": 7.899999991059303,
+          "max": 11.5
+        },
+        "rendererPre": {
+          "count": 1201,
+          "mean": 0.025645295683787726,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.20000000298023224
+        },
+        "rendererRender": {
+          "count": 1201,
+          "mean": 4.076686095064824,
+          "p50": 3.6000000089406967,
+          "p95": 6.399999991059303,
+          "p99": 7.899999991059303,
+          "max": 11.5
+        },
+        "rendererPost": {
+          "count": 1201,
+          "mean": 0.0424646128102405,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.20000000298023224,
+          "max": 0.29999999701976776
+        },
+        "groundRender": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "renderOutsideGround": {
+          "count": 1201,
+          "mean": 4.155703580610262,
+          "p50": 3.7000000029802322,
+          "p95": 6.5,
+          "p99": 8.099999994039536,
+          "max": 11.700000002980232
+        },
+        "otherGameStepCpu": {
+          "count": 1201,
+          "mean": 0.04712739378387584,
+          "p50": 0,
+          "p95": 0.19999998807907104,
+          "p99": 0.20000000298023224,
+          "max": 0.30000001192092896
+        },
+        "sceneUpdateOutsideArena": {
+          "count": 1201,
+          "mean": 0.01690258109301552,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "sceneUpdateOutsideArenaAndPhysics": {
+          "count": 1201,
+          "mean": 0.01690258109301552,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        }
+      },
+      "groundRenderCalls": 0,
+      "rafOver25ms": 0,
+      "rafOver42ms": 0,
+      "longTasks": [],
+      "populations": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "02-arena-live",
+      "note": "Actual update/physics/render with automatic enemy spawning and companion actions. QA HP/core/enemy-HP refills prevent defeat or wave transitions. Population may vary and is recorded each second; this is not the ground A/B control.",
+      "start": {
+        "scene": "ArenaScene",
+        "frozen": false,
+        "sceneActive": true,
+        "sceneVisible": true,
+        "displayFingerprint": "47ad309f",
+        "fingerprintBytes": 109805,
+        "groundVisible": true,
+        "groundCommands": 12073,
+        "enemies": 9,
+        "playerBullets": 0,
+        "enemyBullets": 13,
+        "children": 90,
+        "combatTime": 6246.409999999998,
+        "dead": false,
+        "upgrading": false
+      },
+      "end": {
+        "scene": "ArenaScene",
+        "frozen": false,
+        "sceneActive": true,
+        "sceneVisible": true,
+        "displayFingerprint": "6c02042c",
+        "fingerprintBytes": 110016,
+        "groundVisible": true,
+        "groundCommands": 12073,
+        "enemies": 9,
+        "playerBullets": 1,
+        "enemyBullets": 11,
+        "children": 91,
+        "combatTime": 26262.289999999863,
+        "dead": false,
+        "upgrading": false
+      },
+      "elapsedMs": 20015.89999999106,
+      "frames": 1201,
+      "frameRate": 60.00229817297931,
+      "raf": {
+        "count": 1200,
+        "mean": 16.666000000000004,
+        "p50": 16.69999999999709,
+        "p95": 16.700000000004366,
+        "p99": 16.80000000000291,
+        "max": 16.80000000000291
+      },
+      "callbackInterval": {
+        "count": 1200,
+        "mean": 16.66641666666915,
+        "p50": 16.700000002980232,
+        "p95": 17.900000005960464,
+        "p99": 18.5,
+        "max": 23.600000008940697
+      },
+      "paintInterval": {
+        "count": 1201,
+        "mean": 16.66640840965862,
+        "p50": 16.506799999995565,
+        "p95": 21.97060000000056,
+        "p99": 25.253600000003644,
+        "max": 53.77599999999802
+      },
+      "cpu": {
+        "gameStep": {
+          "count": 1201,
+          "mean": 11.89750208160363,
+          "p50": 11.400000005960464,
+          "p95": 14.699999988079071,
+          "p99": 17.599999994039536,
+          "max": 23.30000001192093
+        },
+        "sceneUpdate": {
+          "count": 1201,
+          "mean": 0.35328892571890386,
+          "p50": 0.29999999701976776,
+          "p95": 0.9000000059604645,
+          "p99": 1.2999999970197678,
+          "max": 2.199999988079071
+        },
+        "arenaUpdate": {
+          "count": 1201,
+          "mean": 0.14621149025838837,
+          "p50": 0.10000000894069672,
+          "p95": 0.4000000059604645,
+          "p99": 0.5,
+          "max": 0.7000000029802322
+        },
+        "physicsUpdate": {
+          "count": 1201,
+          "mean": 0.13064113239463818,
+          "p50": 0.09999999403953552,
+          "p95": 0.7000000029802322,
+          "p99": 0.9000000059604645,
+          "max": 1.2999999970197678
+        },
+        "physicsPost": {
+          "count": 1201,
+          "mean": 0.00974188171804795,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "sceneEvent_preupdate": {
+          "count": 1201,
+          "mean": 0.006161532073989696,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "sceneEvent_update": {
+          "count": 1201,
+          "mean": 0.17826810991585404,
+          "p50": 0.10000000894069672,
+          "p95": 0.7999999970197678,
+          "p99": 1,
+          "max": 1.5999999940395355
+        },
+        "sceneEvent_postupdate": {
+          "count": 1201,
+          "mean": 0.011573688572987628,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "heroUpdate": {
+          "count": 1201,
+          "mean": 0.004829308844724364,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "shadowUpdate": {
+          "count": 1201,
+          "mean": 0.021315570365479347,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.20000000298023224
+        },
+        "enemyUpdate": {
+          "count": 1201,
+          "mean": 0.023313905017064276,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.3999999910593033
+        },
+        "bulletUpdate": {
+          "count": 1201,
+          "mean": 0.002331390480614026,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0.09999999403953552,
+          "max": 0.10000000894069672
+        },
+        "waveUpdate": {
+          "count": 1201,
+          "mean": 0.0009159034088588972,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0.10000000894069672
+        },
+        "hudUpdate": {
+          "count": 1201,
+          "mean": 0.053705245616235506,
+          "p50": 0,
+          "p95": 0.29999999701976776,
+          "p99": 0.4000000059604645,
+          "max": 0.5999999940395355
+        },
+        "bgParticlesUpdate": {
+          "count": 1201,
+          "mean": 0.007910074875515566,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.20000000298023224
+        },
+        "hazardsUpdate": {
+          "count": 1201,
+          "mean": 0.007826811119876834,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "renderCpu": {
+          "count": 1201,
+          "mean": 11.506244796201848,
+          "p50": 11.099999994039536,
+          "p95": 14.200000002980232,
+          "p99": 17.399999991059303,
+          "max": 22.900000005960464
+        },
+        "sceneRender": {
+          "count": 1201,
+          "mean": 11.444046627894528,
+          "p50": 11,
+          "p95": 14.199999988079071,
+          "p99": 17.399999991059303,
+          "max": 22.900000005960464
+        },
+        "rendererPre": {
+          "count": 1201,
+          "mean": 0.01656952543768855,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.20000000298023224
+        },
+        "rendererRender": {
+          "count": 1201,
+          "mean": 11.419483763639576,
+          "p50": 11,
+          "p95": 14.199999988079071,
+          "p99": 17.399999991059303,
+          "max": 22.900000005960464
+        },
+        "rendererPost": {
+          "count": 1201,
+          "mean": 0.04562864286963092,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.20000000298023224,
+          "max": 2.7000000029802322
+        },
+        "groundRender": {
+          "count": 1201,
+          "mean": 7.611323896767595,
+          "p50": 7.299999997019768,
+          "p95": 9.700000002980232,
+          "p99": 12.200000002980232,
+          "max": 16.200000002980232
+        },
+        "renderOutsideGround": {
+          "count": 1201,
+          "mean": 3.8949208994342523,
+          "p50": 3.7000000029802322,
+          "p95": 5.200000002980232,
+          "p99": 6.300000011920929,
+          "max": 7.300000011920929
+        },
+        "otherGameStepCpu": {
+          "count": 1201,
+          "mean": 0.03796835968287958,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.20000000298023224,
+          "max": 0.20000001788139343
+        },
+        "sceneUpdateOutsideArena": {
+          "count": 1201,
+          "mean": 0.20707743546051546,
+          "p50": 0.10000000894069672,
+          "p95": 0.7999999970197678,
+          "p99": 1,
+          "max": 1.5999999940395355
+        },
+        "sceneUpdateOutsideArenaAndPhysics": {
+          "count": 1201,
+          "mean": 0.06669442134782932,
+          "p50": 0.09999999403953552,
+          "p95": 0.20000000298023224,
+          "p99": 0.20000001788139343,
+          "max": 0.30000001192092896
+        }
+      },
+      "groundRenderCalls": 1201,
+      "rafOver25ms": 0,
+      "rafOver42ms": 0,
+      "longTasks": [],
+      "populations": [
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 13,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 7263.049999999997
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 10,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 8279.650000000001
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 8,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 9296.27
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 7,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 10312.91
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 6,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 11329.56
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 8,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 12346.169999999998
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 6,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 13362.789999999997
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 12,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 14379.419999999996
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 8,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 15379.389999999996
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 1,
+          "enemyBullets": 10,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 16396.009999999995
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 10,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 17395.93999999998
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 8,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 18412.589999999982
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 15,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 19429.20999999998
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 10,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 20429.16999999997
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 13,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 21445.779999999933
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 1,
+          "enemyBullets": 9,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 22445.759999999915
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 1,
+          "enemyBullets": 8,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 23462.369999999915
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 0,
+          "enemyBullets": 7,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 24479.019999999895
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 1,
+          "enemyBullets": 10,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 25495.659999999873
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 1,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26262.289999999863
+        }
+      ]
+    },
+    {
+      "name": "03-arena-frozen-visible",
+      "note": "Frozen scene-system baseline; actual enemies/bullets retained, gameplay CPU intentionally absent.",
+      "start": {
+        "scene": "ArenaScene",
+        "frozen": true,
+        "sceneActive": false,
+        "sceneVisible": true,
+        "displayFingerprint": "f93f3305",
+        "fingerprintBytes": 110082,
+        "groundVisible": true,
+        "groundCommands": 12073,
+        "enemies": 9,
+        "playerBullets": 2,
+        "enemyBullets": 11,
+        "children": 92,
+        "combatTime": 26478.939999999857,
+        "dead": false,
+        "upgrading": false
+      },
+      "end": {
+        "scene": "ArenaScene",
+        "frozen": true,
+        "sceneActive": false,
+        "sceneVisible": true,
+        "displayFingerprint": "f93f3305",
+        "fingerprintBytes": 110082,
+        "groundVisible": true,
+        "groundCommands": 12073,
+        "enemies": 9,
+        "playerBullets": 2,
+        "enemyBullets": 11,
+        "children": 92,
+        "combatTime": 26478.939999999857,
+        "dead": false,
+        "upgrading": false
+      },
+      "elapsedMs": 20016.09999999404,
+      "frames": 1201,
+      "frameRate": 60.00169863261862,
+      "raf": {
+        "count": 1200,
+        "mean": 16.666000000000004,
+        "p50": 16.69999999999709,
+        "p95": 16.79999999998836,
+        "p99": 16.80000000000291,
+        "max": 16.80000000000291
+      },
+      "callbackInterval": {
+        "count": 1200,
+        "mean": 16.666499999997516,
+        "p50": 16.69999998807907,
+        "p95": 17.799999997019768,
+        "p99": 18.5,
+        "max": 24.599999994039536
+      },
+      "paintInterval": {
+        "count": 1200,
+        "mean": 16.669918666666664,
+        "p50": 16.615399999995134,
+        "p95": 23.94000000000233,
+        "p99": 27.37720000000263,
+        "max": 51.50139999999374
+      },
+      "cpu": {
+        "gameStep": {
+          "count": 1201,
+          "mean": 11.611240632751404,
+          "p50": 11.099999994039536,
+          "p95": 14.700000002980232,
+          "p99": 17.400000005960464,
+          "max": 24.19999998807907
+        },
+        "sceneUpdate": {
+          "count": 1201,
+          "mean": 0.0035803497433166123,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "arenaUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "physicsUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "physicsPost": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_preupdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_update": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_postupdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "heroUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "shadowUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "enemyUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "bulletUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "waveUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "hudUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "bgParticlesUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "hazardsUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "renderCpu": {
+          "count": 1201,
+          "mean": 11.568026644465428,
+          "p50": 11.099999994039536,
+          "p95": 14.600000008940697,
+          "p99": 17.299999997019768,
+          "max": 24.099999994039536
+        },
+        "sceneRender": {
+          "count": 1201,
+          "mean": 11.510407993376106,
+          "p50": 11,
+          "p95": 14.599999994039536,
+          "p99": 17.200000002980232,
+          "max": 24.099999994039536
+        },
+        "rendererPre": {
+          "count": 1201,
+          "mean": 0.015570358025045021,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.20000000298023224
+        },
+        "rendererRender": {
+          "count": 1201,
+          "mean": 11.478684429733779,
+          "p50": 11,
+          "p95": 14.599999994039536,
+          "p99": 17.100000008940697,
+          "max": 24.099999994039536
+        },
+        "rendererPost": {
+          "count": 1201,
+          "mean": 0.042048293064277834,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.20000000298023224,
+          "max": 0.20000000298023224
+        },
+        "groundRender": {
+          "count": 1201,
+          "mean": 7.575770191593929,
+          "p50": 7.200000002980232,
+          "p95": 9.899999991059303,
+          "p99": 11.899999991059303,
+          "max": 17.900000005960464
+        },
+        "renderOutsideGround": {
+          "count": 1201,
+          "mean": 3.9922564528715005,
+          "p50": 3.7999999970197678,
+          "p95": 5.200000017881393,
+          "p99": 6.4000000059604645,
+          "max": 7.200000002980232
+        },
+        "otherGameStepCpu": {
+          "count": 1201,
+          "mean": 0.03963363854265729,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.20000000298023224,
+          "max": 0.30000001192092896
+        },
+        "sceneUpdateOutsideArena": {
+          "count": 1201,
+          "mean": 0.0035803497433166123,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "sceneUpdateOutsideArenaAndPhysics": {
+          "count": 1201,
+          "mean": 0.0035803497433166123,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        }
+      },
+      "groundRenderCalls": 1201,
+      "rafOver25ms": 0,
+      "rafOver42ms": 0,
+      "longTasks": [],
+      "populations": [
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        }
+      ]
+    },
+    {
+      "name": "04-arena-frozen-ground-hidden",
+      "note": "Identical frozen scene, only static Graphics depth -1 hidden. Diagnostic visual control, not player presentation.",
+      "start": {
+        "scene": "ArenaScene",
+        "frozen": true,
+        "sceneActive": false,
+        "sceneVisible": true,
+        "displayFingerprint": "f93f3305",
+        "fingerprintBytes": 110082,
+        "groundVisible": false,
+        "groundCommands": 12073,
+        "enemies": 9,
+        "playerBullets": 2,
+        "enemyBullets": 11,
+        "children": 92,
+        "combatTime": 26478.939999999857,
+        "dead": false,
+        "upgrading": false
+      },
+      "end": {
+        "scene": "ArenaScene",
+        "frozen": true,
+        "sceneActive": false,
+        "sceneVisible": true,
+        "displayFingerprint": "f93f3305",
+        "fingerprintBytes": 110082,
+        "groundVisible": false,
+        "groundCommands": 12073,
+        "enemies": 9,
+        "playerBullets": 2,
+        "enemyBullets": 11,
+        "children": 92,
+        "combatTime": 26478.939999999857,
+        "dead": false,
+        "upgrading": false
+      },
+      "elapsedMs": 20010.40000000596,
+      "frames": 1201,
+      "frameRate": 60.018790229063,
+      "raf": {
+        "count": 1200,
+        "mean": 16.665999999999997,
+        "p50": 16.69999999999709,
+        "p95": 16.70000000001164,
+        "p99": 16.80000000000291,
+        "max": 16.80000000000291
+      },
+      "callbackInterval": {
+        "count": 1200,
+        "mean": 16.666333333340784,
+        "p50": 16.700000002980232,
+        "p95": 17.799999997019768,
+        "p99": 18.100000008940697,
+        "max": 18.700000002980232
+      },
+      "paintInterval": {
+        "count": 1200,
+        "mean": 16.664659666666665,
+        "p50": 16.697000000000116,
+        "p95": 19.45569999999134,
+        "p99": 21.67819999999483,
+        "max": 54.44740000000456
+      },
+      "cpu": {
+        "gameStep": {
+          "count": 1201,
+          "mean": 4.231557035525574,
+          "p50": 3.8999999910593033,
+          "p95": 6,
+          "p99": 6.799999997019768,
+          "max": 8.399999991059303
+        },
+        "sceneUpdate": {
+          "count": 1201,
+          "mean": 0.005079100744412602,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "arenaUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "physicsUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "physicsPost": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_preupdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_update": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_postupdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "heroUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "shadowUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "enemyUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "bulletUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "waveUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "hudUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "bgParticlesUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "hazardsUpdate": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "renderCpu": {
+          "count": 1201,
+          "mean": 4.183180682727141,
+          "p50": 3.800000011920929,
+          "p95": 5.9000000059604645,
+          "p99": 6.700000002980232,
+          "max": 8.399999991059303
+        },
+        "sceneRender": {
+          "count": 1201,
+          "mean": 4.149375520392223,
+          "p50": 3.7999999970197678,
+          "p95": 5.800000011920929,
+          "p99": 6.699999988079071,
+          "max": 8.299999997019768
+        },
+        "rendererPre": {
+          "count": 1201,
+          "mean": 0.022647793507893615,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.20000000298023224
+        },
+        "rendererRender": {
+          "count": 1201,
+          "mean": 4.121482098442529,
+          "p50": 3.7999999970197678,
+          "p95": 5.800000011920929,
+          "p99": 6.600000008940697,
+          "max": 8.299999997019768
+        },
+        "rendererPost": {
+          "count": 1201,
+          "mean": 0.011157368827024963,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.20000000298023224
+        },
+        "groundRender": {
+          "count": 1201,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "renderOutsideGround": {
+          "count": 1201,
+          "mean": 4.183180682727141,
+          "p50": 3.800000011920929,
+          "p95": 5.9000000059604645,
+          "p99": 6.700000002980232,
+          "max": 8.399999991059303
+        },
+        "otherGameStepCpu": {
+          "count": 1201,
+          "mean": 0.04329725205401993,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.20000000298023224,
+          "max": 0.29999999701976776
+        },
+        "sceneUpdateOutsideArena": {
+          "count": 1201,
+          "mean": 0.005079100744412602,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "sceneUpdateOutsideArenaAndPhysics": {
+          "count": 1201,
+          "mean": 0.005079100744412602,
+          "p50": 0,
+          "p95": 0.09999999403953552,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        }
+      },
+      "groundRenderCalls": 0,
+      "rafOver25ms": 0,
+      "rafOver42ms": 0,
+      "longTasks": [],
+      "populations": [
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        }
+      ]
+    },
+    {
+      "name": "05-arena-frozen-restored",
+      "note": "Same frozen scene and ground visibility restored; detects one-way warmup or scheduling drift.",
+      "start": {
+        "scene": "ArenaScene",
+        "frozen": true,
+        "sceneActive": false,
+        "sceneVisible": true,
+        "displayFingerprint": "f93f3305",
+        "fingerprintBytes": 110082,
+        "groundVisible": true,
+        "groundCommands": 12073,
+        "enemies": 9,
+        "playerBullets": 2,
+        "enemyBullets": 11,
+        "children": 92,
+        "combatTime": 26478.939999999857,
+        "dead": false,
+        "upgrading": false
+      },
+      "end": {
+        "scene": "ArenaScene",
+        "frozen": true,
+        "sceneActive": false,
+        "sceneVisible": true,
+        "displayFingerprint": "f93f3305",
+        "fingerprintBytes": 110082,
+        "groundVisible": true,
+        "groundCommands": 12073,
+        "enemies": 9,
+        "playerBullets": 2,
+        "enemyBullets": 11,
+        "children": 92,
+        "combatTime": 26478.939999999857,
+        "dead": false,
+        "upgrading": false
+      },
+      "elapsedMs": 20016.5,
+      "frames": 1199,
+      "frameRate": 59.900582019833635,
+      "raf": {
+        "count": 1198,
+        "mean": 16.693823038397326,
+        "p50": 16.69999999999709,
+        "p95": 16.79999999998836,
+        "p99": 16.80000000000291,
+        "max": 33.39999999999418
+      },
+      "callbackInterval": {
+        "count": 1198,
+        "mean": 16.692988313858915,
+        "p50": 16.69999998807907,
+        "p95": 18,
+        "p99": 18.299999997019768,
+        "max": 47.70000000298023
+      },
+      "paintInterval": {
+        "count": 1198,
+        "mean": 16.693597829716182,
+        "p50": 16.581200000000536,
+        "p95": 22.404799999989336,
+        "p99": 25.46830000000773,
+        "max": 83.29370000000927
+      },
+      "cpu": {
+        "gameStep": {
+          "count": 1199,
+          "mean": 11.221934945621621,
+          "p50": 10.899999991059303,
+          "p95": 13.099999994039536,
+          "p99": 15.299999997019768,
+          "max": 42.8999999910593
+        },
+        "sceneUpdate": {
+          "count": 1199,
+          "mean": 0.004336947408987145,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "arenaUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "physicsUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "physicsPost": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_preupdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_update": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "sceneEvent_postupdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "heroUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "shadowUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "enemyUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "bulletUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "waveUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "hudUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "bgParticlesUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "hazardsUpdate": {
+          "count": 1199,
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "renderCpu": {
+          "count": 1199,
+          "mean": 11.181651376318296,
+          "p50": 10.800000011920929,
+          "p95": 13,
+          "p99": 15.299999997019768,
+          "max": 42.79999999701977
+        },
+        "sceneRender": {
+          "count": 1199,
+          "mean": 11.122935779908481,
+          "p50": 10.799999997019768,
+          "p95": 13,
+          "p99": 15.199999988079071,
+          "max": 42.70000000298023
+        },
+        "rendererPre": {
+          "count": 1199,
+          "mean": 0.016180150217071386,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.10000000894069672,
+          "max": 0.20000000298023224
+        },
+        "rendererRender": {
+          "count": 1199,
+          "mean": 11.097914929000709,
+          "p50": 10.799999997019768,
+          "p95": 12.900000005960464,
+          "p99": 15.199999988079071,
+          "max": 42.70000000298023
+        },
+        "rendererPost": {
+          "count": 1199,
+          "mean": 0.042535446192742986,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.20000000298023224,
+          "max": 0.20000000298023224
+        },
+        "groundRender": {
+          "count": 1199,
+          "mean": 7.2969140951910845,
+          "p50": 7.0999999940395355,
+          "p95": 8.599999994039536,
+          "p99": 10.299999997019768,
+          "max": 38.29999999701977
+        },
+        "renderOutsideGround": {
+          "count": 1199,
+          "mean": 3.8847372811272107,
+          "p50": 3.7999999970197678,
+          "p95": 4.700000002980232,
+          "p99": 6,
+          "max": 10.199999988079071
+        },
+        "otherGameStepCpu": {
+          "count": 1199,
+          "mean": 0.03594662189433931,
+          "p50": 0,
+          "p95": 0.10000000894069672,
+          "p99": 0.20000000298023224,
+          "max": 0.30000001192092896
+        },
+        "sceneUpdateOutsideArena": {
+          "count": 1199,
+          "mean": 0.004336947408987145,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "sceneUpdateOutsideArenaAndPhysics": {
+          "count": 1199,
+          "mean": 0.004336947408987145,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0.10000000894069672,
+          "max": 0.10000000894069672
+        }
+      },
+      "groundRenderCalls": 1199,
+      "rafOver25ms": 2,
+      "rafOver42ms": 0,
+      "longTasks": [],
+      "populations": [
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        },
+        {
+          "enemies": 9,
+          "playerBullets": 2,
+          "enemyBullets": 11,
+          "dead": false,
+          "upgrading": false,
+          "combatTime": 26478.939999999857
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "renderer": {
+    "rendererType": 2,
+    "webgl": true,
+    "rendererName": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002520) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "width": 1024,
+    "height": 768,
+    "dpr": 1,
+    "canvas": {
+      "width": 1024,
+      "height": 768
+    },
+    "timeStep": {
+      "targetFps": 60,
+      "fpsLimit": 0,
+      "forceSetTimeOut": false
+    },
+    "performanceClock": "performance.now(); native precision, no synthetic smoothing",
+    "longTaskSupported": true
+  },
+  "arena": {
+    "commandBufferLength": 12073,
+    "depth": -1,
+    "otherGroundLayers": [
+      {
+        "type": "TileSprite",
+        "depth": -2,
+        "visible": true
+      },
+      {
+        "type": "Graphics",
+        "depth": -1,
+        "visible": true
+      },
+      {
+        "type": "Graphics",
+        "depth": -0.5,
+        "visible": true
+      }
+    ]
+  },
+  "checks": {
+    "webglRenderer": true,
+    "actualLiveEnemies": true,
+    "liveArenaAndPhysicsMeasured": true,
+    "minimumSampleDuration": true,
+    "exactFrozenDisplayState": true,
+    "allFrozenAndVisible": true,
+    "onlyGroundSuppressed": true,
+    "noConsoleErrors": true
+  },
+  "comparison": {
+    "staticGroundCpuMeanMs": 7.4363421433925065,
+    "renderCpuSavedMeanMs": 7.191658327664722,
+    "gameStepCpuSavedMeanMs": 7.1850307536609375,
+    "groundShareOfVisibleRenderCpu": 0.6537536167851509,
+    "visibleA_RafP95": 16.79999999998836,
+    "hidden_RafP95": 16.70000000001164,
+    "visibleB_RafP95": 16.79999999998836,
+    "inferenceRule": "Use per-frame CPU attribution plus reversible state-matched render-cost change to assess a static-cache candidate. Cadence alone cannot separate GPU/compositor/offscreen scheduling; JS submission spans do not measure GPU execution."
+  },
+  "completedAt": "2026-09-12T12:18:30.873Z"
+}

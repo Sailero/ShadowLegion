@@ -1,0 +1,35 @@
+{
+  "scope": "Production backup UI: real DOM File APIs (OS picker not automated), native confirm/cancel/download, actual reload and localStorage readback. Synthetic progression created through real managers, not player progress.",
+  "engine": "152.0.7977.54",
+  "restored": {
+    "clears": 15,
+    "stars": 45,
+    "cores": 74,
+    "checkpoint": 16,
+    "modules": {
+      "arsenal": 0,
+      "armor": 1,
+      "reactor": 0
+    },
+    "research": [
+      "tidy_satchel"
+    ],
+    "equipped": {
+      "ranger": "ranger_roamer",
+      "gunner": null,
+      "warden": null,
+      "engineer": null
+    }
+  },
+  "checks": {
+    "invalidFileNoMutation": true,
+    "previewNoMutation": true,
+    "cancelNoMutation": true,
+    "downloadRoundTrip": true,
+    "foreignKeyPreserved": true,
+    "restoredSettings": true,
+    "battleRestoreDisabled": true
+  },
+  "errors": [],
+  "output": "D:\\Code\\Game\\.cache\\backup-qa-1789196063321"
+}

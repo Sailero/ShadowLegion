@@ -1,0 +1,120 @@
+{
+  "output": "D:\\Code\\Game\\.cache\\ending-qa-1789196348015",
+  "scope": "Development QA renderer; accelerated real rival deaths reach Arena.finishFiniteRun. Storage.prototype.setItem rejects only sunlit_shadow_trials_v1. The independent wallet must still save. Not ordinary gameplay or difficulty evidence.",
+  "errors": [],
+  "before": {
+    "cores": 0,
+    "records": []
+  },
+  "rounds": [
+    {
+      "dead": false,
+      "wave": 1,
+      "kills": 1
+    },
+    {
+      "dead": false,
+      "wave": 2,
+      "kills": 2
+    },
+    {
+      "dead": true,
+      "wave": 3,
+      "kills": 3
+    }
+  ],
+  "after": {
+    "cores": 6,
+    "records": [],
+    "rejectedWrites": 1,
+    "texts": [
+      "一封旅途回信  /  A LETTER TO TOMORROW",
+      "昨天的自己，向你击了个掌。",
+      "影子试炼 1 · 初次击掌",
+      "已送达",
+      "花火游侠",
+      "熟练度 2 · 渐入佳境",
+      "本次熟练度 +12",
+      "挑战已完成，切磋纪录暂未保存。",
+      "积分",
+      "306",
+      "击退",
+      "3",
+      "同行",
+      "0:01",
+      "+6 暖晶",
+      "行囊里共有 6 暖晶",
+      "寄给明天的自己",
+      "坚守者的影子，已经记下这次的习惯。",
+      "移动",
+      "0",
+      "火力",
+      "0",
+      "轻跃",
+      "0",
+      "本领",
+      "0",
+      "这是行为偏好，不是能力评分。",
+      "下一封信和新的风景正在等你。也可以先回工坊，整理刚刚得到的收获。",
+      "再走一次这段路  ·  R",
+      "选择另一封挑战书",
+      "去工坊整理行囊",
+      "切磋纪录暂未保存 · 暖晶结果已保存 · 请检查浏览器存储。"
+    ],
+    "result": {
+      "mode": "shadow",
+      "trialTier": 1,
+      "stageResult": null,
+      "trialResult": {
+        "tier": 1,
+        "firstClear": false,
+        "bestTimeSec": 0,
+        "newBest": false,
+        "saved": false
+      },
+      "score": 306,
+      "kills": 3,
+      "wave": 3,
+      "level": 1,
+      "victory": true,
+      "endless": false,
+      "durationSec": 1,
+      "build": "nova",
+      "newHighScore": true,
+      "profile": {
+        "style": "坚守者",
+        "mobility": 0,
+        "firepower": 0,
+        "reflex": 0,
+        "technique": 0,
+        "shots": 0,
+        "dashes": 0,
+        "skills": 0,
+        "damageTaken": 0,
+        "build": "nova",
+        "createdAt": "2026-09-12T06:59:10.316Z"
+      },
+      "reward": {
+        "earned": 6,
+        "progressReward": 0,
+        "victoryReward": 6,
+        "newBuildReward": 0,
+        "newBuildClear": false,
+        "total": 6,
+        "masteryXp": 12,
+        "saved": true
+      },
+      "operativeId": "ranger",
+      "shadowTrial": true,
+      "startLevel": 1
+    }
+  },
+  "checks": {
+    "recordWriteRejected": true,
+    "recordNotFabricated": true,
+    "walletSaved": true,
+    "noticeAccurate": true,
+    "victoryNotFailure": true
+  },
+  "notice": "切磋纪录暂未保存 · 暖晶结果已保存 · 请检查浏览器存储。"
+}

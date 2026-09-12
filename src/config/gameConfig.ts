@@ -164,6 +164,16 @@ export const WAVE_CFG = {
   bossSpeed: 0.85,
 };
 
+/** Shared runtime/save bounds; the endless route has no designed final station. */
+export const MAX_ENDLESS_LEVEL = Math.floor(Number.MAX_SAFE_INTEGER / WAVE_CFG.perLevel);
+export const MAX_ENDLESS_WAVE = MAX_ENDLESS_LEVEL * WAVE_CFG.perLevel;
+export const MAX_ACTIVE_ENEMIES = 160;
+
+export function normalizeRunLevel(value: unknown, endless = false): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 1;
+  return Math.max(1, Math.min(endless ? MAX_ENDLESS_LEVEL : WAVE_CFG.levels, Math.floor(value)));
+}
+
 export interface BehaviorRecordingConfig {
   enabled: boolean;
   recordInterval: number;

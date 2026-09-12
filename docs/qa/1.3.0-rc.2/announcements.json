@@ -1,0 +1,67 @@
+{
+  "output": "D:\\Code\\Game\\.cache\\announcement-qa-1789197035655",
+  "scope": "Isolated development renderer; direct announcement calls and a visible injected combo counter, not ordinary play.",
+  "errors": [],
+  "burst": {
+    "activeReferences": 1,
+    "containers": 1,
+    "lastText": "花火派对 · 47"
+  },
+  "priority": {
+    "warningRetained": true,
+    "endingRetained": true,
+    "priority": 3,
+    "containers": 1,
+    "text": "旅途结束 · 高优先级回信"
+  },
+  "expired": {
+    "priority": -1,
+    "containers": 0
+  },
+  "longest": {
+    "stageId": 35,
+    "wave": 1,
+    "text": "1/3 · 花朵小团长 · 看清来路\n集市精英在灯带旁指挥队伍。不要只追着团长，把它招呼来的伙伴一起引向花火。",
+    "height": 70,
+    "notice": {
+      "left": 192,
+      "right": 832,
+      "top": 157,
+      "bottom": 245
+    },
+    "combo": {
+      "left": 30,
+      "right": 121,
+      "top": 124,
+      "bottom": 149
+    },
+    "bossHudBottom": 145,
+    "bossVisible": true,
+    "clearOfTopHud": true,
+    "clearOfCombo": true,
+    "containers": 1
+  },
+  "actionHint": {
+    "candidates": 46,
+    "text": "镜像切磋开始：观察蓄力线，轻跃躲开昨日的自己",
+    "height": 31,
+    "width": 332,
+    "hint": {
+      "left": 409,
+      "right": 741,
+      "top": 645,
+      "bottom": 676
+    },
+    "overlapsNotice": false,
+    "clearOfBottomHud": true,
+    "clearOfSideHud": true
+  },
+  "checks": {
+    "singleAfterBurst": true,
+    "priority": true,
+    "expires": true,
+    "topHud": true,
+    "combo": true,
+    "actionHint": true
+  }
+}

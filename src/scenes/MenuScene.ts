@@ -15,8 +15,8 @@ export class MenuScene extends Phaser.Scene {
     paintedBackground(this, 'cover');
     label(this, 67, 88, 'SUNLIT ECHOES', 13, UI.green, true).setLetterSpacing(5);
     heading(this, 62, 121, '暖影同行', 61, UI.green).setLetterSpacing(4).setStroke('#fff1d5', 1);
-    label(this, 70, 208, '把勇气寄给远方，\n让昨天的影子一起长大。', 17, UI.ink).setLineSpacing(8).setStroke('#fff2d8', 2);
-    menuEntry(this, 69, 302, '01', '展开旅行地图', '五个章节 · 五十封等待送达的信', () => this.scene.start('CampaignScene'), true);
+    label(this, 70, 208, '借地形守住营地，选卡搭出拿手打法。\n记住你习惯的影伴，帮你照看另一条路。', 16, UI.ink).setLineSpacing(8).setStroke('#fff2d8', 2);
+    menuEntry(this, 69, 302, '01', '展开旅行地图', '动作守营 · 五个章节，五十段小旅途', () => this.scene.start('CampaignScene'), true);
     menuEntry(this, 69, 391, '02', '去往更远的地方', '无尽漫游 · 让流派与勇气继续成长', () => this.scene.start('LoadoutScene', { mode: 'endless' }));
     menuEntry(this, 69, 480, '03', '和昨天的自己切磋', '影子试炼 · 五种挑战，读懂自己的习惯', () => this.scene.start('LoadoutScene', { mode: 'shadow', trialTier: 1 }));
     button(this, 161, 608, 208, '旅人行囊与工坊', () => this.scene.start('WorkshopScene'), { secondary: true, height: 43, size: 14 });

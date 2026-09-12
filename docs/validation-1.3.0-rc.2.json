@@ -1,0 +1,332 @@
+{
+  "version": "1.3.0-rc.2",
+  "createdAt": "2026-09-12T12:52:07.451076+00:00",
+  "releaseDirectory": "release/shadow-legion-web-1.3.0-rc.2-2026-09-12T13-00-03-069Z",
+  "releaseManifest": "release-manifest-1.3.0-rc.2.json",
+  "releaseManifestSha256": "f1ee4e81cdda4d405f5e79e4475e129cb72c679cf056ebabdc7cd689e03f4abf",
+  "releaseChecks": {
+    "command": "npm run release:web",
+    "testsPassed": 108,
+    "testsFailed": 0,
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "staticAssetCheck": "passed",
+    "knownDependencyVulnerabilities": 0,
+    "runtimeFiles": 5,
+    "rawRuntimeBytes": 4483690,
+    "jsGzipKilobytes": 424.62,
+    "verifiedSha256Files": 8
+  },
+  "zip": {
+    "path": "release/Sunlit-Echoes-1.3.0-rc.2-web.zip",
+    "bytes": 3155016,
+    "sha256": "546d2aef1b044fdf4bf6b1be8488580a54d19fa7ff5226825bf10d36e662cc62",
+    "entries": 9,
+    "independentReadback": "All source, manifest, ZIP and current dist runtime bytes match"
+  },
+  "soak": {
+    "report": "qa/1.3.0-rc.2/soak-cached.json",
+    "sourceHash": "3beddabd33232cc82b17d0530264c3168f8e8d6c06d8991bd22f15527d8500e5",
+    "hashScope": "SHA-256 of absolute Windows source paths plus raw bytes; sorted recursively by Node localeCompare; src .ts/.json/.css/.html only. Earlier baseline hash excluded .html. Not a portable Git tree hash.",
+    "realTimeSeconds": 1207.134,
+    "frameMs": {
+      "samples": 72218,
+      "median": 16.699999999953434,
+      "p95": 16.799999999813735,
+      "p99": 16.800000000046566,
+      "max": 100
+    },
+    "peaks": {
+      "enemies": 160,
+      "playerActive": 200,
+      "playerAllocated": 200,
+      "enemyActive": 31,
+      "enemyAllocated": 33,
+      "gems": 48,
+      "objects": 408,
+      "physicsBodies": 305,
+      "emitters": 27,
+      "groundImages": 1,
+      "particles": 211,
+      "particleCounter": 27,
+      "timers": 31,
+      "tweens": 66,
+      "pendingSpawns": 17,
+      "rivals": 2,
+      "fireListeners": 1,
+      "deathListeners": 1,
+      "commandListeners": 1,
+      "pauseListeners": 1,
+      "gameBlurListeners": 4,
+      "cards": 52
+    },
+    "peakHeapBytes": 157526107,
+    "gcAfterMiB": [
+      62.88143253326416,
+      63.7948579788208,
+      63.06835174560547,
+      63.31926441192627
+    ],
+    "textureCountRange": [
+      55,
+      110
+    ],
+    "endlessCombatLevels": [
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58
+    ],
+    "restartChecks": 10,
+    "terminalBoundaryChecks": [
+      {
+        "order": "hero-first",
+        "runDelta": 1,
+        "victory": false,
+        "expectedVictory": false
+      },
+      {
+        "order": "core-first",
+        "runDelta": 1,
+        "victory": false,
+        "expectedVictory": false
+      },
+      {
+        "order": "enemy-death-core-before-clear-check",
+        "runDelta": 1,
+        "victory": false,
+        "expectedVictory": false
+      },
+      {
+        "order": "victory-first-then-core",
+        "runDelta": 1,
+        "victory": true,
+        "expectedVictory": true
+      }
+    ],
+    "errors": [],
+    "scope": "Real-time hidden offscreen Chromium renderer with automation/HP refills and legal capped build seeding. Not human playtesting, ordinary difficulty, minimum-spec certification or all browsers.",
+    "revisionScope": "Cached-ground revision before the final camp anchoring fix; the original soak did not assert camp coordinates and cannot certify the final fixed revision."
+  },
+  "production": {
+    "report": "qa/1.3.0-rc.2/production-final.json",
+    "nativeNavigation": "Menu, route, loadout, onboarding, draft, battle, pause, menu, checkpoint resume",
+    "debugHookPresent": false,
+    "menuAndBattleScreenshotsVisuallyReviewed": true,
+    "errors": [],
+    "revisionScope": "Previous cached-ground bundle index-C8XQ99TM.js; native production navigation has not been rerun on final anchored index-Cim6Y03c.js."
+  },
+  "evidenceFiles": [
+    {
+      "path": "qa/1.3.0-rc.2/announcement-boundaries.png",
+      "bytes": 1021026,
+      "sha256": "d86d9e80c82a0d19035db251306d7ee8f2b6f22fa032684ecc722d80e3cf2586"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/announcements.json",
+      "bytes": 1604,
+      "sha256": "403ff2fab6d1e0da5ac5a480aad5070dc3423272383f5de7b114ab9da12c6503"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/backup-preview.png",
+      "bytes": 307059,
+      "sha256": "0153d0f37faddfbb4c19e8bb2977858f859995023c57a57e337c8b07674d4a9b"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/backup.json",
+      "bytes": 928,
+      "sha256": "58a80db2b9372acfd0503f73b7bb46f3306ef3d0d88aafdc8f18abeec97ae0b5"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/campaign-flow.json",
+      "bytes": 5860,
+      "sha256": "51f5eb4d895470b85104ced0ac1f81a6462c6bc42b424ce4bbac7f9c6cf31533"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/core-anchor-after.json",
+      "bytes": 2771,
+      "sha256": "5b22d204c6b40c8dc8ebd4a355f1d26e26ad0e5dd9d47dab5c33736d87f45ca9"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/core-anchor-after.png",
+      "bytes": 1039077,
+      "sha256": "1189b24b3c4d3982e6323ee28515921a990e8595ad62af18feae7592e66d8d3d"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/core-anchor-before.json",
+      "bytes": 2970,
+      "sha256": "aaf38277ae49af5096ef96da04567f2820b210061288fe3290b6ec8cffde3eca"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/endless-regression.json",
+      "bytes": 7665,
+      "sha256": "d3a7bbbef1d06293d6dc94d023ddca4924742b379c305a42aa7c59b107829753"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/ground-cache.json",
+      "bytes": 14030,
+      "sha256": "5d4307a20cf87e8a1bb9b7ffa7a5d31a3c98e09677f951b90d3d29fd79dc1903"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/ground-cached.png",
+      "bytes": 1064104,
+      "sha256": "a3ae6a8d9013bc3a1ab8ae04f4014424b6fcfba52da64982e80ad170b7e43f96"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/ground-vector.png",
+      "bytes": 1071626,
+      "sha256": "80d994bb0fa7eb1b0e722410d8b31fb33921a6605c74e5d51c568895f984d239"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/production-final-battle.png",
+      "bytes": 1067949,
+      "sha256": "bbba415ca7dbe58813dd598ecc927cb35e5ff1df9adb134f674a70b85eea54d0"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/production-final-menu.png",
+      "bytes": 1329652,
+      "sha256": "e363aea11169b51e42696217acf84f1a4bef84f776dff672d8bdd41d36ab5042"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/production-final.json",
+      "bytes": 1202,
+      "sha256": "c9bc771a78a082233c721ba9f4d30d4a4ea9232cf29ec3441924aabe03e3d1bd"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/production-menu.png",
+      "bytes": 1258330,
+      "sha256": "96fb8a91cc73e42607ab81966255889591aeced72c7420a8f47021cfb63fa4a2"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/release-checks-before-anchor.log",
+      "bytes": 12449,
+      "sha256": "7ff06bd83ced348d063a67d700c9a6832f9cb65809590aed091d345419f64902"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/release-checks.log",
+      "bytes": 12417,
+      "sha256": "2644a954c2a18630646d45802eafa836301f74560092a79b409f7bf3dd3f08b4"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/render-after-cache.json",
+      "bytes": 57015,
+      "sha256": "a785fb7af4e504ec20ce60de7665d2cc4301006ce8a311720f8561530d256452"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/render-before-cache.json",
+      "bytes": 57197,
+      "sha256": "772b31f5323c5f4c9736d2f3654ebf889b47a571b71564c8d220520e54caa3c8"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/settings-focus.json",
+      "bytes": 5558,
+      "sha256": "df8d79577ed5265c50f6bb2f996d542a9d7c7684d290f617cb140ecc17e2ae15"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/settings-focus.png",
+      "bytes": 273625,
+      "sha256": "c175ca34676c3121076ef8f87c370c53f79237cf1aed9bca4dba95e443476e35"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/shadow-save-failure.json",
+      "bytes": 3029,
+      "sha256": "a9f17e7118138cab61f3dee54b492767f1788df0574fa796b7720b000fe9681c"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-cached-density.png",
+      "bytes": 1045428,
+      "sha256": "aad354961d4387a270570a44952cacba3058bf4dfa75bc918ae7b18a5d85dc46"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-cached-dual-shadow.png",
+      "bytes": 1021911,
+      "sha256": "308dc7b803c88c44d9a7a603d139b2fb6a42e04e7b0714f8d76426e57f1aad2f"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-cached-projectiles.png",
+      "bytes": 1052162,
+      "sha256": "df10a46752b81b125f34200c41706e610a508565f0ca54e430dbd743d10cea9b"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-cached-samples.jsonl",
+      "bytes": 375595,
+      "sha256": "ba2960fe7726dce7a8f58c959da0ccef09e9e9a74d9e9ff175f2beaa2320f807"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-cached.json",
+      "bytes": 23952,
+      "sha256": "aecf05eb6ff0aca655e369225835f21f93d214948079614fdf24498836be805b"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-density.png",
+      "bytes": 1048852,
+      "sha256": "5cb751d18e2fd901e6d9abccc4fa552e91ec8872de76260bf85e1ccd4381143d"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-dual-shadow.png",
+      "bytes": 1038255,
+      "sha256": "5ff6fb82875e15945ef076f13273064f7e6aa9bb81b175753060a83948fd733f"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-initial-failure.json",
+      "bytes": 6157,
+      "sha256": "e527d1d09db3ead04cb959af66a3090cfe75e174d50551cfeff33dd123abb1b6"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-projectiles.png",
+      "bytes": 1054776,
+      "sha256": "73a7006627c860ee47a1f9e6fce4e37f48ce6acba811f8970216c2e2d6155b1b"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak-samples.jsonl",
+      "bytes": 357209,
+      "sha256": "385014b10d9862fa1e6dc62ed09e2d217005fc4163491d022c249cb04998126a"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/soak.json",
+      "bytes": 23373,
+      "sha256": "5df01d8c7f673decf2a147e5523a99bee3476cd0a99d0787eef4c6cdf6a73579"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/viewport-dpr-150.json",
+      "bytes": 6744,
+      "sha256": "baf082f8f1697765276b321fababe6d03d34c69fd01d23786512be2801c925a6"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/viewports.json",
+      "bytes": 10166,
+      "sha256": "d281827cab7823bc070e3379b14ed96f5e9d55d6ecf4602138d1de5f2d0c291b"
+    }
+  ],
+  "remoteCI": {
+    "status": "pending push; historical rc.1 CI is not evidence for this revision"
+  },
+  "remainingGates": [
+    "Final anchored production UI smoke and 20-minute soak with camp-coordinate assertions; blocked by automatic tool review",
+    "Target Chrome / Edge / Firefox compatibility; Edge extension transport currently unavailable",
+    "Visible-window reference/minimum hardware performance and native Windows 150% scaling",
+    "Normal-difficulty human playtests, progression/replay feedback and complete five-chapter pacing",
+    "Human audio/comfort and final commercial naming/material review"
+  ],
+  "releaseStatus": "Playable PC web candidate; not certified as meeting every launch gate",
+  "campAnchor": {
+    "beforeReport": "qa/1.3.0-rc.2/core-anchor-before.json",
+    "afterReport": "qa/1.3.0-rc.2/core-anchor-after.json",
+    "fixedSamples": 8,
+    "lastCombatMs": 17580.776666666632,
+    "anchoredX": 800,
+    "anchoredY": 600,
+    "scope": "Independent Electron diagnostic: actual spawned enemies repeatedly repositioned into the camp every 100ms, HP refilled; eight samples throughout a 20s run. Before/after raw reports retained. Not ordinary difficulty or whole-release certification.",
+    "automatedReusableRegression": "scripts/core-anchor-smoke.cjs added but its launch was rejected by automatic approval; not recorded as passed"
+  },
+  "toolReviewBlock": "2026-09-12：自动审批拦截了启动新增隔离图形回归进程的操作，仅返回 blocked by policy，未提供具体原因。未尝试绕过；固定营地后的整包图形复测与包含位置断言的二十分钟持续运行未执行。"
+}

@@ -1,0 +1,90 @@
+{
+    "status":  "failed-stopped",
+    "reason":  "Reachable full-build endless transition froze at level 47 wave 0 with activeMs=0 and combatTime=0 for over 60 seconds. Root confirmed empty level/wave draft transition defect from source. Timed coverage incomplete and cannot be counted as passed.",
+    "observed":  {
+                     "pid":  39780,
+                     "rendererPid":  42044,
+                     "output":  "D:\\Code\\Game\\.cache\\soak-qa-1789195090425",
+                     "status":  "running",
+                     "latest":  {
+                                    "elapsedSec":  517.096,
+                                    "phase":  "endless-late-build",
+                                    "frame":  {
+                                                  "samples":  301,
+                                                  "median":  16.70000000001164,
+                                                  "p95":  16.70000000001164,
+                                                  "p99":  16.79999999998836,
+                                                  "max":  16.800000000046566
+                                              },
+                                    "enemyUpdate":  {
+                                                        "samples":  0,
+                                                        "median":  null,
+                                                        "p95":  null,
+                                                        "p99":  null,
+                                                        "max":  null
+                                                    },
+                                    "bulletUpdate":  {
+                                                         "samples":  0,
+                                                         "median":  null,
+                                                         "p95":  null,
+                                                         "p99":  null,
+                                                         "max":  null
+                                                     },
+                                    "scenes":  6,
+                                    "results":  3,
+                                    "scene":  "ArenaScene",
+                                    "heapBytes":  76033264,
+                                    "heapLimitBytes":  4395630592,
+                                    "fps":  60.47236057870359,
+                                    "mode":  "endless",
+                                    "level":  47,
+                                    "wave":  0,
+                                    "activeMs":  0,
+                                    "combatTime":  0,
+                                    "counts":  {
+                                                   "enemies":  0,
+                                                   "playerActive":  0,
+                                                   "playerAllocated":  0,
+                                                   "enemyActive":  0,
+                                                   "enemyAllocated":  0,
+                                                   "gems":  0,
+                                                   "objects":  53,
+                                                   "physicsBodies":  2,
+                                                   "emitters":  0,
+                                                   "particles":  0,
+                                                   "particleCounter":  0,
+                                                   "timers":  0,
+                                                   "tweens":  0,
+                                                   "pendingSpawns":  0,
+                                                   "rivals":  0,
+                                                   "fireListeners":  1,
+                                                   "deathListeners":  1,
+                                                   "commandListeners":  1,
+                                                   "pauseListeners":  1,
+                                                   "gameBlurListeners":  4,
+                                                   "cards":  52
+                                               },
+                                    "rendererProcess":  {
+                                                            "cpu":  {
+                                                                        "cumulativeCPUUsage":  403.554167,
+                                                                        "percentCPUUsage":  4.324808850481547,
+                                                                        "idleWakeupsPerSecond":  0
+                                                                    },
+                                                            "pid":  42044,
+                                                            "type":  "Tab",
+                                                            "creationTime":  1789195090615.588,
+                                                            "memory":  {
+                                                                           "workingSetSize":  276292,
+                                                                           "peakWorkingSetSize":  363580,
+                                                                           "privateBytes":  267396
+                                                                       },
+                                                            "integrityLevel":  "untrusted",
+                                                            "sandboxed":  true
+                                                        }
+                                },
+                     "errors":  0,
+                     "restarts":  0
+                 },
+    "limitation":  "Existing harness did not expose live paused/upgrading/openingDrafts fields or external screenshot control; no retroactive frame/state assertion is claimed.",
+    "stoppedAt":  "2026-09-12T06:46:52.2234125Z"
+}

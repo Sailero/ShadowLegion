@@ -1,0 +1,5 @@
+# Preserve the raw evidence bytes referenced by validation SHA-256 manifests.
+docs/qa/** -text whitespace=cr-at-eol
+# Captured tool output includes PowerShell's own trailing spaces.
+docs/qa/**/*.log -whitespace
+docs/release-manifest-*.json -text

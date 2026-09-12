@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   GAME_WIDTH, GAME_HEIGHT, ARENA_WIDTH, ARENA_HEIGHT,
-  COLORS, HERO_CFG, ENEMY_TYPES, WAVE_CFG,
+  COLORS, HERO_CFG, ENEMY_TYPES, WAVE_CFG, MAX_ACTIVE_ENEMIES, normalizeRunLevel,
 } from '../config/gameConfig';
 import { BUILD_INFO, CATEGORY_COLORS, EVOLUTION_INFO } from '../data/upgrades';
 import { Hero, FireEvent } from '../entities/Hero';
@@ -56,6 +56,8 @@ export class ArenaScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private infoText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
+  private announcement: Phaser.GameObjects.Container | null = null;
+  private announcementPriority = -1;
   private waveProgressGfx!: Phaser.GameObjects.Graphics;
   private bossHudGfx!: Phaser.GameObjects.Graphics;
   private bossNameText!: Phaser.GameObjects.Text;
@@ -157,7 +159,7 @@ export class ArenaScene extends Phaser.Scene {
     this.stage = this.mode === 'campaign' ? getStage(data.stageId ?? ((Math.max(1, data.level ?? 1) - 1) * 10 + 1)) : undefined;
     if (this.stage && !CampaignProgressionManager.isStageUnlocked(this.stage.id)) this.stage = getStage(CampaignProgressionManager.getNextUnlockedStage().id);
     this.trialTier = getShadowTrial(data.trialTier ?? 1).tier;
-    this.currentLevel = this.stage?.chapter ?? (this.mode === 'shadow' ? this.trialTier : data.level || 1);
+    this.currentLevel = this.stage?.chapter ?? (this.mode === 'shadow' ? this.trialTier : normalizeRunLevel(data.level, this.mode === 'endless'));
     this.completionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     this.openingDrafts = data.freshRun === false && (this.registry.get('appliedUpgrades')?.length ?? 0) > 0 ? 0 : this.stage?.id === 1 ? 1 : 2;
     this.stageStats = { dashes: 0, skills: 0, commands: 0, terrainHits: 0, intercepts: 0, priorityKills: 0 };
@@ -167,6 +169,8 @@ export class ArenaScene extends Phaser.Scene {
     this.paused = false;
     this.dead = false;
     this.comboCount = 0;
+    this.announcement = null;
+    this.announcementPriority = -1;
     this.hitlagUntil = 0;
     this.comboResetTime = 0;
     this.lastComboVal = 0;
@@ -217,7 +221,9 @@ export class ArenaScene extends Phaser.Scene {
     this.defenseMaxHp = this.chapter.coreHp;
     this.defenseHp = this.defenseMaxHp;
     this.defenseCore = this.physics.add.image(ARENA_WIDTH / 2, ARENA_HEIGHT / 2, 'defense_core')
-      .setImmovable(true).setDepth(7);
+      // Arcade circle separation also consults pushable; immovable alone can
+      // still displace the camp when several circular enemies reach it.
+      .setImmovable(true).setPushable(false).setDepth(7);
     const coreBody = this.defenseCore.body as Phaser.Physics.Arcade.Body;
     coreBody.setCircle(29, this.defenseCore.width / 2 - 29, this.defenseCore.height / 2 - 29);
 
@@ -401,6 +407,29 @@ export class ArenaScene extends Phaser.Scene {
       backgroundColor: '#fff7df', padding: { x: 8, y: 3 },
     }).setOrigin(.5).setDepth(1);
     g.lineStyle(10, p.detail, .22).strokeRoundedRect(5, 5, ARENA_WIDTH - 10, ARENA_HEIGHT - 10, 24);
+    this.cacheStaticGround(g);
+  }
+
+  private cacheStaticGround(graphics: Phaser.GameObjects.Graphics): void {
+    // Replaying the garden's paths every frame costs substantially more than
+    // drawing the same pixels once. Only the static overlay is cached; tide,
+    // hazards, particles, actors and collision geometry stay independent.
+    const key = 'sunlit-arena-ground-cache';
+    try {
+      if (this.textures.exists(key)) this.textures.remove(key);
+      graphics.generateTexture(key, ARENA_WIDTH, ARENA_HEIGHT);
+      const texture = this.textures.get(key);
+      this.add.image(0, 0, key).setOrigin(0).setDepth(graphics.depth).setName('static-ground-cache');
+      graphics.destroy();
+      // Keep just the current map's canvas/GPU texture, including across fifty
+      // campaign maps and repeated endless scene restarts.
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        if (this.textures.exists(key) && this.textures.get(key) === texture) this.textures.remove(key);
+      });
+    } catch (error) {
+      if (this.textures.exists(key)) this.textures.remove(key);
+      console.warn('Static garden cache unavailable; retaining vector background.', error);
+    }
   }
 
   private createMapGeometry(): void {
@@ -764,10 +793,10 @@ export class ArenaScene extends Phaser.Scene {
     this.runTimerText = text(986, 56, 13).setOrigin(1, 0);
     this.shadowText = text(28, GAME_HEIGHT - 172, 13).setWordWrapWidth(274, true);
     this.objectiveText = text(28, GAME_HEIGHT - 136, 12).setWordWrapWidth(267, true).setLineSpacing(5);
-    this.actionHint = text(512, 170, 15, '#665237').setOrigin(.5).setAlpha(0).setDepth(145)
-      .setBackgroundColor('#fff6da').setPadding(12, 7);
+    this.actionHint = text(575, GAME_HEIGHT - 92, 14, '#665237').setOrigin(.5, 1).setAlpha(0).setDepth(145)
+      .setWordWrapWidth(454, true).setBackgroundColor('#fff6da').setPadding(12, 7);
     this.infoText = text(575, GAME_HEIGHT - 48, 14).setOrigin(.5).setAlign('center').setLineSpacing(7);
-    this.comboText = text(512, 222, 25, '#98613b').setOrigin(.5).setAlpha(0).setFontStyle('bold');
+    this.comboText = text(30, 124, 20, '#98613b').setAlpha(0).setFontStyle('bold');
     this.waveProgressGfx = this.add.graphics().setScrollFactor(0).setDepth(99);
     this.bossHudGfx = this.add.graphics().setScrollFactor(0).setDepth(106);
     this.bossNameText = text(512, 115, 13, '#913f50').setOrigin(.5).setDepth(107).setVisible(false);
@@ -1027,7 +1056,7 @@ export class ArenaScene extends Phaser.Scene {
     if (this.comboCount > 1 && time < this.comboResetTime) {
       const remaining = (this.comboResetTime - time) / this.comboDuration;
       if (this.comboCount !== this.lastComboVal) {
-        this.comboText.setText(`${this.comboCount}x COMBO!`);
+        this.comboText.setText(`${this.comboCount} 次连击`);
         this.lastComboVal = this.comboCount;
       }
       this.comboText.setAlpha(Math.min(1, remaining * 3));
@@ -1096,14 +1125,29 @@ export class ArenaScene extends Phaser.Scene {
     } catch (err) { console.error('[onHeroFire]', err); }
   }
 
-  private announce(msg: string, color: number, dur = 800): void {
-    const hex = '#' + color.toString(16).padStart(6, '0');
-    const t = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.35, msg, {
-      fontFamily: 'Microsoft YaHei, sans-serif', fontSize: '22px', color: hex,
-      wordWrap: { width: 720, useAdvancedWrap: true }, align: 'center', lineSpacing: 8,
-      stroke: '#fff8e7', strokeThickness: 3,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(150);
-    this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: dur, onComplete: () => t.destroy() });
+  private announce(msg: string, color: number, dur = 800, priority = 0): void {
+    // Rapid skills share one notice. Encounter warnings remain readable until
+    // their own duration ends, and never drift into the combo or battlefield.
+    if (this.announcement?.active && priority < this.announcementPriority) return;
+    if (this.announcement) {
+      this.tweens.killTweensOf(this.announcement);
+      this.announcement.destroy();
+    }
+    const text = this.add.text(0, 0, msg, {
+      fontFamily: 'Microsoft YaHei, sans-serif', fontSize: '18px', color: '#455343',
+      wordWrap: { width: 620, useAdvancedWrap: true }, align: 'center', lineSpacing: 5,
+    }).setOrigin(.5, 0);
+    const paper = this.add.graphics().fillStyle(0xfffbef, .97)
+      .fillRoundedRect(-text.width / 2 - 14, -9, text.width + 28, text.height + 18, 9)
+      .lineStyle(1.5, color, .75)
+      .strokeRoundedRect(-text.width / 2 - 14, -9, text.width + 28, text.height + 18, 9);
+    const notice = this.add.container(GAME_WIDTH / 2, 166, [paper, text]).setScrollFactor(0).setDepth(150);
+    this.announcement = notice;
+    this.announcementPriority = priority;
+    this.tweens.add({ targets: notice, alpha: 0, delay: Math.max(400, dur - 200), duration: 200, onComplete: () => {
+      if (this.announcement === notice) { this.announcement = null; this.announcementPriority = -1; }
+      notice.destroy();
+    } });
   }
 
   private muzzleFlash(x: number, y: number): void {
@@ -1145,7 +1189,7 @@ export class ArenaScene extends Phaser.Scene {
       repeat: Math.max(1, Math.floor(ev.duration / 240) - 1),
     });
     this.time.delayedCall(ev.duration, () => warning.destroy());
-    this.announce(`锁定冲锋 · ${Math.round(ev.length)} 距离`, 0xef4444, Math.min(850, ev.duration));
+    this.announce(`锁定冲锋 · ${Math.round(ev.length)} 距离`, 0xef4444, Math.min(850, ev.duration), 2);
   }
 
   private onEnemyBlastTelegraph(ev: { x: number; y: number; radius: number; duration: number }): void {
@@ -1602,10 +1646,12 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onEnemySplit(ev: { x: number; y: number; type: string }): void {
+    if (this.dead) return;
     const cfg = ENEMY_TYPES[ev.type];
     if (!cfg) return;
-    this.waveEnemyTotal += 2;
-    for (let i = 0; i < 2; i++) {
+    const count = Math.min(2, Math.max(0, MAX_ACTIVE_ENEMIES - this.enemies.countActive(true)));
+    this.waveEnemyTotal += count;
+    for (let i = 0; i < count; i++) {
       const offset = 20;
       const a = Math.random() * Math.PI * 2;
       const child = new Enemy(
@@ -1624,9 +1670,10 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onEnemySummon(ev: { x: number; y: number; count: number }): void {
+    if (this.dead || !Number.isFinite(ev.count)) return;
     const cfg = ENEMY_TYPES['slime'];
     if (!cfg) return;
-    const count = Math.min(ev.count, Math.max(0, 160 - this.enemies.countActive(true)));
+    const count = Math.min(Math.max(0, Math.floor(ev.count)), Math.max(0, MAX_ACTIVE_ENEMIES - this.enemies.countActive(true)));
     this.waveEnemyTotal += count;
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
@@ -1673,11 +1720,11 @@ export class ArenaScene extends Phaser.Scene {
       this.showActionHint('镜像切磋开始：观察蓄力线，轻跃躲开昨日的自己');
     }
     if (ev.isBoss) {
-      this.announce(`⚠ ${ev.name}\n${ev.hint}`, 0xef4444, 2400);
+      this.announce(`⚠ ${ev.name}\n${ev.hint}`, 0xef4444, 2400, 1);
       this.feedbackShake(300, 0.004);
       this.snd.bossAlert();
     } else {
-      this.announce(`${ev.wave}/${ev.total} · ${ev.name}\n${ev.hint}`, 0xfbbf24, 1500);
+      this.announce(`${ev.wave}/${ev.total} · ${ev.name}\n${ev.hint}`, 0xfbbf24, 1500, 1);
       this.snd.waveStart();
     }
   }
@@ -1711,7 +1758,7 @@ export class ArenaScene extends Phaser.Scene {
     this.physics.pause();
     this.hero.heal(this.hero.maxHp);
     const milestoneReward = MetaProgressionManager.recordModeProgress({ completionId: `${this.completionId}-floor`, mode: 'endless', operativeId: this.operativeId, wave: this.currentLevel * this.waveMgr.totalWaves });
-    this.announce(`漫游第 ${ev.level} 站完成 · 下一站更热闹${milestoneReward.earned ? `\n新里程碑 · 暖晶 +${milestoneReward.earned}，已收进行囊` : ''}`, 0xb47b45, 2000);
+    this.announce(`漫游第 ${ev.level} 站完成 · 下一站更热闹${milestoneReward.earned ? `\n新里程碑 · 暖晶 +${milestoneReward.earned}，已收进行囊` : ''}`, 0xb47b45, 2000, 3);
     this.time.delayedCall(1800, () => { if (!this.dead && this.sys.isActive()) this.showUpgradeUI('level'); });
   }
 
@@ -1749,7 +1796,7 @@ export class ArenaScene extends Phaser.Scene {
       profile, reward, operativeId: this.operativeId, shadowTrial: this.shadowTrial, startLevel: this.currentLevel,
     };
     ScoreManager.saveScore({ score: this.score, kills: this.kills, level: this.currentLevel, wave: this.waveMgr.totalWaves, endless: false, durationSec, build });
-    this.announce(this.stage ? `${this.stage.label} · ${this.stage.name}\n${'★'.repeat(stageResult?.stars ?? 1)}  这段风景收进日记啦` : '三轮切磋完成 · 和昨日的自己击掌', 0x598862, 1800);
+    this.announce(this.stage ? `${this.stage.label} · ${this.stage.name}\n${'★'.repeat(stageResult?.stars ?? 1)}  这段风景收进日记啦` : '三轮切磋完成 · 和昨日的自己击掌', 0x598862, 1800, 3);
     this.slowMoFinish(true);
     this.time.delayedCall(1900, () => this.scene.start('GameOverScene', data));
   }
@@ -1980,23 +2027,9 @@ export class ArenaScene extends Phaser.Scene {
 
     const choices = this.upgradeMgr.pickThree(pool, this.hero, this.defenseHp / this.defenseMaxHp);
     if (choices.length === 0) {
-      if (pool === 'level') {
-        this.paused = true;
-        this.physics.pause();
-        this.registry.set('appliedUpgrades', this.upgradeMgr.getAppliedIds());
-        const nextLvl = this.currentLevel + 1;
-        const sc = this.score;
-        const kills = this.kills;
-        const endless = this.endless;
-        const operativeId = this.operativeId;
-        const elapsedMs = this.elapsedBeforeChapterMs + this.activeRunMs;
-        const sceneRef = this.scene;
-        this.time.delayedCall(350, () => {
-          try { sceneRef.start('ArenaScene', { level: nextLvl, score: sc, kills, endless, operativeId, elapsedMs }); } catch (_) { /* noop */ }
-        });
-      } else {
-        this.waveMgr.scheduleNextWave(this.combatTime);
-      }
+      // A complete build still has to consume opening drafts and carry its
+      // run state into the next station, exactly like a selected upgrade.
+      this.finishUpgrade(pool);
       return;
     }
 
@@ -2249,7 +2282,7 @@ export class ArenaScene extends Phaser.Scene {
       this.paused = true;
       this.physics.pause();
       this.registry.set('appliedUpgrades', this.upgradeMgr.getAppliedIds());
-      const nextLvl = this.currentLevel + 1;
+      const nextLvl = normalizeRunLevel(this.currentLevel + 1, true);
       const sc = this.score;
       const kills = this.kills;
       const endless = this.endless;

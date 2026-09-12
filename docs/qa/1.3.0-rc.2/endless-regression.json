@@ -1,0 +1,272 @@
+{
+  "pid": 3676,
+  "rendererPid": 42860,
+  "output": "D:\\Code\\Game\\.cache\\soak-qa-1789196056860",
+  "durationMinutes": 1,
+  "evidence": "Diagnostic short run, not release soak",
+  "sourceHash": "cf51235ad1f24ff865a653f1f35a96d72f0b0ef285227a31e136459a55e641df",
+  "assists": {
+    "seededProgress": "All stages/classes unlocked only in isolated profile",
+    "maxEnemyBudget": "Product code only; no direct spawning",
+    "helper": "200ms robot, aim/movement/skills/draft, bounded late-run cards, HP/core refills; companion silent only during accumulation",
+    "gcAvailable": true,
+    "sourceMetaVersion": 3,
+    "renderer": {
+      "phaserType": 2,
+      "webgl": true,
+      "unmaskedRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002520) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    }
+  },
+  "hardware": {
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "logicalCpus": 20,
+    "systemMemoryBytes": 16828952576,
+    "gpu": {
+      "auxAttributes": {
+        "amdSwitchable": false,
+        "canSupportThreadedTextureMailbox": false,
+        "directMLFeatureLevel": "Not supported",
+        "dx12FeatureLevel": "Not supported",
+        "glImplementationParts": "(gl=none,angle=none)",
+        "glResetNotificationStrategy": 0,
+        "inProcessGpu": true,
+        "initializationTime": 0,
+        "isAsan": false,
+        "isClangCoverage": false,
+        "jpegDecodeAcceleratorSupported": false,
+        "optimus": false,
+        "overlayInfo": {
+          "bgra8OverlaySupport": "NONE",
+          "directComposition": false,
+          "nv12OverlaySupport": "NONE",
+          "p010OverlaySupport": "NONE",
+          "rgb10a2OverlaySupport": "NONE",
+          "supportsOverlays": false,
+          "yuy2OverlaySupport": "NONE"
+        },
+        "passthroughCmdDecoder": false,
+        "sandboxed": false,
+        "skiaBackendType": "None",
+        "subpixelFontRendering": true,
+        "supportsD3dSharedImages": false,
+        "supportsDirectML": false,
+        "supportsDx12": false,
+        "supportsVulkan": false,
+        "targetCpuBits": 64,
+        "visibilityCallbackCallCount": 0,
+        "vulkanVersion": "Not supported"
+      },
+      "gpuDevice": [
+        {
+          "active": false,
+          "deviceId": 9504,
+          "deviceString": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "driverVersion": "32.0.15.9282",
+          "gpuPreference": 3,
+          "revision": 161,
+          "subSysId": -1977282500,
+          "vendorId": 4318
+        },
+        {
+          "active": false,
+          "deviceId": 18086,
+          "deviceString": "Intel(R) Iris(R) Xe Graphics",
+          "driverVersion": "31.0.101.4502",
+          "gpuPreference": 2,
+          "revision": 12,
+          "subSysId": -1977282500,
+          "vendorId": 32902
+        },
+        {
+          "active": false,
+          "deviceId": 18086,
+          "deviceString": "Intel(R) Iris(R) Xe Graphics",
+          "driverVersion": "31.0.101.4502",
+          "gpuPreference": 0,
+          "revision": 12,
+          "subSysId": -1977282500,
+          "vendorId": 32902
+        },
+        {
+          "active": false,
+          "deviceId": 140,
+          "deviceString": "Microsoft Basic Render Driver",
+          "driverVersion": "10.0.26100.9278",
+          "gpuPreference": 0,
+          "revision": 0,
+          "subSysId": 0,
+          "vendorId": 5140
+        }
+      ]
+    },
+    "gpuFeatures": {
+      "2d_canvas": "enabled",
+      "direct_rendering_display_compositor": "disabled_off_ok",
+      "gpu_compositing": "enabled",
+      "multiple_raster_threads": "enabled_on",
+      "opengl": "enabled_on",
+      "rasterization": "enabled",
+      "raw_draw": "disabled_off_ok",
+      "skia_graphite": "disabled_off",
+      "trees_in_viz": "disabled_off",
+      "video_decode": "enabled",
+      "video_encode": "enabled",
+      "webgl": "enabled",
+      "webgpu": "enabled",
+      "webnn": "disabled_off"
+    },
+    "versions": {
+      "node": "24.18.1",
+      "acorn": "8.16.0",
+      "ada": "3.4.4",
+      "amaro": "1.1.9",
+      "ares": "1.34.6",
+      "brotli": "1.2.0",
+      "cldr": "48.0",
+      "icu": "78.2",
+      "llhttp": "9.4.3",
+      "merve": "1.2.2",
+      "modules": "149",
+      "napi": "10",
+      "nbytes": "0.1.4",
+      "ncrypto": "0.0.1",
+      "nghttp2": "1.69.0",
+      "nghttp3": "",
+      "ngtcp2": "",
+      "openssl": "0.0.0",
+      "simdjson": "4.6.4",
+      "simdutf": "7.7.0",
+      "sqlite": "3.53.1",
+      "tz": "2025c",
+      "undici": "7.29.0",
+      "unicode": "17.0",
+      "uv": "1.52.1",
+      "uvwasi": "0.0.23",
+      "v8": "15.2.124.13-electron.0",
+      "zlib": "1.3.2.1-motley",
+      "zstd": "1.6.0",
+      "electron": "44.0.0",
+      "chrome": "152.0.7977.54"
+    }
+  },
+  "environment": "Hidden offscreen renderer on shared development host; rAF timings are not visible-window or exclusive reference-machine certification.",
+  "realTimeSoakSeconds": 60.638,
+  "scope": "Real-time hidden offscreen Chromium renderer with automation/HP refills and legal capped build seeding. Not human playtesting, ordinary difficulty, minimum-spec certification or all browsers.",
+  "frameMs": {
+    "samples": 2681,
+    "median": 16.700000000000728,
+    "p95": 33.400000000001455,
+    "p99": 33.400000000001455,
+    "max": 99.90000000000009
+  },
+  "enemyUpdateMs": {
+    "samples": 2551,
+    "median": 0,
+    "p95": 0.10000000149011612,
+    "p99": 0.19999999552965164,
+    "max": 4.299999997019768
+  },
+  "bulletUpdateMs": {
+    "samples": 2551,
+    "median": 0,
+    "p95": 0.10000000149011612,
+    "p99": 0.10000000149011612,
+    "max": 0.6999999955296516
+  },
+  "peaks": {
+    "enemies": 4,
+    "playerActive": 189,
+    "playerAllocated": 200,
+    "enemyActive": 15,
+    "enemyAllocated": 16,
+    "gems": 43,
+    "objects": 323,
+    "physicsBodies": 247,
+    "emitters": 14,
+    "particles": 107,
+    "particleCounter": 14,
+    "timers": 18,
+    "tweens": 46,
+    "pendingSpawns": 7,
+    "rivals": 0,
+    "fireListeners": 1,
+    "deathListeners": 1,
+    "commandListeners": 1,
+    "pauseListeners": 1,
+    "gameBlurListeners": 4,
+    "cards": 52
+  },
+  "phases": {
+    "endless-late-build": {
+      "frames": {
+        "samples": 2681,
+        "median": 16.700000000000728,
+        "p95": 33.400000000001455,
+        "p99": 33.400000000001455,
+        "max": 99.90000000000009
+      },
+      "enemyMs": {
+        "samples": 2551,
+        "median": 0,
+        "p95": 0.10000000149011612,
+        "p99": 0.19999999552965164,
+        "max": 4.299999997019768
+      },
+      "bulletMs": {
+        "samples": 2551,
+        "median": 0,
+        "p95": 0.10000000149011612,
+        "p99": 0.10000000149011612,
+        "max": 0.6999999955296516
+      },
+      "robotMs": {
+        "samples": 303,
+        "median": 0.09999999403953552,
+        "p95": 1.2000000029802322,
+        "p99": 2,
+        "max": 17.299999997019768
+      }
+    }
+  },
+  "endlessCombatLevels": [
+    46,
+    47
+  ],
+  "gcSamples": [
+    {
+      "phase": "endless-late-build",
+      "available": true,
+      "before": 80721332,
+      "after": 58353280
+    }
+  ],
+  "peakHeapBytes": 96768247,
+  "lifecycle": [],
+  "boundaries": [
+    {
+      "order": "hero-first",
+      "runDelta": 1,
+      "victory": false,
+      "expectedVictory": false
+    },
+    {
+      "order": "core-first",
+      "runDelta": 1,
+      "victory": false,
+      "expectedVictory": false
+    },
+    {
+      "order": "enemy-death-core-before-clear-check",
+      "runDelta": 1,
+      "victory": false,
+      "expectedVictory": false
+    },
+    {
+      "order": "victory-first-then-core",
+      "runDelta": 1,
+      "victory": true,
+      "expectedVictory": true
+    }
+  ],
+  "errors": []
+}

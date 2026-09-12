@@ -35,6 +35,7 @@ export class GameOverScene extends Phaser.Scene {
     const earned=stageResult?.earned??data.reward?.earned??0;
     const total=stageResult?.total??data.reward?.total??MetaProgressionManager.getState().shadowCores;
     const saved=stageResult?.saved??data.reward?.saved??true;
+    const trialSaved=mode!=='shadow'||!victory||data.trialResult?.saved===true;
     backdrop(this,'一封旅途回信  /  A LETTER TO TOMORROW');
     const title=stageResult?.campaignCompleted?'五十封信，都有了回响。':victory?(mode==='campaign'?`第 ${stageId} 封信，送到了。`:mode==='shadow'?'昨天的自己，向你击了个掌。':'这一程，走得很好。'):'歇一歇，故事还会继续。';
     heading(this,45,93,title,36);
@@ -50,7 +51,7 @@ export class GameOverScene extends Phaser.Scene {
       const stars=stageResult?.stars??0;
       label(this,84,389,'★'.repeat(stars)+'☆'.repeat(Math.max(0,3-stars)),30,UI.amber,true);
       label(this,229,401,stageResult?.firstClear?'第一次送达，谢谢你的勇气。':stageResult?.newStars?`比上次多了 ${stageResult.newStars} 枚星章。`:victory?'这段熟悉的路，又多了一次回响。':'每一次尝试，都让下一次更熟悉。',12,UI.muted).setWordWrapWidth(255,true);
-    }else label(this,84,395,data.trialResult?.firstClear?'首次完成这封挑战书。':victory?'新的默契，已经收进行囊。':'影子会记住，你这次走过的路。',14,UI.green,true);
+    }else label(this,84,395,!trialSaved?'挑战已完成，切磋纪录暂未保存。':data.trialResult?.firstClear?'首次完成这封挑战书。':victory?'新的默契，已经收进行囊。':'影子会记住，你这次走过的路。',14,trialSaved?UI.green:UI.rose,true);
     const stats=[['积分',ScoreManager.formatScore(data.score??0)],['击退',String(data.kills??0)],['同行',`${Math.floor(elapsed/60)}:${String(elapsed%60).padStart(2,'0')}`]];
     stats.forEach(([name,value],index)=>{const x=85+index*136;label(this,x,460,name,11,UI.muted);label(this,x,485,value,23,UI.ink,true);});
     titleRule(this,83,537,393);
@@ -74,7 +75,10 @@ export class GameOverScene extends Phaser.Scene {
     button(this,214,696,335,canNext?'下一封信，准备出发  →':victory&&mode==='campaign'?'把回信收进旅行地图':'再走一次这段路  ·  R',()=>canNext?this.scene.start('LoadoutScene',{mode:'campaign',stageId:next,operativeId}):victory&&mode==='campaign'?this.scene.start('CampaignScene',{stageId}):this.scene.start('ArenaScene',retry),{height:48,size:15});
     button(this,540,696,280,mode==='campaign'?'打开旅行地图':mode==='shadow'?'选择另一封挑战书':'换一位旅人',()=>this.scene.start(mode==='campaign'?'CampaignScene':'LoadoutScene',mode==='campaign'?{stageId}:{mode,trialTier,operativeId}),{secondary:true,height:48,size:14});
     button(this,840,696,275,'去工坊整理行囊',()=>this.scene.start('WorkshopScene',{operativeId}),{secondary:true,height:48,size:14});
-    label(this,512,749,saved?'R 重试本次旅途 · ESC 返回 · 本次成长已记在本机日记里':'本次记录暂未保存，请保持页面打开后再检查浏览器存储。',11,saved?UI.muted:UI.rose).setOrigin(.5);
+    const saveNotice=mode==='shadow'&&victory
+      ?`切磋纪录${trialSaved?'已保存':'暂未保存'} · 暖晶结果${saved?'已保存':'暂未保存'} · ${trialSaved&&saved?'R 重试 · ESC 返回':'请检查浏览器存储。'}`
+      :saved?'R 重试本次旅途 · ESC 返回 · 本次成长已记在本机日记里':'本次记录暂未保存，请保持页面打开后再检查浏览器存储。';
+    label(this,512,749,saveNotice,11,saved&&trialSaved?UI.muted:UI.rose).setOrigin(.5);
     shortcut(this,'R',()=>this.scene.start('ArenaScene',retry));
     shortcut(this,'ESC',()=>this.scene.start(mode==='campaign'?'CampaignScene':'MenuScene',mode==='campaign'?{stageId}:undefined));
   }

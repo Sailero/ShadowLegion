@@ -1,4 +1,5 @@
 import { OPERATIVES, type OperativeId } from '../data/operatives';
+import { MAX_ENDLESS_LEVEL, WAVE_CFG } from '../config/gameConfig';
 import { LEVEL_UPGRADES, WAVE_UPGRADES } from '../data/upgrades';
 import type { GameMode } from '../data/modes';
 import {
@@ -40,7 +41,7 @@ export function sanitizeRunCheckpoint(value: unknown): RunCheckpoint | null {
   if (!value || typeof value !== 'object') return null;
   const source = value as Record<string, unknown>;
   if (source.version !== 1 || typeof source.endless !== 'boolean' || typeof source.shadowTrial !== 'boolean') return null;
-  if (!finiteWithin(source.level, 1, source.endless ? 1000 : 5, true)) return null;
+  if (!finiteWithin(source.level, 1, source.endless ? MAX_ENDLESS_LEVEL : WAVE_CFG.levels, true)) return null;
   if (source.mode !== undefined && !['campaign', 'endless', 'shadow'].includes(source.mode as string)) return null;
   if (source.stageId !== undefined && !finiteWithin(source.stageId, 1, 50, true)) return null;
   if (source.trialTier !== undefined && !finiteWithin(source.trialTier, 1, 5, true)) return null;

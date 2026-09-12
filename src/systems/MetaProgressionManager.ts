@@ -2,7 +2,7 @@ import type { BuildPath } from '../data/upgrades';
 import type { CombatProfile } from './RunRecorder';
 import type { OperativeId } from '../data/operatives';
 import type { Hero } from '../entities/Hero';
-import { WAVE_CFG } from '../config/gameConfig';
+import { WAVE_CFG, MAX_ENDLESS_WAVE } from '../config/gameConfig';
 import { sanitizeCombatProfile } from './ShadowDirector';
 import {
   CAMPAIGN_STAGE_COUNT, MASTERY_XP_THRESHOLDS, MASTERY_TITLES, MAX_MASTERY_XP,
@@ -324,7 +324,7 @@ export class MetaProgressionManager {
       for (let value = oldTier + 1; value <= tier; value++) xp += 10 + value * 2;
       state.modeProgress.shadowMasteryTiers[input.operativeId] = Math.max(oldTier, tier);
     } else if (input.mode === 'endless') {
-      if (!Number.isInteger(input.wave) || input.wave! < 1 || input.wave! > 100_000) return none;
+      if (!Number.isInteger(input.wave) || input.wave! < 1 || input.wave! > MAX_ENDLESS_WAVE) return none;
       const wave = input.wave!;
       const milestone = Math.min(20, Math.floor(wave / 5));
       const oldMilestone = Math.min(20, Math.floor(state.modeProgress.endlessBestWave / 5));
@@ -349,7 +349,7 @@ export class MetaProgressionManager {
     state.totalRuns = int(state.totalRuns + 1);
     state.wins = int(state.wins + (summary.victory ? 1 : 0));
     state.totalKills = int(state.totalKills + int(summary.kills));
-    state.bestWave = Math.max(state.bestWave, int(summary.wave));
+    state.bestWave = Math.max(state.bestWave, int(summary.wave, MAX_ENDLESS_WAVE));
     state.lastProfile = sanitizeCombatProfile(summary.profile);
     const fullVictory = isFullCampaignVictory(summary);
     if (fullVictory && Number.isFinite(summary.durationSec) && summary.durationSec > 0) {
@@ -401,14 +401,15 @@ export class MetaProgressionManager {
       return true;
     } catch { return false; }
   }
-  private static sanitize(value: unknown): MetaState {
+  static sanitize(value: unknown): MetaState {
     const state = createDefaultMetaState();
     const src = object(value);
     if (src.version !== undefined && src.version !== 1 && src.version !== 2 && src.version !== 3) return state;
     const modules = object(src.modules);
     state.modules = { arsenal: int(modules.arsenal, 5), armor: int(modules.armor, 5), reactor: int(modules.reactor, 5) };
     state.shadowCores = int(src.shadowCores, MAX_CURRENCY);
-    for (const key of ['totalRuns', 'wins', 'totalKills', 'bestWave'] as const) state[key] = int(src[key]);
+    for (const key of ['totalRuns', 'wins', 'totalKills'] as const) state[key] = int(src[key]);
+    state.bestWave = int(src.bestWave, MAX_ENDLESS_WAVE);
     state.bestVictorySec = typeof src.bestVictorySec === 'number' && Number.isFinite(src.bestVictorySec) && src.bestVictorySec > 0 ? Math.min(604800, Math.floor(src.bestVictorySec)) : null;
     const filter = <T extends string>(value: unknown, allowed: readonly T[]): T[] => Array.isArray(value) ? [...new Set(value.filter((id): id is T => allowed.includes(id as T)))] : [];
     state.clearedBuilds = filter(src.clearedBuilds, VALID_BUILDS);
@@ -451,7 +452,7 @@ export class MetaProgressionManager {
     }
     const modes = object(src.modeProgress);
     state.modeProgress.shadowBestTier = int(modes.shadowBestTier, 5);
-    state.modeProgress.endlessBestWave = int(modes.endlessBestWave, 100_000);
+    state.modeProgress.endlessBestWave = int(modes.endlessBestWave, MAX_ENDLESS_WAVE);
     for (const id of VALID_OPERATIVES) {
       state.modeProgress.shadowMasteryTiers[id] = int(object(modes.shadowMasteryTiers)[id], 5);
       state.modeProgress.endlessMasteryMilestones[id] = int(object(modes.endlessMasteryMilestones)[id], 20);

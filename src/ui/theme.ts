@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
 import { SoundManager } from '../systems/SoundManager';
-import { SettingsManager } from '../systems/SettingsManager';
+import { openSettingsDialog } from './settingsDialog';
 
 /** A travel picture book: painted space, printed ink and tactile paper objects. */
 export const UI = {
@@ -269,36 +269,7 @@ export function shortcut(scene: Phaser.Scene, key: string, action: () => void): 
 }
 
 export function openSettings(scene: Phaser.Scene): void {
-  if (document.querySelector('.settings-dialog')) return;
-  const settings = SettingsManager.get();
-  const dialog = document.createElement('dialog');
-  dialog.className = 'settings-dialog';
-  dialog.setAttribute('aria-labelledby', 'settings-title');
-  dialog.innerHTML = `<form method="dialog"><div class="settings-eyebrow">让旅途更合心意</div>
-    <h2 id="settings-title">旅途设置</h2><p>随时调整，本设备会记住你的选择。</p>
-    <label class="setting-volume" for="sound-volume">声音音量 <output id="sound-value"></output></label>
-    <input id="sound-volume" type="range" min="0" max="100" step="5" aria-label="声音音量">
-    <label class="setting-toggle"><span><strong>自动开火</strong><small>持续射击，仍由鼠标控制瞄准方向。</small></span><input id="auto-fire" type="checkbox"></label>
-    <label class="setting-toggle"><span><strong>减少动态效果</strong><small>减轻镜头晃动、闪光和界面动效。</small></span><input id="reduce-motion" type="checkbox"></label>
-    <div class="settings-note">WASD 移动 · 鼠标瞄准 · SHIFT 闪避<br>SPACE 技能 · Q 切换技能 · E 安排影伴 · ESC 暂停</div>
-    <button class="settings-done" autofocus>完成设置</button></form>`;
-  const volume = dialog.querySelector<HTMLInputElement>('#sound-volume')!;
-  const value = dialog.querySelector<HTMLOutputElement>('#sound-value')!;
-  const auto = dialog.querySelector<HTMLInputElement>('#auto-fire')!;
-  const motion = dialog.querySelector<HTMLInputElement>('#reduce-motion')!;
-  volume.value = String(Math.round(settings.volume * 100));
-  value.value = `${volume.value}%`;
-  auto.checked = settings.autoFire;
-  motion.checked = settings.reducedMotion;
-  volume.addEventListener('input', () => {
-    const nextVolume = Number(volume.value) / 100;
-    value.value = `${volume.value}%`;
-    SettingsManager.update({ volume: nextVolume });
-    SoundManager.get().setVolume(nextVolume);
-  });
-  auto.addEventListener('change', () => SettingsManager.update({ autoFire: auto.checked }));
-  motion.addEventListener('change', () => SettingsManager.update({ reducedMotion: motion.checked }));
-  showDialog(scene, dialog);
+  openSettingsDialog(scene, showDialog);
 }
 
 /** Shared native-modal boundary for settings and local playtest records. */
