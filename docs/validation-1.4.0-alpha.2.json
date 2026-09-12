@@ -1,0 +1,84 @@
+{
+  "version": "1.4.0-alpha.2",
+  "createdAt": "2026-09-12T16:31:12Z",
+  "releaseCommand": "npm run release:web",
+  "exitCode": 0,
+  "tests": {
+    "total": 326,
+    "passed": 326,
+    "failed": 0,
+    "scope": "Actual logic/managers and selected scene methods with explicit rendering/physics boundaries; not graphical or OS compatibility tests"
+  },
+  "checks": [
+    "TypeScript",
+    "Vite production build",
+    "relative static assets and package budgets",
+    "npm audit: 0 known vulnerabilities"
+  ],
+  "artifact": {
+    "directory": "release/shadow-legion-web-1.4.0-alpha.2-2026-09-12T16-08-50-778Z",
+    "archive": "release/Sunlit-Echoes-1.4.0-alpha.2-web.zip",
+    "archiveBytes": 10044316,
+    "archiveSha256": "494930700fc200f913feaf6bcfe219f22d0c44b6fca244142b58b7e7fbcaf512",
+    "manifestFiles": 11,
+    "zipEntries": 12,
+    "runtimeFiles": 8,
+    "runtimeBytes": 11525017,
+    "javascript": "assets/index-CK6S0itx.js",
+    "javascriptBytes": 1849693,
+    "javascriptGzipBytes": 467574,
+    "javascriptGzipMethod": "Node v24.16.0 zlib.gzipSync defaults"
+  },
+  "zipVerifiedIndependently": true,
+  "browserObservationFile": "qa/1.4.0-alpha.2/edge-observations.json",
+  "browserAcceptance": "Partial graphical acceptance: genuine shore/echo/leaf interactions and both carrier arrivals were observed across intermediate alpha.2 builds. The final CK6S0itx build passed confirmed mail-dock reload recovery, actual F delivery, pause/resume/exit, two-page reply reading and rereading, and post-delivery reload persistence. No page scripts injected game state. The full continuous outbound shoreline and return bridge, final fresh-save journey and complete three-hour release remain unverified.",
+  "fullReleaseAcceptance": false,
+  "remainingGates": [
+    "Three further regions and a connected three-hour journey",
+    "Full sixteen-page story and final-build fresh-save graphical journey",
+    "Desktop durable file saves and legacy browser save migration",
+    "Gamepad, remapping, language coverage and hardware/OS acceptance",
+    "Human playability, art and sound review; measured first-play duration",
+    "Minimum-spec sustained performance and cross-browser checks",
+    "Ten-domain native backup round trip and storage fault injection",
+    "Steam release materials, runtime/license review and platform review",
+    "Final-build fresh-save continuous forest-to-lake playthrough",
+    "Full outbound east shoreline and complete return-bridge traverse in this graphical run",
+    "Full sixteen-page story reached through ordinary unlock progression",
+    "Human pace, held-key feel, audio listening and reduced-motion art review",
+    "Ten-domain native backup round trip and native storage write fault injection",
+    "Minimum hardware performance, multi-DPI/fullscreen/multimonitor and cross-browser acceptance",
+    "Electron desktop, file-save migration, gamepad and remapping",
+    "Three remaining regions and the connected three-hour game"
+  ],
+  "remoteCi": {
+    "status": "completed",
+    "conclusion": "success",
+    "headSha": "e9c7d17fb8117f1c9c6dd92cf0b16a79ffd95106",
+    "runId": 34704561741,
+    "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34704561741",
+    "evidence": "qa/1.4.0-alpha.2/remote-ci.json"
+  },
+  "evidence": [
+    {
+      "path": "qa/1.4.0-alpha.2/release-checks.log",
+      "sha256": "1bf6590ecf679b2b7e8cf85486d5b5a63b63eceba6d98e82b3b320b92abc696a"
+    },
+    {
+      "path": "qa/1.4.0-alpha.2/package-verification.json",
+      "sha256": "9c16871e0f01cac21ca23734f89e481c81f95f883d71840e3e40f2be80b1b8b2"
+    },
+    {
+      "path": "release-manifest-1.4.0-alpha.2.json",
+      "sha256": "4fb805ae95344664501aaf0a0fa79899acf500e88c7bc23b55c0df0af122667c"
+    },
+    {
+      "path": "qa/1.4.0-alpha.2/edge-observations.json",
+      "sha256": "b30a22a969ae60f3420d5f0645745b58cd675e7378f616ff7b72b1691a10d3aa"
+    },
+    {
+      "path": "qa/1.4.0-alpha.2/remote-ci.json",
+      "sha256": "a7dcc81715455c1ad6f323abae92d836a89bdca596de37b0d71cb70235cda1ec"
+    }
+  ]
+}

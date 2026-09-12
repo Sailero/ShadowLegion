@@ -1,0 +1,84 @@
+{
+  "headSha": "e9c7d17fb8117f1c9c6dd92cf0b16a79ffd95106",
+  "runId": 34704561741,
+  "status": "completed",
+  "conclusion": "success",
+  "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34704561741",
+  "checkedAt": "2026-09-12T16:15:30.715Z",
+  "jobs": [
+    {
+      "id": 103582158358,
+      "name": "Tests, web build and pacing model",
+      "status": "completed",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out source",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node.js 24",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install locked dependencies without lifecycle scripts",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run tests, TypeScript, Vite and distribution checks",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Recompute theoretical campaign pacing",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Archive checked web build",
+          "number": 7,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Archive theoretical pacing report",
+          "number": 8,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node.js 24",
+          "number": 15,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out source",
+          "number": 16,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "number": 17,
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ]
+}

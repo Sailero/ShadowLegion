@@ -2,6 +2,24 @@
 
 拟人布偶猫棉棉带着一袋回信，与记住她脚步的影伴小暖，把远方的朋友重新联系起来。新定位是温暖、需要操作与分工的 Steam PC 送信冒险，首次完整体验的制作目标约三小时。
 
+当前开发版 **1.4.0-alpha.2** 已接入**风铃森林与圆镜湖两段可玩原型**。森林确认交信后，新的邮路图才开放圆镜湖；旧练习星章不会替代实际投递来解锁送信区域。云阶山、晒被沙原、晴雪湾仍未制作完成，三小时成品与 Steam 发行仍是目标。
+
+圆镜湖围绕“叶舟运信、猫走岸路、小暖稳住码头”展开：近距离调整两片导流叶，确认湖心与收信码头两次到站后分别保存，最后向泡芙交信并开放回信与返程近路；岸边野餐垫是可选发现。小暖按棉棉走过的安全脚印沿岸跟随，召回不会直接抄近路穿水。暂停冻结操作与航行；重新进入从最近确认的码头恢复，不保存航行中的位置。
+
+多地区投递、湖区到站和可选发现纳入**十项本机数据备份**，与旧成长、挑战记录和森林兼容存档并存；旧备份缺少新增旅程域时保留该域当前记录。数据仍只保存在当前浏览器本机，不是云存档。
+
+**最终 `release:web` 已通过 326/326 自动检查、TypeScript、Vite、静态检查与依赖审计，0 已知依赖漏洞。** 本轮修复森林与湖区键盘事件被重复处理的问题，新增 14 项使用真实 Phaser 键盘队列的回归，覆盖单次暂停、继续、按住重复事件与失焦恢复；这些检查不代替浏览器操作验收。[alpha.2 本机试玩 ZIP](release/Sunlit-Echoes-1.4.0-alpha.2-web.zip) 已打包并独立读回核对，10,044,316 字节；SHA-256：`494930700fc200f913feaf6bcfe219f22d0c44b6fca244142b58b7e7fbcaf512`。[包校验记录](docs/qa/1.4.0-alpha.2/package-verification.json) 与 [发布清单](docs/release-manifest-1.4.0-alpha.2.json) 保留文件证据。
+
+Edge 中间版已通过起点稳舟、装信、启航到湖心真实到站保存；后续中间版 `index-CmW6i9W8.js` 以普通点击、F / E 完成双导流叶调整、野餐垫发现保存与第二航段出发，看到叶舟到达第三叶码头并显示已保存，也观察到召回影伴沿栈桥折向岸边。随后主动刷新到最终 `index-CK6S0itx.js`，确认从第三叶码头恢复；F 向泡芙实际交信后，HUD / 地图显示已收信、近路开放，泡芙两页回信及 Right 翻页、R 重读、Esc 合上均已检查。最终包的快速 Escape / Return 恢复后仍留在湖区，单次 Esc 暂停、另一次 Esc 返回地图也已实测。
+
+交信后的第二次刷新也已验证：最终包菜单恢复，邮路图仍显示泡芙已收信、新回信与湖心近路已开放；本轮未注入存档或坐标。本轮未连续走完北岸与东岸至收件人，也未完整走回程桥，这些分段证据不代表两段最终完整流程或真人时长达标。[Edge 观察记录](docs/qa/1.4.0-alpha.2/edge-observations.json) 与 [验证摘要](docs/validation-1.4.0-alpha.2.json) 保留构建、流程和未测范围。下列 alpha.1 包仅供历史追溯，详见 [发行准备](docs/release-readiness.md)。
+
+代码提交 `e9c7d17fb8117f1c9c6dd92cf0b16a79ffd95106` 已推送，已核对本地与远端提交完全一致。[CI 34704561741](https://github.com/Sailero/ShadowLegion/actions/runs/34704561741) 及任务 `103582158358` 的全部步骤成功；[远端证据](docs/qa/1.4.0-alpha.2/remote-ci.json) 已保存。CI 覆盖代码检查和产物归档，不代表图形或 Steam 发行验收。
+
+## 1.4.0-alpha.1 历史基线
+
+以下至“浏览器试玩”前的版本、包和检查描述保留 alpha.1 当时状态；“当前”不指 alpha.2。
+
 当前 **1.4.0-alpha.1** 是“第一封信”可玩 alpha：森林寻址、影伴扶桥、亲手交信与返程捷径；小猫分层待机/跑动/轻跃/庆祝动作；十六页可跳过、回看的序章与回信册。它尚不是三小时成品；完整五地区、真人时长、Steam 桌面发行与手柄支持仍需制作和验收。准确检查与待测项见 [发行准备](docs/release-readiness.md)。
 
 当前包已完成 **248/248 自动测试**，`release:web` 的 TypeScript、生产构建、静态检查与依赖审计通过，审计为 **0 已知漏洞**。[本机试玩 ZIP](release/Sunlit-Echoes-1.4.0-alpha.1-web.zip) 已生成。Edge 已走通中间生产版的森林投递与返营；最终包通过刷新保留进度、森林画面、暂停继续及栗笺回信检查。具体构建与未测范围见 [实测记录](docs/qa/1.4.0-alpha.1/edge-observations.json) 和 [验证摘要](docs/validation-1.4.0-alpha.1.json)，不等于完整发行验收。
@@ -73,12 +91,12 @@ npm run release:web
 Windows 可在发布目录检查完成后使用标准 ZIP 脚本；将参数换成实际生成的目录：
 
 ```powershell
-.\scripts\package-web-release.ps1 -ReleaseDirectory ".\release\shadow-legion-web-1.4.0-alpha.1-<timestamp>"
+.\scripts\package-web-release.ps1 -ReleaseDirectory ".\release\shadow-legion-web-1.4.0-alpha.2-<timestamp>"
 ```
 
 脚本输出同一 `release/` 父目录中的版本 ZIP，使用正斜杠条目，并校验源文件与 ZIP 内部 SHA-256；拒绝额外文件、路径穿越、链接、清单不符和覆盖已有包，不改动发布源目录。
 
-当前 alpha 的[本机静态目录](release/shadow-legion-web-1.4.0-alpha.1-2026-09-12T15-16-53-547Z/)和 [Sunlit-Echoes-1.4.0-alpha.1-web.zip](release/Sunlit-Echoes-1.4.0-alpha.1-web.zip) 已准备好，ZIP 为 **10,030,567 字节**。运行内容为 8 个文件、11,482,178 字节，脚本 `index-D5VG81Rx.js` 的 Vite gzip 估算为 453.58kB。11 个清单文件加清单本身共 12 个 ZIP 条目已校验；完整 SHA-256 见[包校验记录](docs/qa/1.4.0-alpha.1/package-verification.json)及[发布清单](docs/release-manifest-1.4.0-alpha.1.json)。这些是本机静态产物，不是 Steam 上架包；体积检查不能证明加载速度或帧率。
+历史 alpha.1 的[本机静态目录](release/shadow-legion-web-1.4.0-alpha.1-2026-09-12T15-16-53-547Z/)和 [Sunlit-Echoes-1.4.0-alpha.1-web.zip](release/Sunlit-Echoes-1.4.0-alpha.1-web.zip) 已准备好，ZIP 为 **10,030,567 字节**。运行内容为 8 个文件、11,482,178 字节，脚本 `index-D5VG81Rx.js` 的 Vite gzip 估算为 453.58kB。11 个清单文件加清单本身共 12 个 ZIP 条目已校验；完整 SHA-256 见[包校验记录](docs/qa/1.4.0-alpha.1/package-verification.json)及[发布清单](docs/release-manifest-1.4.0-alpha.1.json)。这些是本机静态产物，不是 Steam 上架包；体积检查不能证明加载速度或帧率。
 
 `analyze:pacing` 是理论敌人负载模型，不是实测局长。真实试玩会在本机保留最近 120 条已完成波次的有效战斗用时；`SessionMetricsManager.summary()` 返回各章样本数、单波中位数和 p90。数据不上传，小样本也不代表整体平衡或整章时长。
 

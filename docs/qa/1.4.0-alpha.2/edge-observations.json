@@ -1,0 +1,73 @@
+{
+  "date": "2026-09-13",
+  "timezone": "Asia/Shanghai",
+  "method": "Connected Microsoft Edge via CUA screenshots, accessibility tree, ordinary clicks and key presses; Browser SDK read-only DOM and captured warn/error logs",
+  "origin": "http://localhost:4173/",
+  "storageScope": "Existing task QA origin retained from the genuine forest delivery. No progress, position or save state was injected through page scripts.",
+  "browserVersion": "not independently collected",
+  "screenshotEvidence": "Screenshots inspected in the tool conversation. This is an observation log; no PNG archive or video was exported.",
+  "firstLakeLeg": {
+    "script": "assets/index-BkmtQ2Pb.js",
+    "scope": "Intermediate production build before final footstep compression, copy and keyboard-event deduplication fixes",
+    "flow": [
+      "Open journey map after real forest receipt; lake becomes available while three planned regions remain unavailable",
+      "Enter lake at the southwest post station and walk to the departure dock",
+      "E sends echo to the actual anchor; F loads the letter and the next F launches the carrier",
+      "Letter boat sails on the lake while cat stays on the shore; recall echo and walk to the middle dock",
+      "Actual middle-dock arrival displays saved confirmation; reload retains the middle checkpoint"
+    ]
+  },
+  "lakeSecondLeg": {
+    "script": "assets/index-CmW6i9W8.js",
+    "scope": "Intermediate production build before keyboard-event deduplication; both earlier waypoints, shore geometry and leaf mechanics match final CK6S0itx",
+    "flow": [
+      "Reload/reopen production preview; journey map displays the saved middle dock and LakeScene resumes there with the letter",
+      "E sends echo to the middle anchor; the steady-boat hint is shown",
+      "Leave echo at the middle dock, walk west along the pier and up the shore to the west leaf",
+      "F turns west leaf from left to right; world marker and HUD agree",
+      "F at the optional picnic cloth saves four places and updates its label",
+      "Walk north shore to the north leaf; F turns down to up and both HUD targets match",
+      "Return around the west shore and along the middle pier; F starts the second voyage",
+      "E recalls echo, then cat and echo return along the pier and turn north along the shore",
+      "Boat progress is visibly observed at 1, 42 and 91 percent, followed by actual mail-dock arrival and saved confirmation"
+    ],
+    "capturedWarnErrorLogs": [],
+    "limitation": "The cat did not continuously walk from the middle dock around the north and east shore to the recipient in this run. After the genuine carrier arrival, an intentional final-build reload tests recovery at the confirmed mail dock."
+  },
+  "inputRegression": {
+    "observation": "An Escape/Return sequence during the intermediate lake play returned to the map. The observed sequence alone cannot disambiguate prior blur-pause from queued event replay.",
+    "diagnosis": "Installed Phaser KeyboardManager -> KeyboardPlugin -> Key regression tests reproduce identical DOM keydown replay after resetKeys in both forest and lake controls. A per-binding WeakSet and closed-scene guard prevent duplicate handling.",
+    "tests": 14,
+    "finalBrowserCheck": "Final CK6S0itx: Enter resumes the visible pause panel; sequential Escape/Return in one CUA call stays in the lake; one Escape opens pause, a later second Escape returns to the journey map. This UI smoke complements the 14 actual Phaser queue regression tests; it is not a frame-timing measurement."
+  },
+  "finalBuildSmoke": {
+    "script": "assets/index-CK6S0itx.js",
+    "flow": [
+      "Reload after genuine intermediate-build carrier arrival. Journey map reports the saved third-leaf mail dock.",
+      "Enter lake at the derived safe mail-dock checkpoint; the letter is still aboard and the recipient asks for F delivery.",
+      "F physically next to Puffer delivers the letter; envelope disappears, receipt confirmation appears and the return shortcut opens.",
+      "Enter resumes an already visible pause panel. Escape/Return in one CUA call leaves the player in LakeScene.",
+      "One Escape opens pause; a later second Escape returns to the journey map, which shows the actual lake receipt and open shortcut.",
+      "Open reply book; Puffer reply is unlocked while mountain, desert, snow and epilogue remain locked.",
+      "Read both Puffer reply pages using Right; R returns to page 1; Escape closes the story.",
+      "Reload the completed final build. Menu keeps the prior practice 2 stars / 3 warm crystals / 1-2 resume entry. Journey map retains Puffer received status, new reply and lake shortcut.",
+      "Read-only DOM confirms data-game-ready=true and ./assets/index-CK6S0itx.js; captured warn/error logs are empty."
+    ],
+    "capturedWarnErrorLogs": [],
+    "status": "passed for the explicitly listed smoke scope",
+    "dataGameReady": true
+  },
+  "notCovered": [
+    "Final-build fresh-save continuous forest-to-lake playthrough",
+    "Full outbound east shoreline and complete return-bridge traverse in this graphical run",
+    "Full sixteen-page story reached through ordinary unlock progression",
+    "Human pace, held-key feel, audio listening and reduced-motion art review",
+    "Ten-domain native backup round trip and native storage write fault injection",
+    "Minimum hardware performance, multi-DPI/fullscreen/multimonitor and cross-browser acceptance",
+    "Electron desktop, file-save migration, gamepad and remapping",
+    "Three remaining regions and the connected three-hour game"
+  ],
+  "fullReleaseAcceptance": false,
+  "version": "1.4.0-alpha.2",
+  "browserAcceptance": "Partial graphical acceptance: genuine shore/echo/leaf interactions and both carrier arrivals were observed across intermediate alpha.2 builds. The final CK6S0itx build passed confirmed mail-dock reload recovery, actual F delivery, pause/resume/exit, two-page reply reading and rereading, and post-delivery reload persistence. No page scripts injected game state. The full continuous outbound shoreline and return bridge, final fresh-save journey and complete three-hour release remain unverified."
+}
