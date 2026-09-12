@@ -1,5 +1,6 @@
 import { getBattleTime } from '../systems/BattleClock';
 import Phaser from 'phaser';
+import { SettingsManager } from '../systems/SettingsManager';
 import { EnemyType, ELITE, WAVE_CFG } from '../config/gameConfig';
 
 export const BOSS_CHARGE_PROFILE = {
@@ -181,6 +182,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.y = Phaser.Math.Clamp(this.y, margin, wh - margin);
   }
 
+  private face(angle: number): void {
+    this.setFlipX(Math.cos(angle) < 0);
+    this.rotation = SettingsManager.get().reducedMotion ? 0 : Math.sin(getBattleTime(this.scene) * .009 + this.y * .02) * .055;
+  }
+
   private chaseAI(hx: number, hy: number): void {
     const a = Phaser.Math.Angle.Between(this.x, this.y, hx, hy);
     const dist = Phaser.Math.Distance.Between(this.x, this.y, hx, hy);
@@ -191,7 +197,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     } else {
       b.setVelocity(Math.cos(a) * this.spd, Math.sin(a) * this.spd);
     }
-    this.rotation = a;
+    this.face(a);
   }
 
   private batAI(time: number, hx: number, hy: number): void {
@@ -216,7 +222,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const a = baseAngle + this.offsetAngle * 0.6;
       b.setVelocity(Math.cos(a) * this.spd, Math.sin(a) * this.spd);
     }
-    this.rotation = baseAngle;
+    this.face(baseAngle);
   }
 
   private archerAI(time: number, hx: number, hy: number): void {
@@ -233,7 +239,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const strafe = a + Math.PI / 2 * (Math.sin(time * 0.002) > 0 ? 1 : -1);
       b.setVelocity(Math.cos(strafe) * this.spd * 0.5, Math.sin(strafe) * this.spd * 0.5);
     }
-    this.rotation = a;
+    this.face(a);
 
     const fr = this.cfg.fireRate || 1400;
     if (time > this.lastFire + fr && dist < 450) {
@@ -256,7 +262,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private bossAI(time: number, hx: number, hy: number): void {
     const a = Phaser.Math.Angle.Between(this.x, this.y, hx, hy);
     const b = this.body as Phaser.Physics.Arcade.Body;
-    this.rotation = a;
+    this.face(a);
 
     // Clamp boss position to stay well inside arena
     const margin = 60;
@@ -276,7 +282,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     if (this.bossWindup) {
       b.setVelocity(0, 0);
-      this.rotation = this.bossChargeAngle;
+      this.face(this.bossChargeAngle);
       if (time >= this.bossWindupEnd) {
         this.bossWindup = false;
         this.bossCharging = true;
@@ -474,7 +480,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const approach = a + (Math.sin(time * 0.004) * 0.7);
       b.setVelocity(Math.cos(approach) * this.spd * 1.3, Math.sin(approach) * this.spd * 1.3);
     }
-    this.rotation = a;
+    this.face(a);
 
     // Throw shuriken frequently
     const fr = this.cfg.fireRate || 1200;
@@ -506,7 +512,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const strafe = a + Math.PI / 2 * (Math.sin(time * 0.0015) > 0 ? 1 : -1);
       b.setVelocity(Math.cos(strafe) * this.spd * 0.4, Math.sin(strafe) * this.spd * 0.4);
     }
-    this.rotation = a;
+    this.face(a);
 
     // Ranged attack
     const fr = this.cfg.fireRate || 2000;
@@ -546,7 +552,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     const distance = Phaser.Math.Distance.Between(this.x, this.y, tx, ty);
     const angle = Phaser.Math.Angle.Between(this.x, this.y, tx, ty);
-    this.rotation = angle;
+    this.face(angle);
     if (distance <= 92) {
       this.bombWindup = true;
       this.bombEnd = time + 720;
@@ -622,6 +628,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       x: this.x, y: this.y,
       xp: this.xpVal, score: this.scoreVal,
       color: this.cfg.color, isBoss: this.isBoss,
+      type: this.cfg.key, shadowRival: Boolean(this.getData('shadowRival')),
     });
     if (this.eliteGlow) {
       this.eliteGlow.destroy();

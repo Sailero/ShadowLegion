@@ -1,5 +1,6 @@
 import { OPERATIVES, type OperativeId } from '../data/operatives';
 import { LEVEL_UPGRADES, WAVE_UPGRADES } from '../data/upgrades';
+import type { GameMode } from '../data/modes';
 import {
   MAX_RECORDED_RUN_MS, sanitizeRunRecorderSnapshot, type RunRecorderSnapshot,
 } from './RunRecorder';
@@ -15,6 +16,9 @@ export interface RunCheckpointInput {
   appliedUpgrades: string[];
   shadowTrial: boolean;
   recorder: RunRecorderSnapshot;
+  mode?: GameMode;
+  stageId?: number;
+  trialTier?: number;
 }
 
 export interface RunCheckpoint extends RunCheckpointInput {
@@ -36,7 +40,12 @@ export function sanitizeRunCheckpoint(value: unknown): RunCheckpoint | null {
   if (!value || typeof value !== 'object') return null;
   const source = value as Record<string, unknown>;
   if (source.version !== 1 || typeof source.endless !== 'boolean' || typeof source.shadowTrial !== 'boolean') return null;
-  if (!finiteWithin(source.level, 1, source.endless ? 1000 : 4, true)) return null;
+  if (!finiteWithin(source.level, 1, source.endless ? 1000 : 5, true)) return null;
+  if (source.mode !== undefined && !['campaign', 'endless', 'shadow'].includes(source.mode as string)) return null;
+  if (source.stageId !== undefined && !finiteWithin(source.stageId, 1, 50, true)) return null;
+  if (source.trialTier !== undefined && !finiteWithin(source.trialTier, 1, 5, true)) return null;
+  if (source.mode === 'campaign' && source.stageId !== undefined && Math.ceil((source.stageId as number) / 10) !== source.level) return null;
+  if (source.mode && (source.mode === 'endless') !== source.endless) return null;
   const startLevel = source.startLevel === undefined ? 1 : source.startLevel;
   if (!finiteWithin(startLevel, 1, source.level, true)) return null;
   if (!OPERATIVES.some(item => item.id === source.operativeId)) return null;
@@ -67,6 +76,7 @@ export function sanitizeRunCheckpoint(value: unknown): RunCheckpoint | null {
     score: source.score, kills: source.kills, elapsedMs: source.elapsedMs,
     appliedUpgrades, shadowTrial: source.shadowTrial,
     recorder: sanitizeRunRecorderSnapshot(source.recorder),
+    mode: source.mode as GameMode | undefined, stageId: source.stageId as number | undefined, trialTier: source.trialTier as number | undefined,
   };
 }
 

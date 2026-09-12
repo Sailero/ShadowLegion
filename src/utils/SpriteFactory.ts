@@ -5,6 +5,51 @@ export class SpriteFactory {
   static createAll(scene: Phaser.Scene): void {
     this.hero(scene); this.enemies(scene); this.bullets(scene);
     this.xpGem(scene); this.particles(scene); this.defenseCore(scene);
+    this.paintedSprites(scene);
+    this.paintedGround(scene);
+  }
+  /** Atlas frames are normalized to stable physics sizes; the original alpha is preserved. */
+  private static paintedSprites(scene: Phaser.Scene): void {
+    if (!scene.textures.exists('garden-atlas')) return;
+    const source = scene.textures.get('garden-atlas').getSourceImage() as HTMLImageElement;
+    const rows = [0, .344, .648, 1];
+    const frames: Array<[string, number, number, number]> = [
+      ['hero', 0, 0, 56], ['shadow_fox', 1, 0, 52], ['enemy_slime', 2, 0, 40], ['enemy_bat', 3, 0, 40],
+      ['enemy_archer', 0, 1, 44], ['enemy_tank', 1, 1, 54], ['enemy_ninja', 2, 1, 42], ['enemy_summoner', 3, 1, 46],
+      ['enemy_bomber', 0, 2, 44], ['enemy_medic', 1, 2, 46], ['defense_core', 2, 2, 90], ['garden_tree', 3, 2, 160],
+      ['portrait_hero', 0, 0, 280], ['portrait_shadow', 1, 0, 280], ['traveler-portrait', 0, 0, 280],
+    ];
+    for (const [key, column, row, size] of frames) {
+      if (scene.textures.exists(key)) scene.textures.remove(key);
+      const texture = scene.textures.createCanvas(key, size, size);
+      if (!texture) continue;
+      const context = texture.context;
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      const width = source.width / 4, height = source.height * (rows[row + 1] - rows[row]);
+      context.drawImage(source, column * width, source.height * rows[row], width, height, 0, 0, size, size);
+      texture.refresh();
+    }
+  }
+  private static paintedGround(scene: Phaser.Scene): void {
+    if (!scene.textures.exists('terrain-atlas')) return;
+    const source = scene.textures.get('terrain-atlas').getSourceImage() as HTMLImageElement;
+    for (let index = 0; index < 6; index++) {
+      const texture = scene.textures.createCanvas(index === 5 ? 'paper-grain' : `ground-${index + 1}`, 1024, 1024);
+      if (!texture) continue;
+      // Mirror adjacent tiles at their shared edges. Generated material swatches
+      // need this continuous boundary even if the source was not perfectly seamless.
+      for (let row = 0; row < 2; row++) for (let column = 0; column < 2; column++) {
+        const context = texture.context;
+        context.save();
+        context.translate(column ? 1024 : 0, row ? 1024 : 0);
+        context.scale(column ? -1 : 1, row ? -1 : 1);
+        context.drawImage(source, index % 3 * source.width / 3, Math.floor(index / 3) * source.height / 2,
+          source.width / 3, source.height / 2, 0, 0, 512, 512);
+        context.restore();
+      }
+      texture.refresh();
+    }
   }
   private static g(scene: Phaser.Scene): Phaser.GameObjects.Graphics {
     return scene.add.graphics().setVisible(false);

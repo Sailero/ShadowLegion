@@ -1,93 +1,108 @@
 import Phaser from 'phaser';
-import { ARENA_HEIGHT, ARENA_WIDTH } from '../config/gameConfig';
-import { ChapterDef, CHAPTERS } from '../data/chapters';
+import { GameMode, getShadowTrial, SHADOW_TRIALS } from '../data/modes';
 import { getOperative, OPERATIVES, OperativeId } from '../data/operatives';
 import { getSkill } from '../data/skills';
+import { getStage } from '../data/stages';
+import { PROGRESSION_MILESTONES } from '../data/progression';
 import { MetaProgressionManager } from '../systems/MetaProgressionManager';
+import { CampaignProgressionManager } from '../systems/CampaignProgressionManager';
 import { RunCheckpointManager } from '../systems/RunCheckpointManager';
-import { backdrop, button, choiceHit, label, paperCard, shortcut, UI } from '../ui/theme';
+import { ShadowTrialManager } from '../systems/ShadowTrialManager';
+import { backdrop, button, choiceHit, heading, label, paperCard, portrait, shortcut, stamp, titleRule, UI } from '../ui/theme';
 
+interface LoadoutData { mode?: GameMode; stageId?: number; trialTier?: number; operativeId?: OperativeId; endless?: boolean; chapter?: number }
 export class LoadoutScene extends Phaser.Scene {
-  private endless = false;
+  private mode: GameMode = 'campaign';
+  private stageId = 1;
+  private trialTier = 1;
   private selectedOperative: OperativeId = 'ranger';
-  private selectedChapter = 1;
-  private shadowTrial = false;
   constructor() { super('LoadoutScene'); }
-
-  init(data: { endless?: boolean; operativeId?: OperativeId; chapter?: number; shadowTrial?: boolean }) {
-    this.endless = Boolean(data.endless);
+  init(data: LoadoutData = {}) {
+    this.mode = data.mode ?? (data.endless ? 'endless' : 'campaign');
+    this.stageId = data.stageId ?? CampaignProgressionManager.getNextUnlockedStage().id;
+    this.trialTier = getShadowTrial(data.trialTier ?? 1).tier;
     this.selectedOperative = data.operativeId ?? 'ranger';
-    this.selectedChapter = data.chapter ?? 1;
-    this.shadowTrial = Boolean(data.shadowTrial);
   }
 
   create() {
     const state = MetaProgressionManager.getState();
     if (!state.unlockedOperatives.includes(this.selectedOperative)) this.selectedOperative = 'ranger';
-    this.selectedChapter = Phaser.Math.Clamp(this.selectedChapter, 1, state.highestChapterUnlocked);
-    backdrop(this, '准备出发  /  PLAN YOUR TRIP');
-    button(this, 914, 39, 135, '返回营地  ESC', () => this.scene.start('MenuScene'), { secondary: true, height: 34, size: 12 });
-    label(this, 43, 94, this.endless ? '没有终点的，暖暖漫游。' : '今天，想怎么守护营地？', 30, UI.ink, true);
-    label(this, 45, 141, this.endless ? '章节地形循环，难度逐步成长；每一段旅途都能留下暖晶与影子习惯。' : '选一个伙伴、一处风景。波次结束三选一升级，守住营地，解锁下一站。', 14, UI.muted);
-    label(this, 45, 183, '01  选择你的起手流派', 14, UI.green, true);
-    label(this, 975, 183, '数字 1–4 可快速选择已解锁伙伴', 11, UI.muted).setOrigin(1, 0);
-    OPERATIVES.forEach((operative, index) => {
-      const x = 157 + index * 237;
-      const unlocked = state.unlockedOperatives.includes(operative.id);
-      const selected = this.selectedOperative === operative.id;
-      paperCard(this, x, 309, 220, 194, selected ? 0xeaf0de : unlocked ? UI.card : 0xefeee5, selected ? UI.green : UI.line);
-      this.add.circle(x - 65, 248, 23, unlocked ? 0xe4eacb : 0xe1e1d7);
-      this.add.image(x - 65, 248, 'hero').setScale(0.95).setTint(operative.color).setAlpha(unlocked ? 1 : 0.36);
-      label(this, x - 30, 230, operative.name, 17, unlocked ? UI.ink : UI.muted, true);
-      label(this, x - 30, 257, operative.role, 12, UI.green);
-      if (selected) label(this, x + 91, 222, '✓', 14, UI.green, true).setOrigin(1, 0);
-      label(this, x - 91, 294, operative.trait, 13, UI.muted).setWordWrapWidth(184, true).setLineSpacing(7);
-      const skill = getSkill(operative.signatureSkill);
-      label(this, x - 91, 374, unlocked ? `起手技能 · ${skill?.name ?? '支援'}` : `通关第 ${operative.requiredChapter} 章后加入`, 12, unlocked ? UI.green : UI.muted, unlocked);
-      if (unlocked) choiceHit(this, x, 309, 220, 194, () => this.refresh({ operativeId: operative.id }));
-      shortcut(this, String(index + 1), () => { if (unlocked) this.refresh({ operativeId: operative.id }); });
+    if (this.mode === 'campaign' && !CampaignProgressionManager.isStageUnlocked(this.stageId)) this.stageId = CampaignProgressionManager.getNextUnlockedStage().id;
+    const stage = getStage(this.stageId);
+    const operative = getOperative(this.selectedOperative);
+    const mastery = MetaProgressionManager.getMastery(this.selectedOperative, state);
+    const specialization = MetaProgressionManager.getSpecializations(this.selectedOperative, state).find(item => item.equipped);
+    backdrop(this, '出发前的一页  /  THE TRAVELER’S SATCHEL');
+    button(this, 919, 35, 141, '返回  ESC', () => this.back(), { secondary: true, height: 33, size: 12 });
+    heading(this, 41, 91, this.mode === 'campaign' ? `${stage.label} · ${stage.name}` : this.mode === 'shadow' ? '收到了，昨天的挑战书。' : '去看看，路的尽头还有什么。', 33);
+    label(this, 44, 142, this.mode === 'campaign' ? '选好旅人和拿手本领，就把这封信送往下一处风景。' : this.mode === 'shadow' ? '五封独立挑战书，三轮切磋。看清蓄力，找到自己的破绽。' : '五种风景不断轮转，保留本局搭配，向更远的波次进发。', 13, UI.muted);
+    paperCard(this, 512, 442, 951, 536);
+    const seam = this.add.graphics();
+    seam.lineStyle(1, UI.line,.8).lineBetween(419,194,419,687);
+    seam.lineStyle(5,0xb7a280,.08).lineBetween(424,194,424,687);
+    label(this,60,201,'01  谁来送这封信？',14,UI.green,true);
+    OPERATIVES.forEach((item,index) => {
+      const y=275+index*80;
+      const unlocked=state.unlockedOperatives.includes(item.id);
+      const selected=item.id===this.selectedOperative;
+      const g=this.add.graphics();
+      if(selected) g.fillStyle(UI.pale).fillPoints([{x:55,y:y-36},{x:397,y:y-32},{x:391,y:y+34},{x:59,y:y+37}],true);
+      g.lineStyle(1,UI.line,.55).lineBetween(129,y+35,383,y+35);
+      portrait(this,91,y,item.id,56);
+      label(this,135,y-22,item.name,17,unlocked?UI.ink:UI.muted,true);
+      const milestone=PROGRESSION_MILESTONES.find(unlock=>unlock.operativeId===item.id);
+      label(this,135,y+7,unlocked?item.role:`通关 ${getStage(milestone?.stageId??1).label} 后加入`,11,UI.muted);
+      label(this,378,y-20,selected?'✓':unlocked?String(index+1):'锁',12,selected?UI.green:UI.muted,true).setOrigin(1,0);
+      if(unlocked) choiceHit(this,226,y,342,72,()=>this.refresh({operativeId:item.id}));
+      shortcut(this,String(index+1),()=>{if(unlocked)this.refresh({operativeId:item.id});});
     });
-    label(this, 45, 430, '02  选择出发的风景', 14, UI.green, true);
-    CHAPTERS.forEach((chapter, index) => {
-      const x = 157 + index * 237;
-      const unlocked = chapter.id <= state.highestChapterUnlocked;
-      const selected = chapter.id === this.selectedChapter;
-      paperCard(this, x, 508, 220, 92, selected ? 0xeaf0de : unlocked ? UI.card : 0xefeee5, selected ? UI.green : UI.line);
-      this.miniMap(chapter, x - 94, 479, 69, 54, unlocked);
-      label(this, x - 13, 477, `${chapter.id}. ${chapter.name}`, 13, unlocked ? UI.ink : UI.muted, true);
-      label(this, x - 13, 501, unlocked ? chapter.specialName : `通关第 ${chapter.id - 1} 章解锁`, 11, UI.muted).setWordWrapWidth(111, true);
-      if (selected) label(this, x + 94, 531, '已选择', 10, UI.green, true).setOrigin(1, 0);
-      if (unlocked) choiceHit(this, x, 508, 220, 92, () => this.refresh({ chapter: chapter.id }));
-    });
-    const chapter = CHAPTERS[this.selectedChapter - 1];
-    paperCard(this, 512, 604, 932, 64, 0xf2e5cd);
-    label(this, 64, 583, `${chapter.name}  ·  地形小贴士`, 13, UI.ink, true);
-    label(this, 64, 608, chapter.specialDesc, 13, UI.muted).setWordWrapWidth(880, true);
-    const profile = state.lastProfile;
-    label(this, 47, 654, profile ? `同行影子 · ${profile.style}（来自上一次旅途）` : '同行影子 · 见习伙伴（首局也有人陪伴）', 12, UI.green, true);
-    button(this, 237, 701, 382, `镜像切磋：${this.shadowTrial ? '开启  ✓' : '关闭'}  ·  可选挑战`, () => this.refresh({ shadowTrial: !this.shadowTrial }), { secondary: true, height: 42, size: 13 });
-    label(this, 48, 733, this.shadowTrial ? '第 3 波加入模仿战斗习惯的影子对手。' : '首次推荐关闭，先熟悉守护营地与技能组合。', 11, UI.muted);
-    button(this, 758, 700, 436, `和${getOperative(this.selectedOperative).name}一起出发  →`, () => this.launch(), { height: 54, size: 17 });
-    if (RunCheckpointManager.load()) label(this, 758, 744, '出发后，将替换尚未完成的章节记录。', 11, UI.muted).setOrigin(0.5);
-    shortcut(this, 'ESC', () => this.scene.start('MenuScene'));
+    label(this,62,601,`熟练度 ${mastery.rank} · ${mastery.title}`,12,UI.green,true);
+    const xp=this.add.graphics();xp.fillStyle(UI.line,.6).fillRect(62,629,324,5);xp.fillStyle(UI.green).fillRect(62,629,324*mastery.progress,5);
+    label(this,62,646,specialization?`专精 · ${specialization.name}`:'专精 · 随着关卡中的成长逐渐掌握',11,UI.muted);
+    button(this,225,682,322,'整理装备与专精  →',()=>this.scene.start('WorkshopScene',{tab:'specialization',operativeId:this.selectedOperative,returnTo:{scene:'LoadoutScene',data:this.navigationData()}}),{secondary:true,height:33,size:12});
+
+    heading(this,454,205,operative.name,29);
+    portrait(this,911,253,this.selectedOperative,92);
+    label(this,456,251,operative.trait,13,UI.muted).setWordWrapWidth(350,true).setLineSpacing(7);
+    label(this,456,315,`拿手本领 · ${getSkill(operative.signatureSkill)?.name ?? '花火'}`,14,UI.green,true);
+    titleRule(this,455,350,501);
+    if(this.mode==='campaign') {
+      label(this,456,375,'02  这次出发，要记住的事',14,UI.green,true);
+      label(this,456,410,`地形 · ${stage.mapVariant.name}  /  ${stage.waves.length} 波挑战`,13,UI.ink,true);
+      label(this,456,443,stage.description,13,UI.muted).setWordWrapWidth(475,true);
+      [stage.objective.label,stage.bonusObjective.label].forEach((text,index)=>label(this,456,500+index*40,`☆  ${text}`,13,UI.muted).setWordWrapWidth(478,true));
+      label(this,456,606,'完成本关后回到地图，暖晶与熟练度会留在行囊。',12,UI.green);
+    } else if(this.mode==='shadow') this.drawTrials();
+    else {
+      heading(this,456,378,'这一次，不急着寄出最后一封信。',23);
+      const rules=[['01','五章风景轮转','地形会改变进攻与回防路线。'],['02','本局流派持续成长','在波间挑选增幅，让搭配逐步成型。'],['03','影伴依然在你身边','按 E 安排同行或守营，彼此留出退路。']];
+      rules.forEach(([n,title,description],index)=>{
+        const y=431+index*61;label(this,457,y,n,12,UI.amber,true);label(this,490,y,title,14,UI.ink,true);label(this,490,y+24,description,12,UI.muted);
+      });
+    }
+    button(this,708,674,504,this.mode==='campaign'?'带上行囊，出发  →':this.mode==='shadow'?'拆开挑战书，开始切磋  →':'向更远的地方出发  →',()=>this.launch(),{height:48,size:16});
+    label(this,512,748,RunCheckpointManager.load()?'开始新旅途会替换尚未完成的关卡记录。':'WASD 移动 · 鼠标瞄准 · SHIFT 轻跃 · SPACE 本领 · E 安排影伴',11,UI.muted).setOrigin(.5);
+    shortcut(this,'ESC',()=>this.back());
   }
 
-  private refresh(patch: { operativeId?: OperativeId; chapter?: number; shadowTrial?: boolean }): void {
-    this.scene.restart({ endless: this.endless, operativeId: this.selectedOperative, chapter: this.selectedChapter, shadowTrial: this.shadowTrial, ...patch });
+  private drawTrials():void {
+    const records=ShadowTrialManager.getRecords();
+    label(this,456,372,'02  挑一封昨天寄来的挑战书',14,UI.green,true);
+    SHADOW_TRIALS.forEach((trial,index)=>{
+      const x=532+(index%3)*167,y=441+Math.floor(index/3)*85;
+      const selected=trial.tier===this.trialTier;
+      paperCard(this,x,y,153,72,selected?UI.pale:UI.card,selected?UI.green:UI.line);
+      label(this,x-63,y-25,`0${trial.tier} / ${trial.rivals===2?'双影':'单影'}`,10,UI.amber,true);
+      label(this,x-63,y-4,trial.name,14,UI.ink,true);
+      label(this,x-63,y+20,records.some(row=>row.tier===trial.tier)?'已完成 ✓':selected?'已选择':'等待你的击掌',10,UI.muted);
+      choiceHit(this,x,y,153,72,()=>this.refresh({trialTier:trial.tier}));
+    });
+    const trial=getShadowTrial(this.trialTier);
+    label(this,457,584,trial.lesson,12,UI.green,true).setWordWrapWidth(483,true);
+    label(this,457,616,'独立三轮切磋 · 营地安全 · 可反复练习',11,UI.muted);
   }
-  private launch(): void {
-    this.scene.start('ArenaScene', { level: this.selectedChapter, operativeId: this.selectedOperative,
-      endless: this.endless, freshRun: true, shadowTrial: this.shadowTrial });
-  }
-  private miniMap(chapter: ChapterDef, x: number, y: number, width: number, height: number, unlocked: boolean): void {
-    const g = this.add.graphics().setAlpha(unlocked ? 1 : 0.35);
-    g.fillStyle(chapter.colors.ground).fillRoundedRect(x, y, width, height, 7);
-    const sx = width / ARENA_WIDTH, sy = height / ARENA_HEIGHT;
-    chapter.hazards.forEach(rect => g.fillStyle(chapter.colors.hazard, 0.5)
-      .fillRect(x + (rect.x - rect.width / 2) * sx, y + (rect.y - rect.height / 2) * sy, rect.width * sx, rect.height * sy));
-    chapter.obstacles.forEach(rect => g.fillStyle(chapter.colors.detail)
-      .fillRoundedRect(x + (rect.x - rect.width / 2) * sx, y + (rect.y - rect.height / 2) * sy, rect.width * sx, rect.height * sy, 2));
-    chapter.spawnPoints.forEach(point => g.fillStyle(UI.rose).fillCircle(x + point.x * sx, y + point.y * sy, 2));
-    g.fillStyle(UI.amber).fillTriangle(x + width / 2, y + height / 2 - 5, x + width / 2 - 4, y + height / 2 + 3, x + width / 2 + 4, y + height / 2 + 3);
-  }
+  private navigationData():LoadoutData{return{mode:this.mode,stageId:this.stageId,trialTier:this.trialTier,operativeId:this.selectedOperative};}
+  private refresh(patch:LoadoutData):void{this.scene.restart({...this.navigationData(),...patch});}
+  private back():void{this.scene.start(this.mode==='campaign'?'CampaignScene':'MenuScene',this.mode==='campaign'?{stageId:this.stageId}:undefined);}
+  private launch():void{this.scene.start('ArenaScene',{mode:this.mode,stageId:this.mode==='campaign'?this.stageId:undefined,trialTier:this.trialTier,operativeId:this.selectedOperative,freshRun:true});}
 }

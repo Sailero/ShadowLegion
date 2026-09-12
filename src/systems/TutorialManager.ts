@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 
-const STORAGE_KEY = 'shadowlegion_tutorial_v3';
+const STORAGE_KEY = 'shadowlegion_tutorial_v4';
 const DEPTH = 300;
 
 /** A single-screen onboarding card. Combat teaches the details contextually. */
@@ -55,7 +55,7 @@ export class TutorialManager {
       fontSize: '28px', fontFamily: 'sans-serif', fontStyle: 'bold', color: '#3e5947',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2));
 
-    this.objects.push(this.scene.add.text(cx, cy - 125, '四张地图，每章 5 波来客。你去截击，让影伴照看另一条路。', {
+    this.objects.push(this.scene.add.text(cx, cy - 125, '五章五十段小旅途。你去截击，让影伴照看另一条路。', {
       fontSize: '14px', fontFamily: 'sans-serif', color: '#866444',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2));
 

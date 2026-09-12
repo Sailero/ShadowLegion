@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 const saveMeta = state => storage.set('shadowlegion_meta_v1', JSON.stringify(state));
 const run = (build = 'nova', victory = true) => ({
-  wave: 5, level: 4, kills: 180, durationSec: 840, victory, endless: false, build,
+  wave: WAVE_CFG.perLevel, level: WAVE_CFG.levels, kills: 180, durationSec: 840, victory, endless: false, build,
   profile: new RunRecorder().finish(build, HERO_CFG.maxHp),
 });
 
@@ -50,7 +50,7 @@ test('every campaign chapter has complete finite spawn data and a final boss', (
 
 test('maps keep lanes, cover and hazards inside the playable arena', () => {
   assert.equal(CHAPTERS.length, WAVE_CFG.levels);
-  assert.equal(new Set(CHAPTERS.map(chapter => chapter.hazardKind)).size, CHAPTERS.length);
+  assert.ok(CHAPTERS.every(chapter => ['none', 'sand', 'tide', 'pulse'].includes(chapter.hazardKind)));
   for (const chapter of CHAPTERS) {
     assert.ok(chapter.spawnPoints.length >= 2);
     assert.ok(chapter.coreHp > 0 && chapter.enemyHpScale >= 1);
@@ -70,8 +70,8 @@ test('maps keep lanes, cover and hazards inside the playable arena', () => {
 
 test('chapter boundaries and endless wrap resolve the intended maps', () => {
   assert.equal(getChapter(0).id, 1);
-  assert.equal(getChapter(999).id, 4);
-  for (let level = 1; level <= 24; level++) assert.equal(getChapter(level, true).id, (level - 1) % 4 + 1);
+  assert.equal(getChapter(999).id, WAVE_CFG.levels);
+  for (let level = 1; level <= WAVE_CFG.levels * 6; level++) assert.equal(getChapter(level, true).id, (level - 1) % WAVE_CFG.levels + 1);
 });
 
 test('all four operatives have distinct builds and real signature skills', () => {
@@ -115,13 +115,13 @@ test('new saves grant the starting class without workshop power', () => {
 });
 
 test('chapter completion persists every earned unlock and is idempotent', () => {
-  for (let chapter = 1; chapter <= 4; chapter++) {
+  for (let chapter = 1; chapter <= WAVE_CFG.levels; chapter++) {
     assert.equal(Meta.recordChapterClear(chapter).firstClear, true);
     assert.equal(Meta.recordChapterClear(chapter).firstClear, false);
   }
   const state = Meta.getState();
-  assert.equal(state.highestChapterUnlocked, 4);
-  assert.equal(state.clearedChapters.length, 4);
+  assert.equal(state.highestChapterUnlocked, WAVE_CFG.levels);
+  assert.equal(state.clearedChapters.length, WAVE_CFG.levels);
   assert.deepEqual([...state.unlockedOperatives].sort(), OPERATIVES.map(item => item.id).sort());
   assert.deepEqual([...state.unlockedSkills].sort(), SKILLS.map(item => item.id).sort());
 });
@@ -129,7 +129,7 @@ test('chapter completion persists every earned unlock and is idempotent', () => 
 test('older partial saves restore unlocks from chapter progress', () => {
   saveMeta({ version: 1, highestChapterUnlocked: 4, unlockedOperatives: ['ranger'], unlockedSkills: ['burst'] });
   const state = Meta.getState();
-  assert.equal(state.version, 2);
+  assert.equal(state.version, 3);
   assert.equal(state.unlockedOperatives.length, 4);
   assert.equal(state.unlockedSkills.length, 4);
 });
@@ -179,9 +179,9 @@ test('first-clear build bonus is paid once and fastest completion persists', () 
 });
 
 test('starting at a late chapter cannot farm progress or claim a full campaign achievement', () => {
-  const fastLoss = calculateRunReward({ wave: 1, level: 4, startLevel: 4, victory: false, endless: false }, true);
+  const fastLoss = calculateRunReward({ wave: 1, level: WAVE_CFG.levels, startLevel: WAVE_CFG.levels, victory: false, endless: false }, true);
   assert.equal(fastLoss.earned, 0);
-  const shortcut = { ...run('engineer'), startLevel: 4 };
+  const shortcut = { ...run('engineer'), startLevel: WAVE_CFG.levels };
   assert.equal(isFullCampaignVictory(shortcut), false);
   const reward = Meta.recordRun(shortcut);
   assert.equal(reward.earned, 6);

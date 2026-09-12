@@ -1,0 +1,168 @@
+{
+  "version": "1.3.0-rc.1",
+  "releaseDirectory": "release/shadow-legion-web-1.3.0-rc.1-2026-09-12T06-11-00-121Z",
+  "releaseManifest": "release-manifest-1.3.0-rc.1.json",
+  "releaseCommand": "npm run release:web",
+  "releaseChecks": {
+    "testsPassed": 84,
+    "testsFailed": 0,
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "staticAssetCheck": "passed",
+    "runtimeFiles": 5,
+    "rawRuntimeBytes": 4467173,
+    "jsGzipKilobytes": 418.42,
+    "knownDependencyVulnerabilities": 0,
+    "verifiedSha256Files": 8
+  },
+  "isolatedRenderer": {
+    "reportPath": "docs/qa/1.3.0-rc.1/native-input.json",
+    "reportSha256": "8e2a130d67510c05c82693fbb1413eb17659d368003a51716f51f986050dd298",
+    "electron": "44.0.0",
+    "chromium": "152.0.7977.54",
+    "screenshotCount": 12,
+    "nativeInput": {
+      "movedPixels": 71.27746104849064,
+      "skillFeedback": "还差 85 点灵感，继续击退小捣蛋",
+      "shadowCommand": true
+    },
+    "pauseClockFrozen": true,
+    "shadowTier": 5,
+    "shadowRoundsCompleted": 3,
+    "rendererErrors": [],
+    "scope": "Isolated game profile, actual Chromium rendering and native input; accelerated entity cleanup for flow only."
+  },
+  "acceleratedCampaign": {
+    "reportPath": "docs/qa/1.3.0-rc.1/campaign-flow.json",
+    "reportSha256": "bdb9363053f79339ed336a737745beb135955c7f386e2a9768ebe25b63f40a17",
+    "completedStageIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50
+    ],
+    "everyStageClears": 1,
+    "endlessTransition": {
+      "mode": "endless",
+      "level": 2,
+      "cards": 7,
+      "operative": "engineer"
+    },
+    "unlockedOperatives": [
+      "ranger",
+      "gunner",
+      "warden",
+      "engineer"
+    ],
+    "recordedBuilds": [
+      "nova"
+    ],
+    "rendererErrors": [],
+    "scope": "Accelerated Phaser flow: actual spawning/death/upgrade/result/save across all 50 stages and an endless floor transition. Not normal clear times or balance evidence."
+  },
+  "notVerified": [
+    "Target Chrome, Edge, Firefox or Safari compatibility",
+    "Reference hardware frame times or memory stability",
+    "Normal player difficulty, star targets or clear times",
+    "Human blind playtests, retention or willingness to replay"
+  ],
+  "productionRenderer": {
+    "reportPath": "docs/qa/1.3.0-rc.1/production.json",
+    "reportSha256": "d3e77c99d87232ad04e139f2dcade00ad6e335631f0ea9d9b81269d08c4f51fe",
+    "chromium": "152.0.7977.54",
+    "noDebugGameHook": true,
+    "nativeNavigation": [
+      "menu",
+      "campaign route",
+      "loadout",
+      "tutorial Enter",
+      "upgrade key 1",
+      "battle",
+      "pause Esc",
+      "return M",
+      "resume checkpoint"
+    ],
+    "checkpoint": {
+      "mode": "campaign",
+      "stageId": 1,
+      "operativeId": "ranger"
+    },
+    "screenshotCount": 9,
+    "sourceScreenshots": [
+      "docs/qa/1.3.0-rc.1/production-menu.png",
+      "docs/qa/1.3.0-rc.1/production-battle.png"
+    ],
+    "rendererErrors": [],
+    "scope": "Production bundle boot and native pointer/keyboard navigation, onboarding, first battle, pause, checkpoint menu and resume. Screenshots require visual review; no debug game hooks. This isolated Electron renderer does not establish browser compatibility or human playability."
+  },
+  "zip": {
+    "path": "release/Sunlit-Echoes-1.3.0-rc.1-web.zip",
+    "bytes": 3148721,
+    "sha256": "983CDB68C5B9029297962881E00F1902C77E6C4A27DF48C6C939255D3442AD1D",
+    "standardForwardSlashEntries": true,
+    "verifiedManifestFiles": 8
+  },
+  "finalUiReview": {
+    "reportPath": "docs/qa/1.3.0-rc.1/final-ui.json",
+    "reportSha256": "88c5ef56e9d45dba3dcfa78ff135f96d8078b1b7b1219f854e3b47da3e474de0",
+    "sameAutomatedProfileReused": true,
+    "persistedProgress": {
+      "cleared": 50,
+      "totalStars": 106,
+      "highest": 50
+    },
+    "rendererErrors": [],
+    "screenshot": "docs/qa/1.3.0-rc.1/completed-atlas.png",
+    "scope": "Persisted automated results and final layout inspection, not human achievement or playability."
+  },
+  "remoteCI": {
+    "configured": true,
+    "status": "Awaiting push and actual GitHub Actions execution"
+  }
+}

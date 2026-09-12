@@ -3,12 +3,13 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
 import { SoundManager } from '../systems/SoundManager';
 import { SettingsManager } from '../systems/SettingsManager';
 
-/** Shared paper-and-garden language. Every functional colour has a text label. */
+/** A travel picture book: painted space, printed ink and tactile paper objects. */
 export const UI = {
-  paper: 0xf7f1e4, card: 0xfffcf4, ink: 0x30483e, muted: 0x5f695d,
-  green: 0x3e7057, greenHover: 0x2f5c46, pale: 0xe6ecda, line: 0xd6d8c3,
-  amber: 0xcb8141, apricot: 0xf2cca0, lilac: 0xe4dded, rose: 0xb96251,
+  paper: 0xf2e5cb, card: 0xfff8e8, ink: 0x393e30, muted: 0x676553,
+  green: 0x425d45, greenHover: 0x324836, pale: 0xe4e5c7, line: 0xcbbea0,
+  amber: 0xad6b37, apricot: 0xe8bd78, lilac: 0xd7cddd, rose: 0xa65043,
   font: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, sans-serif',
+  titleFont: '"Noto Serif SC", "STSong", "SimSun", Georgia, serif',
 };
 export const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
@@ -23,26 +24,71 @@ export function label(scene: Phaser.Scene, x: number, y: number, value: string,
 export function paperCard(scene: Phaser.Scene, x: number, y: number, width: number,
   height: number, fill = UI.card, stroke = UI.line): Phaser.GameObjects.Graphics {
   const g = scene.add.graphics();
-  g.fillStyle(0x6d7355, 0.07).fillRoundedRect(x - width / 2, y - height / 2 + 5, width, height, 16);
-  g.fillStyle(fill).fillRoundedRect(x - width / 2, y - height / 2, width, height, 16);
-  g.lineStyle(1, stroke).strokeRoundedRect(x - width / 2, y - height / 2, width, height, 16);
+  const left = x - width / 2, top = y - height / 2;
+  const points = [ { x: left + 4, y: top + 2 }, { x: left + width * .46, y: top },
+    { x: left + width - 3, y: top + 3 }, { x: left + width, y: top + height * .48 },
+    { x: left + width - 5, y: top + height - 2 }, { x: left + width * .42, y: top + height },
+    { x: left + 1, y: top + height - 3 }, { x: left, y: top + height * .41 } ];
+  g.fillStyle(0x594b33, .13).fillPoints(points.map(p => ({ x: p.x + 4, y: p.y + 6 })), true);
+  g.fillStyle(fill).fillPoints(points, true);
+  g.lineStyle(1, stroke, .65).strokePoints(points, true);
+  g.lineStyle(1, 0xffffff, .45).lineBetween(left + 10, top + 7, left + width - 10, top + 7);
+  if (scene.textures.exists('paper-grain')) scene.add.tileSprite(x, y, Math.max(1,width-14), Math.max(1,height-14), 'paper-grain').setAlpha(.08);
   return g;
 }
 
-export function backdrop(scene: Phaser.Scene, eyebrow: string): void {
+export function heading(scene: Phaser.Scene, x: number, y: number, text: string, size = 32,
+  color = UI.ink): Phaser.GameObjects.Text {
+  return label(scene, x, y, text, size, color, true).setFontFamily(UI.titleFont);
+}
+
+export function paintedBackground(scene: Phaser.Scene, clarity: 'cover' | 'page' = 'page'): void {
   scene.cameras.main.setBackgroundColor(UI.paper);
-  const g = scene.add.graphics();
-  // A deterministic grain pattern avoids animated visual noise and random layout shifts.
-  for (let i = 0; i < 210; i++) {
-    const x = (i * 167 + 31) % GAME_WIDTH;
-    const y = (i * 103 + 17) % GAME_HEIGHT;
-    g.fillStyle(0x9f966d, 0.095).fillCircle(x, y, i % 3 === 0 ? 1 : 0.55);
+  if (scene.textures.exists('journey-keyart')) {
+    const art = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'journey-keyart');
+    art.setScale(Math.max(GAME_WIDTH / art.width, GAME_HEIGHT / art.height));
+    if (clarity === 'page') art.setAlpha(.28);
+  } else {
+    const wash = scene.add.graphics();
+    wash.fillStyle(0xf0d7a4).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    wash.fillStyle(0xb3bb91,.55).fillEllipse(850, 365, 810, 540);
+    wash.fillStyle(0x80926b,.35).fillEllipse(930, 680, 1100, 470);
+    wash.fillStyle(0xd7ad73,.35).fillEllipse(500, 765, 1000, 240);
   }
-  g.fillStyle(UI.pale, 0.8).fillEllipse(925, 32, 260, 160);
-  g.fillStyle(UI.apricot, 0.3).fillEllipse(20, 756, 260, 170);
-  drawFlower(g, 49, 41, 11, UI.amber);
-  label(scene, 71, 31, eyebrow, 12, UI.green, true).setLetterSpacing(2);
-  g.lineStyle(1, UI.line).lineBetween(40, 69, GAME_WIDTH - 40, 69);
+  const g = scene.add.graphics();
+  if (clarity === 'cover') {
+    for (let x = 0; x < 570; x += 8) g.fillStyle(0xfff1d4, Math.pow(1 - x / 570, 1.2) * .68).fillRect(x, 0, 8, GAME_HEIGHT);
+  } else g.fillStyle(UI.paper,.48).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  for (let i = 0; i < 200; i++) g.fillStyle(0x9b855b, .065).fillCircle((i * 167 + 31) % GAME_WIDTH, (i * 103 + 17) % GAME_HEIGHT, i % 3 ? .6 : 1);
+}
+
+export function titleRule(scene: Phaser.Scene, x: number, y: number, width: number, color = UI.line): void {
+  const g = scene.add.graphics();
+  g.lineStyle(1, color).lineBetween(x, y, x + width, y);
+  g.fillStyle(color).fillTriangle(x + width / 2, y - 3, x + width / 2 - 4, y, x + width / 2, y + 3);
+}
+
+export function stamp(scene: Phaser.Scene, x: number, y: number, text: string, radius = 28, color = UI.amber): void {
+  const g = scene.add.graphics();
+  g.lineStyle(2, color, .72).strokeCircle(x, y, radius);
+  g.lineStyle(.8, color, .58).strokeCircle(x, y, radius - 5);
+  label(scene, x, y, text, radius > 30 ? 14 : 11, color, true).setOrigin(.5).setAngle(-8);
+}
+
+export function portrait(scene: Phaser.Scene, x: number, y: number, operativeId: string, size = 82): void {
+  const key = scene.textures.exists(`portrait-${operativeId}`) ? `portrait-${operativeId}`
+    : scene.textures.exists('traveler-portrait') ? 'traveler-portrait' : 'hero';
+  const image = scene.add.image(x, y, key);
+  const actualSize = key === 'hero' && image.width < 96 ? Math.min(size, 66) : size;
+  image.setScale(actualSize / Math.max(image.width, image.height));
+}
+
+export function backdrop(scene: Phaser.Scene, eyebrow: string): void {
+  paintedBackground(scene);
+  const g = scene.add.graphics();
+  g.fillStyle(UI.card,.82).fillRect(0, 0, GAME_WIDTH, 67);
+  label(scene, 39, 27, eyebrow, 12, UI.green, true).setLetterSpacing(2);
+  g.lineStyle(1, UI.line,.7).lineBetween(36, 66, GAME_WIDTH - 36, 66);
 }
 
 export function drawFlower(g: Phaser.GameObjects.Graphics, x: number, y: number,
@@ -122,6 +168,7 @@ function registerFocus(scene: Phaser.Scene, item: Focusable): void {
         event.preventDefault();
         current.items[current.index]?.focus(false);
         const direction = event.shiftKey ? -1 : 1;
+        if (current.index < 0 && direction < 0) current.index = 0;
         for (let tries = 0; tries < current.items.length; tries++) {
           current.index = Phaser.Math.Wrap(current.index + direction, 0, current.items.length);
           if (current.items[current.index].enabled) break;
@@ -149,7 +196,7 @@ export function choiceHit(scene: Phaser.Scene, x: number, y: number, width: numb
   const draw = () => {
     ring.clear();
     if (hovered || focused) ring.lineStyle(focused ? 3 : 2, focused ? UI.amber : UI.green)
-      .strokeRoundedRect(x - width / 2 - 2, y - height / 2 - 2, width + 4, height + 4, 17);
+      .strokeRect(x - width / 2 - 2, y - height / 2 - 2, width + 4, height + 4);
   };
   const run = () => { SoundManager.get().buttonClick(); activate(); };
   scene.add.rectangle(x, y, width, height, 0, 0).setInteractive({ useHandCursor: true })
@@ -169,10 +216,11 @@ export function button(scene: Phaser.Scene, x: number, y: number, width: number,
     const active = hovered || focused;
     const fill = disabled ? 0xe7e7dc : options.secondary ? (active ? 0xe2e9d5 : UI.card) : (active ? UI.greenHover : UI.green);
     g.clear();
-    if (!disabled) g.fillStyle(0x657356, 0.13).fillRoundedRect(x - width / 2, y - height / 2 + 3, width, height, 10);
-    g.fillStyle(fill).fillRoundedRect(x - width / 2, y - height / 2, width, height, 10);
+    if (!disabled) g.fillStyle(0x594b33, 0.17).fillRect(x - width / 2 + 3, y - height / 2 + 4, width, height);
+    g.fillStyle(fill).fillPoints([{x:x-width/2+4,y:y-height/2},{x:x+width/2,y:y-height/2+2},
+      {x:x+width/2-3,y:y+height/2},{x:x-width/2,y:y+height/2-2}],true);
     g.lineStyle(focused ? 3 : 1, focused ? UI.amber : options.secondary ? UI.line : fill);
-    g.strokeRoundedRect(x - width / 2 - (focused ? 3 : 0), y - height / 2 - (focused ? 3 : 0), width + (focused ? 6 : 0), height + (focused ? 6 : 0), 12);
+    g.strokeRect(x - width / 2 - (focused ? 3 : 0), y - height / 2 - (focused ? 3 : 0), width + (focused ? 6 : 0), height + (focused ? 6 : 0));
   };
   draw();
   label(scene, x, y, text, options.size ?? 15,
@@ -186,6 +234,30 @@ export function button(scene: Phaser.Scene, x: number, y: number, width: number,
     hit.on('pointerdown', run);
   }
   registerFocus(scene, { enabled: !disabled, focus: value => { focused = value; draw(); }, activate: run });
+}
+
+export function menuEntry(scene: Phaser.Scene, x: number, y: number, number: string, title: string,
+  subtitle: string, activate: () => void, prominent = false): void {
+  const g = scene.add.graphics();
+  let hovered = false, focused = false;
+  const draw = () => {
+    g.clear();
+    if (hovered || focused) g.fillStyle(UI.card, .72).fillPoints([
+      {x:x-16,y:y-8},{x:x+348,y:y-4},{x:x+341,y:y+58},{x:x-20,y:y+61}],true);
+    g.lineStyle(focused ? 2 : 1, focused ? UI.amber : UI.green, focused ? 1 : .35)
+      .lineBetween(x + 37, y + 57, x + 325, y + 57);
+  };
+  draw();
+  label(scene, x, y + 8, number, 12, UI.amber, true);
+  const titleText = heading(scene, x + 38, y, title, prominent ? 25 : 22, UI.green).setStroke('#fff2d8', 1);
+  label(scene, x + 40, y + 34, subtitle, 12, UI.ink).setStroke('#fff2d8', 2);
+  label(scene, x + 317, y + 9, '›', 25, UI.green).setOrigin(.5);
+  const run = () => { SoundManager.get().buttonClick(); activate(); };
+  scene.add.rectangle(x + 160, y + 24, 360, 68, 0, 0).setInteractive({ useHandCursor: true })
+    .on('pointerover', () => { hovered = true; titleText.setColor(hex(UI.amber)); draw(); SoundManager.get().buttonHover(); })
+    .on('pointerout', () => { hovered = false; titleText.setColor(hex(UI.green)); draw(); })
+    .on('pointerdown', run);
+  registerFocus(scene, { enabled: true, focus: value => { focused = value; draw(); }, activate: run });
 }
 
 export function shortcut(scene: Phaser.Scene, key: string, action: () => void): void {

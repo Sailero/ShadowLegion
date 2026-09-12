@@ -6,6 +6,7 @@ import { ArenaScene } from './scenes/ArenaScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { WorkshopScene } from './scenes/WorkshopScene';
 import { LoadoutScene } from './scenes/LoadoutScene';
+import { CampaignScene } from './scenes/CampaignScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -25,7 +26,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, LoadoutScene, ArenaScene, GameOverScene, WorkshopScene],
+  scene: [BootScene, MenuScene, CampaignScene, LoadoutScene, ArenaScene, GameOverScene, WorkshopScene],
 };
 
 const game = new Phaser.Game(config);
@@ -43,12 +44,13 @@ game.events.once(Phaser.Core.Events.READY, () => {
   canvas.tabIndex = 0;
   canvas.setAttribute('aria-label', '暖影同行游戏画面。WASD或方向键移动，鼠标瞄准，空格技能，E指挥影伴，Escape暂停。');
   canvas.addEventListener('pointerdown', () => canvas.focus({ preventScroll: true }));
-  canvas.addEventListener('keydown', event => {
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
-  });
+  game.input.keyboard?.addCapture(['SPACE', 'UP', 'DOWN', 'LEFT', 'RIGHT']);
 });
 
 if ((import.meta as unknown as Record<string, Record<string, boolean>>).env?.DEV) {
+  if (new URLSearchParams(window.location.search).get('renderqa') === '1') {
+    Object.defineProperty(window, '__sunlitQA', { value: { game }, configurable: true });
+  }
   import('./test/RuntimeTest').then(({ runDataTests, printResults }) => {
     printResults('DATA TESTS', runDataTests());
   });

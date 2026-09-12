@@ -180,7 +180,7 @@ export function runDataTests(): Result[] {
 
   t('Run rewards favor progress and first clears', () => {
     const loss = calculateRunReward({ wave: 3, level: 1, victory: false, endless: false }, false);
-    const win = calculateRunReward({ wave: 5, level: 4, victory: true, endless: false }, true);
+    const win = calculateRunReward({ wave: 5, level: WAVE_CFG.levels, victory: true, endless: false }, true);
     assert(loss.earned === 1, `wave 3 loss reward=${loss.earned}`);
     assert(win.earned === 13 && win.newBuildClear, `first clear reward=${win.earned}`);
   });

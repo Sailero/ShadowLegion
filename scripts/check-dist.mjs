@@ -17,6 +17,11 @@ for (const [, reference] of html.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
   references++;
 }
 assert.ok(references > 0, 'No local production assets were found.');
+for (const asset of ['journey-keyart.jpg', 'garden-atlas.png', 'terrain-atlas.jpg']) {
+  const bytes = readFileSync(resolve(root, 'art', asset));
+  assert.ok(bytes.length > 10000, `Missing or truncated game artwork: ${asset}`);
+  assert.ok(asset.endsWith('.png') ? bytes.subarray(1,4).toString() === 'PNG' : bytes[0] === 0xff && bytes[1] === 0xd8, `Unexpected artwork encoding: ${asset}`);
+}
 
 function files(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry =>
@@ -34,7 +39,7 @@ for (const path of all) {
   if (name.endsWith('.js')) {
     gzipJs += gzipSync(content).length;
     const text = content.toString('utf8');
-    for (const marker of ['DATA TESTS', 'SCENE TESTS', 'attachScenarioTests', '__devTestsAttached']) {
+    for (const marker of ['DATA TESTS', 'SCENE TESTS', 'attachScenarioTests', '__devTestsAttached', '__sunlitQA']) {
       assert.ok(!text.includes(marker), `Development test hook in production JS: ${marker}`);
     }
   }

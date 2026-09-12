@@ -6,6 +6,11 @@ import { drawFlower, label, UI } from '../ui/theme';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
+  preload() {
+    this.load.image('journey-keyart', './art/journey-keyart.jpg');
+    this.load.image('garden-atlas', './art/garden-atlas.png');
+    this.load.image('terrain-atlas', './art/terrain-atlas.jpg');
+  }
   create() {
     SpriteFactory.createAll(this);
     this.cameras.main.setBackgroundColor(UI.paper);

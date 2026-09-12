@@ -3,6 +3,8 @@ import { ENEMY_TYPES, WAVE_CFG, ARENA_WIDTH, ARENA_HEIGHT } from '../config/game
 import { LEVEL_WAVES, WaveDef } from '../data/enemies';
 import { ChapterDef, getChapter } from '../data/chapters';
 import { Enemy } from '../entities/Enemy';
+import { getStage, getStageChapter, type StageWaveDef } from '../data/stages';
+import { getShadowTrialWaves, type GameMode } from '../data/modes';
 
 export class WaveManager {
   private scene: Phaser.Scene;
@@ -20,8 +22,10 @@ export class WaveManager {
   private nextWaveAt = 0;
   allWavesDone = false;
   endlessScale = 1.0;
+  private mode: GameMode;
+  private spawnIntervalMs = WAVE_CFG.spawnInterval;
 
-  constructor(scene: Phaser.Scene, level: number, enemies: Phaser.Physics.Arcade.Group, endless = false) {
+  constructor(scene: Phaser.Scene, level: number, enemies: Phaser.Physics.Arcade.Group, endless = false, options: { mode?: GameMode; stageId?: number; trialTier?: number } = {}) {
     this.scene = scene;
     this.level = Math.max(1, level);
     const levelIndex = endless
@@ -29,6 +33,11 @@ export class WaveManager {
       : Math.min(this.level, WAVE_CFG.levels) - 1;
     this.waves = LEVEL_WAVES[levelIndex] || LEVEL_WAVES[0];
     this.chapter = getChapter(this.level, endless);
+    this.mode = options.mode ?? (endless ? 'endless' : 'campaign');
+    if (this.mode === 'campaign' && options.stageId) {
+      this.waves = getStage(options.stageId).waves;
+      this.chapter = getStageChapter(options.stageId);
+    } else if (this.mode === 'shadow') this.waves = getShadowTrialWaves(options.trialTier ?? 1);
     this.enemies = enemies;
     if (endless && level > WAVE_CFG.levels) {
       this.endlessScale = 1 + Math.floor((level - 1) / WAVE_CFG.levels) * 0.22;
@@ -45,13 +54,15 @@ export class WaveManager {
     }
 
     const def = this.waves[this.wave];
+    this.spawnIntervalMs = (def as StageWaveDef).spawnIntervalMs ?? WAVE_CFG.spawnInterval;
     this.wave++;
     this.waveActive = true;
     this.spawning = true;
     this.pendingSpawns = [];
     // The first encounter teaches one readable route. Later waves alternate
     // evenly between the announced entrances instead of randomly piling up.
-    const laneIndices = this.chapter.id === 1 && this.wave === 1
+    const plannedLanes = (def as StageWaveDef).lanes;
+    const laneIndices = plannedLanes?.length ? plannedLanes.filter(index => this.chapter.spawnPoints[index]) : this.chapter.id === 1 && this.wave === 1
       ? [0]
       : this.chapter.spawnPoints.map((_, index) => (index + this.wave - 1) % this.chapter.spawnPoints.length);
 
@@ -70,6 +81,7 @@ export class WaveManager {
 
     Phaser.Utils.Array.Shuffle(this.pendingSpawns);
     this.aliveCount = this.pendingSpawns.length;
+    if (this.pendingSpawns.length === 0) this.spawning = false;
     this.spawnTimer = 0;
 
     this.scene.events.emit('waveStart', {
@@ -96,8 +108,8 @@ export class WaveManager {
 
     if (this.spawning && this.pendingSpawns.length > 0) {
       this.spawnTimer += delta;
-      while (this.spawnTimer >= WAVE_CFG.spawnInterval && this.pendingSpawns.length > 0) {
-        this.spawnTimer -= WAVE_CFG.spawnInterval;
+      while (this.spawnTimer >= this.spawnIntervalMs && this.pendingSpawns.length > 0) {
+        this.spawnTimer -= this.spawnIntervalMs;
         const s = this.pendingSpawns.pop()!;
         this.spawnOne(s.type, s.elite, s.boss, s.bossName, s.laneIndex);
       }
@@ -130,7 +142,7 @@ export class WaveManager {
 
     const pos = this.getSpawnPos(laneIndex);
     const enemy = new Enemy(this.scene, pos.x, pos.y, cfg, isElite, boss);
-    const hpScale = this.chapter.enemyHpScale * this.endlessScale;
+    const hpScale = this.chapter.enemyHpScale * this.endlessScale * (boss ? (this.waves[this.wave - 1] as StageWaveDef)?.bossHpScale ?? 1 : 1);
     const damageScale = this.chapter.enemyDamageScale * (1 + (this.endlessScale - 1) * 0.55);
     enemy.hp = Math.round(enemy.hp * hpScale);
     enemy.maxHp = enemy.hp;

@@ -1,0 +1,373 @@
+{
+  "scope": "Accelerated Phaser flow: actual spawning/death/upgrade/result/save across all 50 stages and an endless floor transition. Not normal clear times or balance evidence.",
+  "engine": "152.0.7977.54",
+  "completed": [
+    {
+      "id": 1,
+      "stars": 2,
+      "clears": 1,
+      "highest": 2,
+      "cores": 5
+    },
+    {
+      "id": 2,
+      "stars": 2,
+      "clears": 1,
+      "highest": 3,
+      "cores": 10
+    },
+    {
+      "id": 3,
+      "stars": 3,
+      "clears": 1,
+      "highest": 4,
+      "cores": 16
+    },
+    {
+      "id": 4,
+      "stars": 2,
+      "clears": 1,
+      "highest": 5,
+      "cores": 21
+    },
+    {
+      "id": 5,
+      "stars": 2,
+      "clears": 1,
+      "highest": 6,
+      "cores": 26
+    },
+    {
+      "id": 6,
+      "stars": 3,
+      "clears": 1,
+      "highest": 7,
+      "cores": 32
+    },
+    {
+      "id": 7,
+      "stars": 3,
+      "clears": 1,
+      "highest": 8,
+      "cores": 38
+    },
+    {
+      "id": 8,
+      "stars": 2,
+      "clears": 1,
+      "highest": 9,
+      "cores": 43
+    },
+    {
+      "id": 9,
+      "stars": 3,
+      "clears": 1,
+      "highest": 10,
+      "cores": 49
+    },
+    {
+      "id": 10,
+      "stars": 3,
+      "clears": 1,
+      "highest": 11,
+      "cores": 55
+    },
+    {
+      "id": 11,
+      "stars": 2,
+      "clears": 1,
+      "highest": 12,
+      "cores": 60
+    },
+    {
+      "id": 12,
+      "stars": 2,
+      "clears": 1,
+      "highest": 13,
+      "cores": 65
+    },
+    {
+      "id": 13,
+      "stars": 3,
+      "clears": 1,
+      "highest": 14,
+      "cores": 71
+    },
+    {
+      "id": 14,
+      "stars": 2,
+      "clears": 1,
+      "highest": 15,
+      "cores": 76
+    },
+    {
+      "id": 15,
+      "stars": 2,
+      "clears": 1,
+      "highest": 16,
+      "cores": 81
+    },
+    {
+      "id": 16,
+      "stars": 2,
+      "clears": 1,
+      "highest": 17,
+      "cores": 86
+    },
+    {
+      "id": 17,
+      "stars": 2,
+      "clears": 1,
+      "highest": 18,
+      "cores": 91
+    },
+    {
+      "id": 18,
+      "stars": 3,
+      "clears": 1,
+      "highest": 19,
+      "cores": 97
+    },
+    {
+      "id": 19,
+      "stars": 1,
+      "clears": 1,
+      "highest": 20,
+      "cores": 101
+    },
+    {
+      "id": 20,
+      "stars": 2,
+      "clears": 1,
+      "highest": 21,
+      "cores": 106
+    },
+    {
+      "id": 21,
+      "stars": 2,
+      "clears": 1,
+      "highest": 22,
+      "cores": 111
+    },
+    {
+      "id": 22,
+      "stars": 2,
+      "clears": 1,
+      "highest": 23,
+      "cores": 116
+    },
+    {
+      "id": 23,
+      "stars": 3,
+      "clears": 1,
+      "highest": 24,
+      "cores": 122
+    },
+    {
+      "id": 24,
+      "stars": 1,
+      "clears": 1,
+      "highest": 25,
+      "cores": 126
+    },
+    {
+      "id": 25,
+      "stars": 2,
+      "clears": 1,
+      "highest": 26,
+      "cores": 131
+    },
+    {
+      "id": 26,
+      "stars": 1,
+      "clears": 1,
+      "highest": 27,
+      "cores": 135
+    },
+    {
+      "id": 27,
+      "stars": 3,
+      "clears": 1,
+      "highest": 28,
+      "cores": 141
+    },
+    {
+      "id": 28,
+      "stars": 3,
+      "clears": 1,
+      "highest": 29,
+      "cores": 147
+    },
+    {
+      "id": 29,
+      "stars": 1,
+      "clears": 1,
+      "highest": 30,
+      "cores": 151
+    },
+    {
+      "id": 30,
+      "stars": 3,
+      "clears": 1,
+      "highest": 31,
+      "cores": 157
+    },
+    {
+      "id": 31,
+      "stars": 2,
+      "clears": 1,
+      "highest": 32,
+      "cores": 162
+    },
+    {
+      "id": 32,
+      "stars": 3,
+      "clears": 1,
+      "highest": 33,
+      "cores": 168
+    },
+    {
+      "id": 33,
+      "stars": 1,
+      "clears": 1,
+      "highest": 34,
+      "cores": 172
+    },
+    {
+      "id": 34,
+      "stars": 2,
+      "clears": 1,
+      "highest": 35,
+      "cores": 177
+    },
+    {
+      "id": 35,
+      "stars": 2,
+      "clears": 1,
+      "highest": 36,
+      "cores": 182
+    },
+    {
+      "id": 36,
+      "stars": 1,
+      "clears": 1,
+      "highest": 37,
+      "cores": 186
+    },
+    {
+      "id": 37,
+      "stars": 3,
+      "clears": 1,
+      "highest": 38,
+      "cores": 192
+    },
+    {
+      "id": 38,
+      "stars": 3,
+      "clears": 1,
+      "highest": 39,
+      "cores": 198
+    },
+    {
+      "id": 39,
+      "stars": 1,
+      "clears": 1,
+      "highest": 40,
+      "cores": 202
+    },
+    {
+      "id": 40,
+      "stars": 2,
+      "clears": 1,
+      "highest": 41,
+      "cores": 207
+    },
+    {
+      "id": 41,
+      "stars": 2,
+      "clears": 1,
+      "highest": 42,
+      "cores": 212
+    },
+    {
+      "id": 42,
+      "stars": 2,
+      "clears": 1,
+      "highest": 43,
+      "cores": 217
+    },
+    {
+      "id": 43,
+      "stars": 2,
+      "clears": 1,
+      "highest": 44,
+      "cores": 222
+    },
+    {
+      "id": 44,
+      "stars": 2,
+      "clears": 1,
+      "highest": 45,
+      "cores": 227
+    },
+    {
+      "id": 45,
+      "stars": 1,
+      "clears": 1,
+      "highest": 46,
+      "cores": 231
+    },
+    {
+      "id": 46,
+      "stars": 2,
+      "clears": 1,
+      "highest": 47,
+      "cores": 236
+    },
+    {
+      "id": 47,
+      "stars": 2,
+      "clears": 1,
+      "highest": 48,
+      "cores": 241
+    },
+    {
+      "id": 48,
+      "stars": 1,
+      "clears": 1,
+      "highest": 49,
+      "cores": 245
+    },
+    {
+      "id": 49,
+      "stars": 3,
+      "clears": 1,
+      "highest": 50,
+      "cores": 251
+    },
+    {
+      "id": 50,
+      "stars": 2,
+      "clears": 1,
+      "highest": 50,
+      "cores": 256
+    }
+  ],
+  "endless": {
+    "mode": "endless",
+    "level": 2,
+    "cards": 7,
+    "operative": "engineer"
+  },
+  "unlocked": [
+    "ranger",
+    "gunner",
+    "warden",
+    "engineer"
+  ],
+  "builds": [
+    "nova"
+  ],
+  "errors": [],
+  "output": "D:\\Code\\Game\\.cache\\campaign-flow-1789193068518"
+}

@@ -16,6 +16,12 @@ const notices = [
   `EventEmitter3 ${eventEmitter.version} — ${eventEmitter.license}\n\n${readFileSync('node_modules/eventemitter3/LICENSE', 'utf8')}`,
 ].join('\n\n---\n\n');
 writeFileSync(resolve(destination, 'THIRD-PARTY-NOTICES.txt'), notices);
+const art = JSON.parse(readFileSync('docs/art-generation-manifest.json', 'utf8'));
+writeFileSync(resolve(destination, 'ARTWORK.json'), JSON.stringify({ generator: art.generator,
+  provenance: 'Original game artwork. Full generation prompts and original source images are retained in the source repository.',
+  assets: art.assets.map(asset => ({ file: asset.path.replace('src/public/', ''), encoding: asset.encoding ?? 'Original generated PNG with transparency',
+    sha256: createHash('sha256').update(readFileSync(asset.path)).digest('hex') })),
+}, null, 2) + '\n');
 function files(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory() ? files(resolve(dir, entry.name)) : [resolve(dir, entry.name)]);

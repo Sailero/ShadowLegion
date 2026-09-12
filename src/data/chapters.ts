@@ -143,11 +143,42 @@ export const CHAPTERS: ChapterDef[] = [
     ],
     hazardKind: 'pulse',
   },
+  {
+    id: 5,
+    name: '晴空花园',
+    subtitle: '四座花桥 · 与影伴分守交替开放的溪谷',
+    specialName: '十字溪谷',
+    specialDesc: '横向与纵向溪流交替涨水。四座花桥同时来客，提前安排影伴守营，再沿退水路线截击。',
+    colors: { ground: 0xeee6c9, grid: 0xdbdab8, accent: 0x8b9b64, detail: 0xb9bf8c, hazard: 0x8eb7a3 },
+    coreHp: 560, enemyHpScale: 1.45, enemyDamageScale: 1.22,
+    spawnPoints: [
+      { x: W * 0.5, y: 48, label: '北花桥' },
+      { x: W - 48, y: H * 0.5, label: '东花桥' },
+      { x: W * 0.5, y: H - 48, label: '南花桥' },
+      { x: 48, y: H * 0.5, label: '西花桥' },
+    ],
+    obstacles: [
+      { x: 380, y: 280, width: 155, height: 90 },
+      { x: W - 380, y: 280, width: 155, height: 90 },
+      { x: 380, y: H - 280, width: 155, height: 90 },
+      { x: W - 380, y: H - 280, width: 155, height: 90 },
+      { x: W * 0.5 - 205, y: 200, width: 170, height: 65 },
+      { x: W * 0.5 + 205, y: H - 200, width: 170, height: 65 },
+    ],
+    hazards: [
+      { x: W * 0.5, y: 365, width: 910, height: 105, phase: 0 },
+      { x: W * 0.5, y: H - 365, width: 910, height: 105, phase: 1 },
+      { x: 555, y: H * 0.5, width: 105, height: 620, phase: 1 },
+      { x: W - 555, y: H * 0.5, width: 105, height: 620, phase: 0 },
+    ],
+    hazardKind: 'tide',
+  },
 ];
 
 export function getChapter(level: number, endless = false): ChapterDef {
-  if (endless) return CHAPTERS[(Math.max(1, level) - 1) % CHAPTERS.length];
-  return CHAPTERS[Math.max(0, Math.min(CHAPTERS.length - 1, level - 1))];
+  const safeLevel = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
+  if (endless) return CHAPTERS[(safeLevel - 1) % CHAPTERS.length];
+  return CHAPTERS[Math.min(CHAPTERS.length - 1, safeLevel - 1)];
 }
 
 export function pointInRect(x: number, y: number, rect: MapRect): boolean {

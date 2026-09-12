@@ -26,6 +26,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
 
   fireRate: number;
   private lastFire = 0;
+  aimAngle = 0;
   bulletDamage: number;
   bulletSpeed: number;
   bulletCount = 1;
@@ -95,7 +96,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     const b = this.body as Phaser.Physics.Arcade.Body;
-    b.setCircle(HERO_CFG.bodyRadius, 24 - HERO_CFG.bodyRadius, 24 - HERO_CFG.bodyRadius);
+    b.setCircle(HERO_CFG.bodyRadius, this.width / 2 - HERO_CFG.bodyRadius, this.height / 2 - HERO_CFG.bodyRadius);
     b.setCollideWorldBounds(true);
 
     this.hp = HERO_CFG.maxHp;
@@ -193,7 +194,9 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
 
       const ptr = this.scene.input.activePointer;
       const wp = this.scene.cameras.main.getWorldPoint(ptr.x, ptr.y);
-      this.rotation = Phaser.Math.Angle.Between(this.x, this.y, wp.x, wp.y);
+      this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, wp.x, wp.y);
+      this.setFlipX(Math.cos(this.aimAngle) < 0);
+      this.rotation = SettingsManager.get().reducedMotion || body.velocity.length() < 20 ? 0 : Math.sin(time * .014) * .055;
 
       const interval = this.fireRate / this.atkSpdMult;
       if ((ptr.isDown && !ptr.rightButtonDown() || SettingsManager.get().autoFire) && time > this.lastFire + interval) {
@@ -290,7 +293,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const angle = body.velocity.length() > 20
       ? Math.atan2(body.velocity.y, body.velocity.x)
-      : this.rotation;
+      : this.aimAngle;
 
     this.dashing = true;
     this.lastDash = time;
@@ -353,7 +356,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     return [
       this.x / ARENA_WIDTH, this.y / ARENA_HEIGHT,
       b.velocity.x / 200, b.velocity.y / 200,
-      this.hp / this.maxHp, this.rotation / Math.PI,
+      this.hp / this.maxHp, this.aimAngle / Math.PI,
       this.dashing ? 1 : 0, this.charge / this.chargeMax,
     ];
   }

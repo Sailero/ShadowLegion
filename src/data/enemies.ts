@@ -19,7 +19,7 @@ const W = (name: string, hint: string, ...spawns: WaveSpawn[]): WaveDef => ({ sp
 const Boss = (name: string, hint: string, bossType: string, ...spawns: WaveSpawn[]): WaveDef =>
   ({ spawns, isBoss: true, bossType, name, hint });
 
-/** Four compact chapters. Each chapter introduces one new battlefield question. */
+/** Five-map endless route. Independent campaign stages live in stages.ts. */
 export const LEVEL_WAVES: WaveDef[][] = [
   [
     W('小径来客', '守住营地；靠近敌军可把仇恨从营地拉到自己身上', S('slime', 4, 4)),
@@ -48,5 +48,12 @@ export const LEVEL_WAVES: WaveDef[][] = [
     W('花灯大合唱', '四类职责协同出现，击杀顺序比单纯堆伤害重要', S('tank', 2, 2), S('ninja', 2, 2), S('summoner', 1, 1), S('medic', 1, 1)),
     W('最后一班来客', '精英薄荷茶师会让前排快速回满，主动穿过火线处理后排', S('archer', 3, 4), S('tank', 2, 2), S('bomber', 2, 3), S('medic', 1, 1, true)),
     Boss('花灯大团长', '预警走廊、召唤与环形弹幕会连续出现；灯带也是你的武器', 'summoner', S('tank', 2, 2), S('ninja', 2, 2), S('medic', 1, 1)),
+  ],
+  [
+    W('花桥开门', '先截住纸燕快递，再回到退水的一侧照看营地', S('ninja', 3, 4), S('slime', 5, 6)),
+    W('溪谷午茶', '薄荷茶师躲在橡果龟后面，绕过溪流处理后排', S('tank', 2, 3), S('medic', 2, 2), S('archer', 2, 3)),
+    W('四桥接力赛', '四条来路依次加压，让影伴守住你暂时离开的一侧', S('bat', 5, 6), S('bomber', 3, 3), S('summoner', 1, 2)),
+    W('满园都到齐', '别让召集员与茶师碰头，优先解决后排的互相支援', S('ninja', 3, 3), S('tank', 2, 2), S('summoner', 1, 1, true), S('medic', 2, 2)),
+    Boss('晴空巡游长', '借交替溪流拖慢追击；冲锋前先给自己留一条退路', 'tank', S('archer', 3, 3), S('ninja', 2, 2), S('medic', 1, 1)),
   ],
 ];

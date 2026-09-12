@@ -1,0 +1,25 @@
+{
+  "profile": "D:\\Code\\Game\\.cache\\campaign-flow-1789193068518\\profile",
+  "output": "D:\\Code\\Game\\.cache\\ui-final-check-1789193637459",
+  "reconstructed": false,
+  "errors": [],
+  "before": {
+    "cleared": 50,
+    "totalStars": 106,
+    "highest": 50
+  },
+  "atlas": {
+    "scene": "CampaignScene",
+    "chapter": 5,
+    "cleared": 50,
+    "totalStars": 106
+  },
+  "opening": {
+    "scene": "ArenaScene",
+    "stageId": 41,
+    "wave": 1,
+    "hint": "行囊添新 · 花火 · 派对加料",
+    "hintY": 170,
+    "hintAlpha": 1
+  }
+}
