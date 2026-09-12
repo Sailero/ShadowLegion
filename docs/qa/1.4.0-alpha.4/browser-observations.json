@@ -1,0 +1,52 @@
+{
+  "version": "1.4.0-alpha.4",
+  "observedLocalDate": "2026-09-13",
+  "method": "Ordinary Edge UI: visible screenshots, ground clicks, E/F/Escape keys; read-only DOM asset identity and browser warning/error log. No game state or storage injection.",
+  "url": "http://127.0.0.1:4173/",
+  "sourceHead": "468ef1e86daa3893b9868811794d7a85b75c18b8",
+  "screenshots": "Inspected in the conversation; no screenshot files archived.",
+  "intermediateBuild": {
+    "script": "assets/index-DaE4JaA6.js",
+    "observed": [
+      "Fresh mainline showed 0/4 replies; practice progress already existed independently.",
+      "Collected all three forest address pieces with actual walking and F.",
+      "Echo actually reached the bell stone and opened the bridge; cat walked across.",
+      "F handed letter to forest recipient; menu showed 1/4 replies."
+    ]
+  },
+  "finalBuild": {
+    "script": "assets/index-CbuzvzsF.js",
+    "observed": [
+      "Read-only DOM confirmed final script and data-game-ready=true.",
+      "Reload retained 1/4 replies; map opened lake and kept mountain/desert locked, snow unavailable.",
+      "At start dock E sent echo to the actual anchor; separate F actions loaded the envelope and launched the boat.",
+      "Boat visibly reached the middle dock.",
+      "Recalled echo; walked along the shoreline and middle boardwalk; E sent echo to the middle anchor where it remained.",
+      "Walked to the west leaf and used F to align east; walked around the north shore to the north boardwalk and aligned its leaf north.",
+      "Collected optional picnic discovery with F; its visible copy changed to four places left by the shore.",
+      "Latest HUD showed west east / target east and north north / target north; echo still held the middle boat.",
+      "Paused with Escape on the north boardwalk before walking back to launch the second boat trip."
+    ],
+    "startupWarnErrorLog": [],
+    "startupLogScope": "One startup read only, not a complete-session absence-of-errors claim."
+  },
+  "lastState": {
+    "scene": "LakeScene",
+    "paused": true,
+    "cat": "North boardwalk, back from north leaf toward dry shore",
+    "echo": "Holding middle dock",
+    "boat": "Middle dock; second launch not performed",
+    "leaves": "West east, north north",
+    "mainlineReplies": "1/4",
+    "resume": "Enter resumes the open tab. Walk safely around north/west shoreline to the middle boardwalk, return to the middle dock and F launch. A reload can restore only the confirmed checkpoint, not transient leaf/actor positions."
+  },
+  "notVerified": [
+    "Second lake trip, lake recipient delivery/reply/reload on this candidate",
+    "Current mountain or desert graphical flow",
+    "Final-build fresh four-region continuous playthrough",
+    "Held-object graphical feedback and native backup UI",
+    "Human playtime, sustained performance, Steam package acceptance"
+  ],
+  "fullReleaseAcceptance": false,
+  "taskBoundary": "Goal tool reported paused. Browser and agents stopped at this boundary; no alpha.5 production files had been written."
+}

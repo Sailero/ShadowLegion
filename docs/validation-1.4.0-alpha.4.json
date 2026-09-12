@@ -1,0 +1,252 @@
+{
+  "version": "1.4.0-alpha.4",
+  "createdAt": "2026-09-12T18:07:15.534427+00:00",
+  "releaseCommand": "npm run release:web",
+  "exitCode": 0,
+  "exitCodeEvidence": "qa/1.4.0-alpha.4/release-execution.json",
+  "tests": {
+    "status": "passed",
+    "total": 442,
+    "passed": 442,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "scope": "Current full release log; includes actual model/manager/scene-method tests with explicit rendering/input/physics boundaries, not browser or human acceptance."
+  },
+  "checks": [
+    {
+      "name": "TypeScript and Vite build",
+      "status": "passed",
+      "evidence": "qa/1.4.0-alpha.4/release-checks.log"
+    },
+    {
+      "name": "Distribution check",
+      "status": "passed",
+      "evidence": "qa/1.4.0-alpha.4/release-checks.log"
+    },
+    {
+      "name": "Dependency audit: zero known vulnerabilities",
+      "status": "passed",
+      "evidence": "qa/1.4.0-alpha.4/release-checks.log"
+    },
+    {
+      "name": "Static release preparation",
+      "status": "passed",
+      "evidence": "qa/1.4.0-alpha.4/release-checks.log"
+    }
+  ],
+  "artifact": {
+    "status": "verified",
+    "directory": "release/shadow-legion-web-1.4.0-alpha.4-2026-09-12T17-50-55-453Z",
+    "archive": "release/Sunlit-Echoes-1.4.0-alpha.4-web.zip",
+    "archiveBytes": 10069730,
+    "archiveSha256": "64afc1c09bd5f5cdb0215893cf8a0711dab310edd2ccf8883e7d993cc457346f",
+    "manifestFiles": 11,
+    "zipEntries": 12,
+    "runtimeFiles": 8,
+    "runtimeBytes": 11601825,
+    "javascript": [
+      {
+        "path": "assets/index-CbuzvzsF.js",
+        "bytes": 1926501,
+        "sha256": "bf306f56e237c5453c3d50773bf8dc5564da44341555d51387def329012a130c",
+        "gzipBytes": 493467,
+        "gzipMethod": "Node v24.16.0 zlib.gzipSync defaults"
+      }
+    ],
+    "verification": "Standard .NET ZIP creation/readback plus independent Python zipfile/hashlib byte-for-byte readback: every ZIP entry equals the release file; all listed sizes and SHA256 match the manifest; all runtime bytes equal dist; manifest copy is byte-identical.",
+    "evidence": "qa/1.4.0-alpha.4/package-verification.json"
+  },
+  "zipVerifiedIndependently": true,
+  "implementation": {
+    "playableRegionCode": [
+      "forest",
+      "lake",
+      "mountain",
+      "desert"
+    ],
+    "plannedLockedRegions": [
+      "snow"
+    ],
+    "desertPuzzles": [
+      "lesson: unfold and fully cover",
+      "stones: recall and choose the far-side anchor",
+      "courtyard: cover both targets simultaneously"
+    ],
+    "newMotions": [
+      "hold",
+      "carry"
+    ],
+    "journeyContentVersion": 4,
+    "journeyStorageKey": "sunlit-postal-journey-v2",
+    "compatibleJourneyContentVersions": [
+      2,
+      3,
+      4
+    ],
+    "backupDomains": 10,
+    "backupContainerVersion": 1,
+    "desertCheckpoints": [
+      "trailhead",
+      "stoneCamp",
+      "courtyard",
+      "mailbox"
+    ],
+    "storyPagesWritten": 16,
+    "completeThreeHourGameImplemented": false,
+    "finalReturnToPostOfficeImplemented": false
+  },
+  "browserObservationFile": "qa/1.4.0-alpha.4/browser-observations.json",
+  "browserEvidenceStatus": "Partial ordinary Edge observations archived; conversation screenshots were inspected but are not stored as image files.",
+  "browserObservations": [
+    {
+      "build": "index-DaE4JaA6.js",
+      "role": "intermediate",
+      "status": "observed-by-coordinator",
+      "scope": [
+        "Fresh main-journey forest: all three address pieces",
+        "Actual echo at bell stone stabilizes bridge",
+        "Cat walks over bridge",
+        "F hands letter to forest recipient"
+      ]
+    },
+    {
+      "build": "index-CbuzvzsF.js",
+      "role": "final-candidate",
+      "status": "partial-observed-by-coordinator",
+      "scope": [
+        "Read-only DOM confirmed final script and data-game-ready=true.",
+        "Reload retained 1/4 replies; map opened lake and kept mountain/desert locked, snow unavailable.",
+        "At start dock E sent echo to the actual anchor; separate F actions loaded the envelope and launched the boat.",
+        "Boat visibly reached the middle dock.",
+        "Recalled echo; walked along the shoreline and middle boardwalk; E sent echo to the middle anchor where it remained.",
+        "Walked to the west leaf and used F to align east; walked around the north shore to the north boardwalk and aligned its leaf north.",
+        "Collected optional picnic discovery with F; its visible copy changed to four places left by the shore.",
+        "Latest HUD showed west east / target east and north north / target north; echo still held the middle boat.",
+        "Paused with Escape on the north boardwalk before walking back to launch the second boat trip."
+      ]
+    }
+  ],
+  "browserAcceptance": "Partial only. No alpha.4 mountain or desert graphical pass is claimed; older alpha.3/alpha.2 reports remain historical.",
+  "git": {
+    "sourceHead": "468ef1e86daa3893b9868811794d7a85b75c18b8",
+    "sourceStatus": "Source and tests committed and pushed; coordinator confirmed exact remote SHA.",
+    "documentationStatus": "Documentation and partial graphical observations archived in the documentation commit following sourceHead; its own commit identity is available from Git history."
+  },
+  "remoteCi": {
+    "status": "completed",
+    "conclusion": "success",
+    "headSha": "468ef1e86daa3893b9868811794d7a85b75c18b8",
+    "runId": 34709906328,
+    "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34709906328",
+    "jobIds": [
+      103596647614
+    ],
+    "matchesExpectedHead": true,
+    "evidenceStatus": "recorded",
+    "evidence": "qa/1.4.0-alpha.4/remote-ci.json",
+    "scope": "Source commit web CI; does not establish graphical playthrough, human pacing or Steam release acceptance."
+  },
+  "fullReleaseAcceptance": false,
+  "steamReleaseAcceptance": false,
+  "pendingValidation": [
+    {
+      "id": "forest-final-fresh",
+      "status": "pending",
+      "requirement": "Fresh forest collection, actual echo bridge crossing, delivery and return on CbuzvzsF; current complete forest run used DaE4JaA6."
+    },
+    {
+      "id": "lake-final-flow",
+      "status": "partial-paused",
+      "requirement": "First boat reached middle; both leaves aligned with actual walking and echo left at middle. Second launch, mail arrival, recipient delivery/reply/reload remain pending."
+    },
+    {
+      "id": "mountain-final-flow",
+      "status": "pending",
+      "requirement": "Both ordered relays, wrong-note recovery, real main-path travel through gate, delivery, reply and reload on current candidate."
+    },
+    {
+      "id": "desert-final-flow",
+      "status": "pending",
+      "requirement": "Actual E arrival, F grip, hold/carry motion, all three cover puzzles, wrong-anchor recall, NPC delivery, reply and all checkpoints."
+    },
+    {
+      "id": "desert-failure-visual",
+      "status": "pending",
+      "requirement": "Real-browser overstretch/stone drop, pickup priority, pause/blur, pending-save feedback and retry; Node regression alone is not native graphical evidence."
+    },
+    {
+      "id": "four-region-continuity",
+      "status": "pending",
+      "requirement": "Single fresh-save current-build four-region journey, replies and revisits; snow remains locked."
+    },
+    {
+      "id": "backup-v4-native",
+      "status": "pending",
+      "requirement": "Ten-domain native file download/selection/preview/cancel/restore, legacy missing-domain preservation and active-region protection."
+    },
+    {
+      "id": "motion-accessibility",
+      "status": "pending",
+      "requirement": "Held-object directions, state transitions, reduced motion, audio listening, full story readability and viewports."
+    }
+  ],
+  "remainingGates": [
+    "Playable snow region and resumable final return to the post office, followed by a complete five-region fresh-save journey",
+    "Human first-play wall-clock duration near the three-hour design target, with exploration, attempts, dialogue, optional content and stalls measured separately",
+    "Player understanding of companion growth and meaningful revisit/replay value rather than repeated counts",
+    "Desktop durable file saves, browser-save migration and actual offline/upgrade recovery in a current native package",
+    "Gamepad, remapping, device prompts, keyboard feel, English/subtitles and visual/audio accessibility",
+    "Reference-hardware sustained performance, loading, window/fullscreen/multimonitor/native-DPI and supported-browser acceptance",
+    "Artwork/font/audio/runtime license review, accurate store materials and Steam platform review"
+  ],
+  "historicalEvidence": [
+    {
+      "version": "1.4.0-alpha.3",
+      "summary": "validation-1.4.0-alpha.3.json",
+      "scope": "Historical mountain evidence only, not this candidate."
+    },
+    {
+      "version": "1.4.0-alpha.2",
+      "summary": "validation-1.4.0-alpha.2.json",
+      "scope": "Historical lake evidence only."
+    },
+    {
+      "version": "1.4.0-alpha.1",
+      "summary": "validation-1.4.0-alpha.1.json",
+      "scope": "Historical forest evidence only."
+    },
+    {
+      "version": "1.3.0-rc.3",
+      "summary": "validation-1.3.0-rc.3.json",
+      "scope": "Historical combat/save recovery evidence only."
+    }
+  ],
+  "evidence": [
+    {
+      "path": "qa/1.4.0-alpha.4/release-checks.log",
+      "sha256": "7eaa86f05126ce79dcb87070198c0d632e999a72df588ba7291cef7788bd1f4a"
+    },
+    {
+      "path": "qa/1.4.0-alpha.4/release-execution.json",
+      "sha256": "2aa80482332e018e3d16389222b5818a71632bb61265c93981571df81328ad7e"
+    },
+    {
+      "path": "qa/1.4.0-alpha.4/package-verification.json",
+      "sha256": "15df0b2028f5e92426ce09190f337e93f0a5292cb9d5c564c4e686051dbad68e"
+    },
+    {
+      "path": "release-manifest-1.4.0-alpha.4.json",
+      "sha256": "8c0b262e6737ebb4d76f9fbaeef71f896cf6502a87488399174329a6ed2fc5c6"
+    },
+    {
+      "path": "qa/1.4.0-alpha.4/remote-ci.json",
+      "sha256": "0feba751c273d6c557cc82924cf2d4ddf06da22bd2889200f5216b67a8d4298b"
+    },
+    {
+      "path": "qa/1.4.0-alpha.4/browser-observations.json",
+      "sha256": "808dd21cbb1226906e7ffb2992a2403430b6d59d40b5032c19927f2ad06b254f"
+    }
+  ]
+}

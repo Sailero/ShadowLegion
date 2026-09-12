@@ -1,0 +1,75 @@
+{
+  "sourceCommit": "468ef1e86daa3893b9868811794d7a85b75c18b8",
+  "runId": 34709906328,
+  "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34709906328",
+  "runStatus": "completed",
+  "runConclusion": "success",
+  "jobs": [
+    {
+      "id": 103596647614,
+      "name": "Tests, web build and pacing model",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-12T18:00:54Z",
+      "completedAt": "2026-09-12T18:01:37Z",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node.js 24",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install locked dependencies without lifecycle scripts",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run tests, TypeScript, Vite and distribution checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Recompute theoretical campaign pacing",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Archive checked web build",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Archive theoretical pacing report",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node.js 24",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "scope": "Source commit web CI; does not establish graphical playthrough, human pacing or Steam release acceptance."
+}

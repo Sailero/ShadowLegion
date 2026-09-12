@@ -1,0 +1,62 @@
+{
+  "version": "1.4.0-alpha.4",
+  "createdAt": "2026-09-12T17:50:55.494Z",
+  "node": "v24.16.0",
+  "files": [
+    {
+      "path": "art/garden-atlas.png",
+      "bytes": 1592368,
+      "sha256": "547dbb1e3570aa0834a26e4d788d37494ef3810595623fce01ef94660f2c9829"
+    },
+    {
+      "path": "art/journey-keyart.jpg",
+      "bytes": 547760,
+      "sha256": "f3a8c379e3ea216dcd249f4959c87e6de3337c767d9cac45cba8de53be6125ff"
+    },
+    {
+      "path": "art/mailcat-journey-v1.png",
+      "bytes": 3116294,
+      "sha256": "4e4137248a2aef782f2e8b56030703175c889de44125b4cde06a6780a92ca715"
+    },
+    {
+      "path": "art/mailcat-portrait-v1.png",
+      "bytes": 1838453,
+      "sha256": "51cd56d983965765699c9be82b31d6eefecb0a1b55303681b80b82b4a56850a4"
+    },
+    {
+      "path": "art/mailcat-puppet-v2.png",
+      "bytes": 1968281,
+      "sha256": "155b31ab337f9b13d5b598aecfcbacb017fa1df428a2da539b5574f2ea62a962"
+    },
+    {
+      "path": "art/terrain-atlas.jpg",
+      "bytes": 602082,
+      "sha256": "35abc2c1c3b5710f7c6d1df34a578c902562d228524f8c61b931f3664f0de657"
+    },
+    {
+      "path": "ARTWORK.json",
+      "bytes": 1524,
+      "sha256": "b063a71fd2b591e5ef91642c98239bb9d48e87aac30dbaec8f9d81201b0f3612"
+    },
+    {
+      "path": "assets/index-CbuzvzsF.js",
+      "bytes": 1926501,
+      "sha256": "bf306f56e237c5453c3d50773bf8dc5564da44341555d51387def329012a130c"
+    },
+    {
+      "path": "DEPLOY.md",
+      "bytes": 972,
+      "sha256": "beadc79f41de0e9502a5713b7e2e0ac27ecb48220e032a45586fd606783339b5"
+    },
+    {
+      "path": "index.html",
+      "bytes": 10086,
+      "sha256": "9e0e61c702c7a5d153c9d2b268fafe1e6c1769f7fd713b440fa5ff216c73e820"
+    },
+    {
+      "path": "THIRD-PARTY-NOTICES.txt",
+      "bytes": 2261,
+      "sha256": "c68927860104a879f68d63671830893b1888ce8b57632fcb7123de29e0f17860"
+    }
+  ]
+}
