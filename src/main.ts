@@ -7,6 +7,10 @@ import { GameOverScene } from './scenes/GameOverScene';
 import { WorkshopScene } from './scenes/WorkshopScene';
 import { LoadoutScene } from './scenes/LoadoutScene';
 import { CampaignScene } from './scenes/CampaignScene';
+import { StoryScene } from './scenes/StoryScene';
+import { LetterBookScene } from './scenes/LetterBookScene';
+import { DeliveryScene } from './scenes/DeliveryScene';
+import { syncInitialBrowserFocus } from './systems/BrowserFocus';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -26,13 +30,15 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, CampaignScene, LoadoutScene, ArenaScene, GameOverScene, WorkshopScene],
+  scene: [BootScene, MenuScene, CampaignScene, LoadoutScene, ArenaScene, GameOverScene, WorkshopScene, StoryScene, LetterBookScene, DeliveryScene],
 };
 
 const game = new Phaser.Game(config);
 
 const finishStartup = () => {
   if (!game.scene.isActive('MenuScene')) return;
+  // READY precedes Game.start's focus listeners; the first menu STEP is after them.
+  syncInitialBrowserFocus(game, document);
   window.dispatchEvent(new Event('sunlit:ready'));
   game.events.off(Phaser.Core.Events.STEP, finishStartup);
 };
@@ -42,8 +48,11 @@ game.events.on(Phaser.Core.Events.STEP, finishStartup);
 game.events.once(Phaser.Core.Events.READY, () => {
   const canvas = game.canvas;
   canvas.tabIndex = 0;
-  canvas.setAttribute('aria-label', '暖影同行游戏画面。WASD或方向键移动，鼠标瞄准，空格技能，E指挥影伴，Escape暂停。');
-  canvas.addEventListener('pointerdown', () => canvas.focus({ preventScroll: true }));
+  canvas.setAttribute('aria-label', '暖影同行游戏画面。WASD或方向键、点地行走；SHIFT轻跃，E分工，F互动，Escape暂停。邮路练习中空格释放技能。');
+  canvas.addEventListener('pointerdown', () => {
+    canvas.focus({ preventScroll: true });
+    syncInitialBrowserFocus(game, document);
+  });
   game.input.keyboard?.addCapture(['SPACE', 'UP', 'DOWN', 'LEFT', 'RIGHT']);
 });
 

@@ -1,0 +1,62 @@
+{
+    "version":  "1.4.0-alpha.1",
+    "createdAt":  "2026-09-12T15:25:23Z",
+    "releaseCommand":  "npm run release:web",
+    "exitCode":  0,
+    "tests":  {
+                  "total":  248,
+                  "passed":  248,
+                  "failed":  0,
+                  "scope":  "Actual logic/managers and selected scene methods with explicit rendering/physics boundaries; not graphical or OS compatibility tests"
+              },
+    "checks":  [
+                   "TypeScript",
+                   "Vite production build",
+                   "relative static assets and package budgets",
+                   "npm audit: 0 known vulnerabilities"
+               ],
+    "artifact":  {
+                     "directory":  "release/shadow-legion-web-1.4.0-alpha.1-2026-09-12T15-16-53-547Z",
+                     "archive":  "release/Sunlit-Echoes-1.4.0-alpha.1-web.zip",
+                     "archiveBytes":  10030567,
+                     "archiveSha256":  "283078391483b7252c8f3cc30b4ce299144c8d713212bfea156e9455e3799f5f",
+                     "manifestFiles":  11,
+                     "zipEntries":  12,
+                     "runtimeFiles":  8,
+                     "runtimeBytes":  11482178,
+                     "javascript":  "assets/index-D5VG81Rx.js",
+                     "javascriptGzipBytes":  453576,
+                     "javascriptGzipMethod":  "Node v24.16.0 zlib.gzipSync defaults"
+                 },
+    "zipVerifiedIndependently":  true,
+    "browserObservationFile":  "qa/1.4.0-alpha.1/edge-observations.json",
+    "browserAcceptance":  "Intermediate production build completed the full forest delivery/return loop; final build passed reload/persistence, forest paint, pause/resume and forest reply smoke. See exact scope in observations.",
+    "fullReleaseAcceptance":  false,
+    "remainingGates":  [
+                           "Four further regions and a connected three-hour journey",
+                           "Full sixteen-page story and final-build fresh-save graphical journey",
+                           "Desktop durable file saves and legacy browser save migration",
+                           "Gamepad, remapping, language coverage and hardware/OS acceptance",
+                           "Human playability, art and sound review; measured first-play duration",
+                           "Minimum-spec sustained performance and cross-browser checks",
+                           "Nine-domain native backup round trip and storage fault injection",
+                           "Steam release materials, runtime/license review and platform review"
+                       ],
+    "remoteCi":  {
+                     "status":  "pending-code-commit"
+                 },
+    "evidence":  [
+                     {
+                         "path":  "qa/1.4.0-alpha.1/release-checks.log",
+                         "sha256":  "7bdfb94c7ccb2a9cd1d4a1275bc46335a793a9a8b86a8d453f87006a6c4996c9"
+                     },
+                     {
+                         "path":  "qa/1.4.0-alpha.1/package-verification.json",
+                         "sha256":  "797352f183b6809ed4a9cdd8b8efcd18d9b72289ece71789af1630718546386a"
+                     },
+                     {
+                         "path":  "qa/1.4.0-alpha.1/edge-observations.json",
+                         "sha256":  "288aa17b1c6f24280231a6b4b66d7eb385995d969f9ddd13325ebecfc47263ff"
+                     }
+                 ]
+}

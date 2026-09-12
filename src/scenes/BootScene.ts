@@ -3,16 +3,20 @@ import { SpriteFactory } from '../utils/SpriteFactory';
 import { SettingsManager } from '../systems/SettingsManager';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
 import { drawFlower, label, UI } from '../ui/theme';
+import { createSkillTextures } from '../ui/skillVisuals';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
   preload() {
-    this.load.image('journey-keyart', './art/journey-keyart.jpg');
+    this.load.image('journey-keyart', './art/mailcat-journey-v1.png');
+    this.load.image('mailcat-portrait', './art/mailcat-portrait-v1.png');
+    this.load.image('mailcat-puppet', './art/mailcat-puppet-v2.png');
     this.load.image('garden-atlas', './art/garden-atlas.png');
     this.load.image('terrain-atlas', './art/terrain-atlas.jpg');
   }
   create() {
     SpriteFactory.createAll(this);
+    createSkillTextures(this);
     this.cameras.main.setBackgroundColor(UI.paper);
     drawFlower(this.add.graphics(), GAME_WIDTH / 2, GAME_HEIGHT / 2 - 73, 25, UI.amber);
     label(this, GAME_WIDTH / 2, GAME_HEIGHT / 2, '暖影同行', 39, UI.ink, true).setOrigin(0.5);

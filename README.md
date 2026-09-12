@@ -1,12 +1,18 @@
 # 暖影同行 / Sunlit Echoes
 
-温暖风格的 PC 浏览器动作守护肉鸽：借地形守住营地，搭出自己的技能流派，让上一局的战斗习惯成为下一局的影伴。
+拟人布偶猫棉棉带着一袋回信，与记住她脚步的影伴小暖，把远方的朋友重新联系起来。新定位是温暖、需要操作与分工的 Steam PC 送信冒险，首次完整体验的制作目标约三小时。
 
-当前候选版 **1.3.0-rc.3**：五章五十个独立小关卡、战役 / 无尽 / 影子切磋三种模式，以及装备、营地研究和角色专精。本轮修复通关奖励补存、角色解锁恢复、影子逐档首胜奖励和结算重试；备份保留待确认凭据，设置显示实际构建版本。**159 项测试、TypeScript / 生产构建、静态检查和依赖审计通过，0 已知依赖漏洞**。最终静态包与标准 ZIP 已生成并逐项读回校验。准确证据与待测项见 [发行准备](docs/release-readiness.md)。
+当前 **1.4.0-alpha.1** 是“第一封信”可玩 alpha：森林寻址、影伴扶桥、亲手交信与返程捷径；小猫分层待机/跑动/轻跃/庆祝动作；十六页可跳过、回看的序章与回信册。它尚不是三小时成品；完整五地区、真人时长、Steam 桌面发行与手柄支持仍需制作和验收。准确检查与待测项见 [发行准备](docs/release-readiness.md)。
 
-固定来路和地形决定站位，四个伙伴和三选一升级改变守法；影伴可以同行或守营，给你腾出转线和处理后排的机会。每个小关有自己的路线、遭遇和两项额外星级目标；五阶影子切磋让你练习读招、走位和双目标选择。影子使用本机行为统计与规则决策，不需要服务器，不声称是训练型 AI。
+当前包已完成 **248/248 自动测试**，`release:web` 的 TypeScript、生产构建、静态检查与依赖审计通过，审计为 **0 已知漏洞**。[本机试玩 ZIP](release/Sunlit-Echoes-1.4.0-alpha.1-web.zip) 已生成。Edge 已走通中间生产版的森林投递与返营；最终包通过刷新保留进度、森林画面、暂停继续及栗笺回信检查。具体构建与未测范围见 [实测记录](docs/qa/1.4.0-alpha.1/edge-observations.json) 和 [验证摘要](docs/validation-1.4.0-alpha.1.json)，不等于完整发行验收。
 
-真实 Edge 普通生产包完成首关、领取奖励及购买装备；新标签页载入 rc.3 后保留进度与设置，并将装备生命值带入第二关实际战斗。该记录不是真人盲测，第一关结算发生在 rc.2，版本和步骤分别记录在 [Edge 观察日志](docs/qa/1.3.0-rc.3/edge-observations.json)。营地固定后的最终构建二十分钟复测、其他浏览器、参考硬件与真人体验仍待验证。
+从“今天，寄往风铃森林”进入新邮路。三片地址和投递结果单独保存，并纳入九项旅途备份；旧备份缺少邮路时保留当前邮路。四个旧角色 ID 作为棉棉的四套邮装保留；旧五十段挑战、无尽与影子切磋是可选练习，不代替新的送信主线。影子基于本机行为统计与规则决策，不是训练模型、在线玩家或精确录像回放。
+
+[故事与旅程初稿](docs/story-and-journey.md) 说明五位收信人、小暖的成长和结局；[五地区实施方案](docs/region-implementation-plan.md) 明确森林、湖泊、山地、暖沙、晴雪各自的操作、交付条件与存档计划；[三小时内容与 Steam 计划](docs/steam-three-hour-plan.md) 保存官方作品参考与制作预算。这些规划不等于后四区已经实现。[小猫完整美术提示词](docs/mailcat-art-manifest.json) 记录内置 image_gen 生成和透明度修正。新头像、部件与封面在 `src/public/art/`，动作由 `src/utils/CatSpriteFactory.ts` 分层合成。
+
+森林邮路：WASD / 方向键或点地行走，Shift / 右键轻跃，E 安排小暖同行或留守，F 近场互动与交信，Esc 暂停。绘本使用左右键翻页、R / Home 重看、Esc 合上、Tab + Enter 选择。森林没有生命扣除，落水返回安全处并保留已保存线索。
+
+下文保留既有挑战系统的运行方法与历史验证。标为 rc.1 / rc.2 / rc.3 的包、159 项旧测试和图形证据均属于 **1.3 历史基线**，不能当作当前 Alpha、三小时冒险或 Steam 发行认证。
 
 ## 浏览器试玩
 
@@ -28,7 +34,7 @@ npm run preview -- --host 127.0.0.1
 
 在营地打开“旅途设置”，选择“备份旅途”下载 JSON；迁移设备或站点时，先选“恢复旅途”查看通关、星章和暖晶，再确认恢复。文件不上传；战斗中不能恢复。读取、验证或写入失败会给出明确提示，写入中断会尝试还原原记录。
 
-## 当前内容
+## 保留的挑战内容（1.3 历史基础）
 
 - 五章各十关，共五十个独立关卡：独立名称、地图几何、来路组合、敌人编排与三星目标；包含暖风草地、杏沙小镇、薄荷港湾、花灯集市、晴空花园。
 - 战役逐关解锁与重玩；无尽巡游逐站加压；影子切磋五阶各三轮，包含单影到双影的不同节奏。
@@ -39,7 +45,7 @@ npm run preview -- --host 127.0.0.1
 
 当前理论负载模型中，多数关卡在“初步流派”假设下约为 **30–150 秒活跃战斗，另假设 20–40 秒读卡**。这些是模型预算，不是实测单关时长；正常玩家的成功率、读图时间与完整路线体验仍需试玩验证。
 
-## PC 操作
+## 挑战模式操作
 
 | 操作 | 按键 |
 |---|---|
@@ -67,14 +73,18 @@ npm run release:web
 Windows 可在发布目录检查完成后使用标准 ZIP 脚本；将参数换成实际生成的目录：
 
 ```powershell
-.\scripts\package-web-release.ps1 -ReleaseDirectory ".\release\shadow-legion-web-1.3.0-rc.2-<timestamp>"
+.\scripts\package-web-release.ps1 -ReleaseDirectory ".\release\shadow-legion-web-1.4.0-alpha.1-<timestamp>"
 ```
 
 脚本输出同一 `release/` 父目录中的版本 ZIP，使用正斜杠条目，并校验源文件与 ZIP 内部 SHA-256；拒绝额外文件、路径穿越、链接、清单不符和覆盖已有包，不改动发布源目录。
 
-最终包为 `release/Sunlit-Echoes-1.3.0-rc.2-web.zip`，**3,155,016 字节**，SHA-256：`546D2AEF1B044FDF4BF6B1BE8488580A54D19FA7FF5226825BF10D36E662CC62`。运行内容约 4.48MB、JS gzip 424.62kB；[发布清单](docs/release-manifest-1.3.0-rc.2.json) 保存八个文件的校验值。体积检查不能证明加载速度或帧率。
+当前 alpha 的[本机静态目录](release/shadow-legion-web-1.4.0-alpha.1-2026-09-12T15-16-53-547Z/)和 [Sunlit-Echoes-1.4.0-alpha.1-web.zip](release/Sunlit-Echoes-1.4.0-alpha.1-web.zip) 已准备好，ZIP 为 **10,030,567 字节**。运行内容为 8 个文件、11,482,178 字节，脚本 `index-D5VG81Rx.js` 的 Vite gzip 估算为 453.58kB。11 个清单文件加清单本身共 12 个 ZIP 条目已校验；完整 SHA-256 见[包校验记录](docs/qa/1.4.0-alpha.1/package-verification.json)及[发布清单](docs/release-manifest-1.4.0-alpha.1.json)。这些是本机静态产物，不是 Steam 上架包；体积检查不能证明加载速度或帧率。
 
 `analyze:pacing` 是理论敌人负载模型，不是实测局长。真实试玩会在本机保留最近 120 条已完成波次的有效战斗用时；`SessionMetricsManager.summary()` 返回各章样本数、单波中位数和 p90。数据不上传，小样本也不代表整体平衡或整章时长。
+
+## 1.3 历史包与验证
+
+历史 rc.2 包为 `release/Sunlit-Echoes-1.3.0-rc.2-web.zip`，**3,155,016 字节**，SHA-256：`546D2AEF1B044FDF4BF6B1BE8488580A54D19FA7FF5226825BF10D36E662CC62`。运行内容约 4.48MB、JS gzip 424.62kB；[历史发布清单](docs/release-manifest-1.3.0-rc.2.json) 保存八个文件的校验值。以下结果不代表当前 alpha 的最终图形验收。
 
 rc.2 的隔离 Electron 44 / Chromium 152.0.7977.54 已验证生产包备份预览、取消、恢复后读回、下载往返及战斗禁用恢复；1280×720 设置首焦音量、标题可见、Tab 循环和关闭后画布焦点通过。文件读取使用真实 DOM File API，系统文件选择器没有自动化。[备份报告](docs/qa/1.3.0-rc.2/backup.json)、[焦点报告](docs/qa/1.3.0-rc.2/settings-focus.json)
 
@@ -99,6 +109,9 @@ GitHub CI 使用 Node 24 执行检查与理论节奏分析。前一版提交 `1b
 ## 文档
 
 - [产品总纲与实现边界](docs/project-master-plan.md)
+- [五地区送信实施方案](docs/region-implementation-plan.md)
+- [故事与旅程](docs/story-and-journey.md)
+- [三小时内容与 Steam 工程计划](docs/steam-three-hour-plan.md)
 - [市场、可玩性与局长研究](docs/market-and-playability-research.md)
 - [五十关节奏分析](docs/campaign-pacing-v2.md)
 - [长期成长、角色专精与经济预算](docs/progression-design.md)

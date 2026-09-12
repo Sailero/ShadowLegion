@@ -3,6 +3,10 @@ import Phaser from 'phaser';
 import { HERO_CFG, ARENA_WIDTH, ARENA_HEIGHT } from '../config/gameConfig';
 import { getSkill, getSkillStatsForLevel } from '../data/skills';
 import { SettingsManager } from '../systems/SettingsManager';
+import { DiscreteActionInput } from '../systems/DiscreteActionInput';
+import { CatAnimator, catAnimationKey } from '../systems/CatAnimator';
+import { getOperativeVisual } from '../data/operativeVisuals';
+import type { OperativeId } from '../data/operatives';
 
 export interface FireEvent {
   x: number;
@@ -89,6 +93,9 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
 
   invUntil = 0;
   keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  private actionInput?: DiscreteActionInput;
+  private catAnimator?: CatAnimator;
+  private appearance: OperativeId = 'ranger';
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'hero');
@@ -116,6 +123,21 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
 
     this.setDepth(10);
     this.setupKeys();
+    this.catAnimator = new CatAnimator(this);
+    this.catAnimator.update(0, { speed: 0 });
+  }
+
+  setOperativeAppearance(id: OperativeId): void {
+    this.appearance = id;
+    const fallback = getOperativeVisual(id).heroTexture;
+    if (this.scene.textures.exists(fallback)) this.setTexture(fallback);
+    this.catAnimator?.setAppearance(id);
+  }
+
+  /** End-of-journey presentation can animate after combat updates have stopped. */
+  playCelebration(): void {
+    const key = catAnimationKey(this.appearance, 'celebrate');
+    if (this.scene.anims.exists(key)) this.play(key);
   }
 
   private setupKeys(): void {
@@ -133,6 +155,22 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       LEFT: kb.addKey('LEFT', false),
       RIGHT: kb.addKey('RIGHT', false),
     };
+    this.once('destroy', this.destroyActionInput, this);
+  }
+
+  configureActionInput(canAccept: () => boolean): void {
+    this.destroyActionInput();
+    this.actionInput = new DiscreteActionInput(() => this.hp > 0 && canAccept());
+    this.actionInput.bind('dash', this.keys.SHIFT);
+    this.actionInput.bind('skill', this.keys.SPACE);
+    this.actionInput.bind('cycleSkill', this.keys.Q);
+  }
+
+  clearActionInput(): void { this.actionInput?.clear(); }
+
+  destroyActionInput(): void {
+    this.actionInput?.destroy();
+    this.actionInput = undefined;
   }
 
   get isDashing(): boolean { return this.dashing; }
@@ -150,7 +188,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   }
 
   tick(time: number, delta: number): void {
-    if (this.hp <= 0) return;
+    if (this.hp <= 0) { this.clearActionInput(); return; }
     const dt = delta / 1000;
     const body = this.body as Phaser.Physics.Arcade.Body;
 
@@ -196,7 +234,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       const wp = this.scene.cameras.main.getWorldPoint(ptr.x, ptr.y);
       this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, wp.x, wp.y);
       this.setFlipX(Math.cos(this.aimAngle) < 0);
-      this.rotation = SettingsManager.get().reducedMotion || body.velocity.length() < 20 ? 0 : Math.sin(time * .014) * .055;
+      this.rotation = 0;
 
       const interval = this.fireRate / this.atkSpdMult;
       if ((ptr.isDown && !ptr.rightButtonDown() || SettingsManager.get().autoFire) && time > this.lastFire + interval) {
@@ -239,16 +277,21 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.SHIFT)) {
+    this.consumeActionInput(time);
+    this.catAnimator?.update(delta, { speed: body.velocity.length(), reducedMotion: SettingsManager.get().reducedMotion });
+  }
+
+  private consumeActionInput(time: number): void {
+    if (this.actionInput?.consume('dash')) {
       this.dash(time);
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+    if (this.actionInput?.consume('skill')) {
       if (this.charge >= this.getSkillChargeCost()) this.useSkill();
       else this.scene.events.emit('actionUnavailable', { label: `还差 ${Math.ceil(this.getSkillChargeCost() - this.charge)} 点灵感，继续击退小捣蛋` });
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.Q)) {
+    if (this.actionInput?.consume('cycleSkill')) {
       this.cycleSkill();
     }
   }
@@ -301,6 +344,8 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     this.dashVx = Math.cos(angle) * this.dashSpd;
     this.dashVy = Math.sin(angle) * this.dashSpd;
     body.setVelocity(this.dashVx, this.dashVy);
+    if (Math.abs(this.dashVx) > 1) this.setFlipX(this.dashVx < 0);
+    this.catAnimator?.dash(this.dashDur);
     this.setAlpha(0.5);
     this.scene.events.emit('heroDash', { x: this.x, y: this.y, angle });
   }

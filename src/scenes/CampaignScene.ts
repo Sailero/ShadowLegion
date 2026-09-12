@@ -26,8 +26,8 @@ export class CampaignScene extends Phaser.Scene {
     const chapter = getChapter(this.chapter);
     backdrop(this, '旅行地图  /  LETTERS FROM THE ROAD');
     button(this, 921, 35, 137, '回到营地  ESC', () => this.scene.start('MenuScene'), { secondary: true, height: 33, size: 12 });
-    heading(this, 39, 93, '给远方的五十封信', 35);
-    label(this, 43, 143, '每一封都是独立旅程。送达后回到地图，带上收获，再决定去哪里。', 13, UI.muted);
+    heading(this, 39, 93, '回信把远方连在一起', 35);
+    label(this, 43, 143, '一段小路，一次停留。收好沿途的心意，再和小暖一起出发。', 13, UI.muted);
     label(this, 978, 119, `星章 ${state.totalStars} / 150`, 14, UI.amber, true).setOrigin(1, 0);
 
     for (let index = 0; index < 5; index++) {
@@ -40,7 +40,7 @@ export class CampaignScene extends Phaser.Scene {
         {x:30,y:y-36},{x:169,y:y-36},{x:161,y:y+37},{x:103,y:y+30},{x:35,y:y+37}],true);
       label(this, 46, y - 23, `CHAPTER 0${id}`, 10, selected ? UI.apricot : UI.amber, true).setLetterSpacing(1);
       heading(this, 45, y - 4, map?.name ?? `第 ${id} 章`, 19, selected ? UI.card : UI.ink);
-      label(this, 46, y + 22, `${clears} / 10 封已送达`, 10, selected ? UI.card : UI.muted);
+      label(this, 46, y + 22, `${clears} / 10 段已走过`, 10, selected ? UI.card : UI.muted);
       choiceHit(this, 100, y, 139, 74, () => this.scene.restart({ chapter: id }));
     }
 
@@ -59,9 +59,9 @@ export class CampaignScene extends Phaser.Scene {
     }
     const stages = getStagesForChapter(this.chapter);
     stages.forEach((stage, index) => this.drawNode(stage, index));
-    label(this, 214, 669, '● 已送达     ○ 可出发     · 待解锁', 11, UI.muted);
+    label(this, 214, 669, '● 已走过     ○ 可出发     · 待解锁', 11, UI.muted);
     this.showStage(getStage(this.selectedStage));
-    label(this, 512, 746, '点击路线上的邮戳选择关卡  ·  每章十关  ·  三颗星章分别记录通关与两项委托', 11, UI.muted).setOrigin(.5);
+    label(this, 512, 746, '点击邮戳选择一段路  ·  星章记录沿途的小挑战  ·  走完一章，拆开一封远方回信', 11, UI.muted).setOrigin(.5);
     shortcut(this, 'ESC', () => this.scene.start('MenuScene'));
   }
 

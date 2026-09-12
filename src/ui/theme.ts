@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
 import { SoundManager } from '../systems/SoundManager';
 import { openSettingsDialog } from './settingsDialog';
+import { getOperativeVisual } from '../data/operativeVisuals';
 
 /** A travel picture book: painted space, printed ink and tactile paper objects. */
 export const UI = {
@@ -76,7 +77,8 @@ export function stamp(scene: Phaser.Scene, x: number, y: number, text: string, r
 }
 
 export function portrait(scene: Phaser.Scene, x: number, y: number, operativeId: string, size = 82): void {
-  const key = scene.textures.exists(`portrait-${operativeId}`) ? `portrait-${operativeId}`
+  const appearance = getOperativeVisual(operativeId);
+  const key = scene.textures.exists(appearance.portraitTexture) ? appearance.portraitTexture
     : scene.textures.exists('traveler-portrait') ? 'traveler-portrait' : 'hero';
   const image = scene.add.image(x, y, key);
   const actualSize = key === 'hero' && image.width < 96 ? Math.min(size, 66) : size;

@@ -3,6 +3,7 @@ import { Hero } from '../entities/Hero';
 import { BuildPath, UpgradeDef, WAVE_UPGRADES, LEVEL_UPGRADES } from '../data/upgrades';
 import { getSkill } from '../data/skills';
 import { getOperative, OperativeId } from '../data/operatives';
+import { getOperativeVisual } from '../data/operativeVisuals';
 
 export class UpgradeManager {
   private stacks = new Map<string, number>();
@@ -30,6 +31,9 @@ export class UpgradeManager {
 
   initializeOperative(hero: Hero, operativeId: OperativeId): void {
     const operative = getOperative(operativeId);
+    const appearance = getOperativeVisual(operative.id);
+    if (typeof hero.setOperativeAppearance === 'function') hero.setOperativeAppearance(operative.id);
+    else if (hero.scene?.textures?.exists(appearance.heroTexture)) hero.setTexture(appearance.heroTexture);
     this.buildPath = operative.path;
     hero.unlockedSkills = [];
     hero.skillLevels = {};

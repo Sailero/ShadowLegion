@@ -15,9 +15,10 @@ import { ScoreManager } from '../systems/ScoreManager';
 import { MetaProgressionManager } from '../systems/MetaProgressionManager';
 import { RunRecorder } from '../systems/RunRecorder';
 import { getSkill, getSkillStatsForLevel } from '../data/skills';
+import { skillTexture } from '../ui/skillVisuals';
 import type { UpgradeDef } from '../data/upgrades';
 import { ChapterDef, getChapter, pointInRect } from '../data/chapters';
-import { getOperative, OperativeId } from '../data/operatives';
+import { getOperative, OPERATIVES, OperativeId } from '../data/operatives';
 import { SettingsManager } from '../systems/SettingsManager';
 import { ShadowCompanion, ShadowRival } from '../systems/ShadowCompanion';
 import { JourneyDirector } from '../systems/JourneyDirector';
@@ -55,6 +56,7 @@ export class ArenaScene extends Phaser.Scene {
   private waveText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
   private infoText!: Phaser.GameObjects.Text;
+  private skillEmblem!: Phaser.GameObjects.Image;
   private comboText!: Phaser.GameObjects.Text;
   private announcement: Phaser.GameObjects.Container | null = null;
   private announcementPriority = -1;
@@ -255,6 +257,7 @@ export class ArenaScene extends Phaser.Scene {
     this.bindEvents();
     this.input.keyboard?.on('keydown-ESC', this.togglePause, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.hero.destroyActionInput();
       this.input.keyboard?.off('keydown-ESC', this.togglePause, this);
       this.clearUpgradeHotkeys();
       this.clearPauseUI();
@@ -293,6 +296,7 @@ export class ArenaScene extends Phaser.Scene {
     if (this.openingDrafts === 0) this.waveMgr.startNextWave();
 
     this.tutorial.start();
+    this.hero.configureActionInput(() => this.canAcceptCombatAction());
 
     this.createBgParticles();
 
@@ -312,7 +316,7 @@ export class ArenaScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-E', this.commandHandler);
     this.blurHandler = () => {
       if (!this.paused && !this.upgrading && !this.dead && !this.tutorial.isActive) this.togglePause();
-      this.input.keyboard?.resetKeys();
+      this.resetCombatInput();
     };
     this.game.events.on(Phaser.Core.Events.BLUR, this.blurHandler);
   }
@@ -527,12 +531,29 @@ export class ArenaScene extends Phaser.Scene {
       const enemy = child as Enemy;
       if (!enemy.active || !activeZones.some(zone => pointInRect(enemy.x, enemy.y, zone))) continue;
       const damage = enemy.isBoss ? 12 : 20;
-      this.journey.record('terrainHit');
-      this.stageStats.terrainHits++;
-      enemy.takeDamage(damage);
+      this.damageEnemy(enemy, damage, 'pulse');
       this.showDmgNum(enemy.x, enemy.y - 20, damage);
     }
     this.feedbackFlash(50, 160, 80, 255, true);
+  }
+
+  /** Keep entity damage/death behavior intact; terrain credit follows real HP loss. */
+  public damageEnemy(enemy: Enemy, amount: number, source: 'hero' | 'shadow' | 'pulse' = 'hero'): boolean {
+    if (!enemy.active || !Number.isFinite(enemy.hp) || enemy.hp <= 0 || !Number.isFinite(amount) || amount <= 0) return false;
+    const hpBefore = enemy.hp;
+    // Death and split events are synchronous and may move/remove the target.
+    const hitPosition = { x: enemy.x, y: enemy.y };
+    const terrainKind = this.chapter.hazardKind;
+    const eligibleSource = source === 'pulse' ? terrainKind === 'pulse'
+      : (source === 'hero' || source === 'shadow') && (terrainKind === 'sand' || terrainKind === 'tide');
+    const inActiveTerrain = eligibleSource && this.chapter.hazards.some(zone =>
+      pointInRect(hitPosition.x, hitPosition.y, zone) && this.isHazardZoneActive(zone, this.combatTime));
+    const killed = enemy.takeDamage(amount);
+    if (inActiveTerrain && Number.isFinite(enemy.hp) && enemy.hp < hpBefore) {
+      this.journey.record('terrainHit');
+      this.stageStats.terrainHits++;
+    }
+    return killed;
   }
 
   /* ────────────────── Physics ────────────────── */
@@ -579,14 +600,9 @@ export class ArenaScene extends Phaser.Scene {
       }
 
       let dmg = bullet.damage;
-      if (this.chapter.hazardKind === 'sand' || this.chapter.hazardKind === 'tide') {
-        if (this.chapter.hazards.some(zone => pointInRect(enemy.x, enemy.y, zone) && this.isHazardZoneActive(zone, this.combatTime))) {
-          this.journey.record('terrainHit'); this.stageStats.terrainHits++;
-        }
-      }
       if (bullet.source === 'shadow') {
         const ex = enemy.x, ey = enemy.y;
-        enemy.takeDamage(dmg);
+        this.damageEnemy(enemy, dmg, 'shadow');
         this.showDmgNum(ex, ey - 20, dmg);
         this.hitParticles(ex, ey, 0x6d9c85);
         return;
@@ -619,7 +635,7 @@ export class ArenaScene extends Phaser.Scene {
       }
 
       enemy.knockback(bullet.x, bullet.y, 80);
-      const killed = enemy.takeDamage(dmg);
+      const killed = this.damageEnemy(enemy, dmg);
       this.hitParticles(enemy.x, enemy.y, enemy.cfg.color);
       if (!killed && enemy.active && !SettingsManager.get().reducedMotion) {
         const scale = (enemy.getData('impactScale') as number | undefined) ?? enemy.scaleX;
@@ -732,7 +748,7 @@ export class ArenaScene extends Phaser.Scene {
 
       if (this.hero.isDashing && this.hero.dashDamageMult > 0) {
         const dashDmg = Math.round(this.hero.bulletDamage * this.hero.damageMult * this.hero.dashDamageMult);
-        enemy.takeDamage(dashDmg);
+        this.damageEnemy(enemy, dashDmg);
         enemy.knockback(this.hero.x, this.hero.y, 100);
         this.showDmgNum(enemy.x, enemy.y - 20, dashDmg);
         return;
@@ -795,7 +811,9 @@ export class ArenaScene extends Phaser.Scene {
     this.objectiveText = text(28, GAME_HEIGHT - 136, 12).setWordWrapWidth(267, true).setLineSpacing(5);
     this.actionHint = text(575, GAME_HEIGHT - 92, 14, '#665237').setOrigin(.5, 1).setAlpha(0).setDepth(145)
       .setWordWrapWidth(454, true).setBackgroundColor('#fff6da').setPadding(12, 7);
-    this.infoText = text(575, GAME_HEIGHT - 48, 14).setOrigin(.5).setAlign('center').setLineSpacing(7);
+    this.skillEmblem = this.add.image(350, GAME_HEIGHT - 52, skillTexture(this.hero.activeSkillId))
+      .setDisplaySize(38, 38).setScrollFactor(0).setDepth(102);
+    this.infoText = text(602, GAME_HEIGHT - 48, 13).setOrigin(.5).setAlign('center').setLineSpacing(7);
     this.comboText = text(30, 124, 20, '#98613b').setAlpha(0).setFontStyle('bold');
     this.waveProgressGfx = this.add.graphics().setScrollFactor(0).setDepth(99);
     this.bossHudGfx = this.add.graphics().setScrollFactor(0).setDepth(106);
@@ -862,7 +880,8 @@ export class ArenaScene extends Phaser.Scene {
       : this.mode === 'shadow' ? `看清蓄力线，再轻跃躲开\n三轮全胜，留下新的纪念\n${getShadowTrial(this.trialTier).lesson}`
       : this.journey.getObjectives().map(o => `${o.completed ? '✓' : '○'} ${o.title}  ${o.progress}/${o.target}`).join('\n'));
     const build = this.upgradeMgr.getBuildPath();
-    this.infoText.setText(`${activeSkill?.name ?? '技能'}  ${chargePct >= 1 ? '[ SPACE · 可以施放 ]' : `灵感 ${Math.floor(chargePct*100)}%`}\n${build ? BUILD_INFO[build].name : '自由搭配'}  ·  SHIFT 轻跃  ·  E 影伴  ·  Q 换技能`);
+    this.skillEmblem.setTexture(skillTexture(this.hero.activeSkillId));
+    this.infoText.setText(`${activeSkill?.name ?? '技能'} · ${activeSkill?.purpose ?? ''}  ${chargePct >= 1 ? '[ SPACE · 就绪 ]' : `灵感 ${Math.floor(chargePct*100)}%`}\n${build ? BUILD_INFO[build].name : '自由搭配'} · SHIFT 轻跃 · E 影伴 · Q 换技能`);
     this.drawWaveProgress();
     this.drawMinimap();
     this.drawBossHud();
@@ -1393,7 +1412,7 @@ export class ArenaScene extends Phaser.Scene {
     [...this.enemies.getChildren()].forEach(c => {
       const e = c as Enemy;
       if (!e.active) return;
-      e.takeDamage(dmg);
+      this.damageEnemy(e, dmg);
       e.knockback(x, y, 200);
       this.showDmgNum(e.x, e.y - 20, dmg);
       hitCount++;
@@ -1449,7 +1468,7 @@ export class ArenaScene extends Phaser.Scene {
       const e = c as Enemy;
       if (!e.active) return;
       if (Phaser.Math.Distance.Between(x, y, e.x, e.y) < radius) {
-        e.takeDamage(damage);
+        this.damageEnemy(e, damage);
       }
     });
   }
@@ -1457,8 +1476,8 @@ export class ArenaScene extends Phaser.Scene {
   private doSkillSentry(
     x: number, y: number, damage: number, radius: number, duration: number, level: number, color: number,
   ): void {
-    const base = this.add.circle(x, y, 17, 0x083344, 0.95).setDepth(11).setStrokeStyle(2, color, 0.9);
-    const head = this.add.rectangle(x, y, 24, 7, color, 0.9).setDepth(12);
+    const base = this.add.ellipse(x, y + 16, 37, 12, 0x638c72, .25).setDepth(10);
+    const head = this.add.image(x, y - 3, skillTexture('sentry')).setDisplaySize(48, 48).setDepth(12);
     const rangeRing = this.add.circle(x, y, radius, color, 0.025).setDepth(3).setStrokeStyle(1, color, 0.18);
     const interval = Math.max(150, 320 - level * 28);
     const timer = this.time.addEvent({
@@ -1476,7 +1495,7 @@ export class ArenaScene extends Phaser.Scene {
         }
         if (!nearest) return;
         const angle = Phaser.Math.Angle.Between(x, y, nearest.x, nearest.y);
-        head.setRotation(angle);
+        head.setFlipX(Math.cos(angle) < 0);
         this.spawnBullet({
           x: x + Math.cos(angle) * 18, y: y + Math.sin(angle) * 18,
           angle, speed: this.hero.bulletSpeed * 0.85, damage,
@@ -1491,7 +1510,7 @@ export class ArenaScene extends Phaser.Scene {
         if (object.active) this.tweens.add({ targets: object, alpha: 0, duration: 180, onComplete: () => object.destroy() });
       }
     });
-    this.announce('蜂群哨戒部署', color, 850);
+    this.announce('蜜蜂小帮手来照看这条路', color, 850);
   }
 
   private onSkillSwitch(ev: { skillId: string }): void {
@@ -1540,6 +1559,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private finishDefeat(reason: string): void {
     if (this.dead) return;
+    this.resetCombatInput();
     RunCheckpointManager.clear();
     this.dead = true;
     this.hitlagUntil = 0;
@@ -1735,6 +1755,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private onWaveComplete(ev: { wave: number; total: number }): void {
     if (this.dead) return;
+    this.resetCombatInput();
     for (const bullet of this.enemyBullets.getChildren() as Projectile[]) if (bullet.active) bullet.recycle();
     if (this.mode === 'shadow') this.hero.heal(Math.round(this.hero.maxHp * .25));
     if (this.mode === 'campaign' && !new URLSearchParams(window.location.search).has('renderqa') && new URLSearchParams(window.location.search).get('qa') !== '1') SessionMetricsManager.record({
@@ -1757,6 +1778,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private onLevelComplete(ev: { level: number }): void {
     if (this.dead) return;
+    this.resetCombatInput();
     if (this.mode !== 'endless') { this.finishFiniteRun(); return; }
     this.paused = true;
     this.physics.pause();
@@ -1768,6 +1790,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private finishFiniteRun(): void {
     if (this.dead) return;
+    this.resetCombatInput();
     this.dead = true;
     this.physics.pause();
     this.tutorial.destroy();
@@ -1814,7 +1837,7 @@ export class ArenaScene extends Phaser.Scene {
       : goal.kind === 'time' ? this.activeRunMs / 1000 : this.stageStats[key[goal.kind]] ?? 0;
     const complete = goal.kind === 'time' ? value <= goal.target : value >= goal.target;
     const progress = goal.kind === 'core' ? `${Math.round(value * 100)}%` : goal.kind === 'time' ? `${Math.floor(value)}s` : `${Math.min(goal.target, value)}/${goal.target}`;
-    const short: Record<string, string> = { core: `营地保留 ${Math.round(goal.target * 100)}% 体力`, time: `${goal.target} 秒内完成`, dash: '轻跃转线', skill: '释放拿手技能', terrain: '借地形命中', command: '指挥影伴', intercept: '营地外围截击', priority: '外围截击后排 / 南瓜' };
+    const short: Record<string, string> = { core: `营地保留 ${Math.round(goal.target * 100)}% 体力`, time: `${goal.target} 秒内完成`, dash: '轻跃转线', skill: '释放拿手技能', terrain: this.chapter.hazardKind === 'pulse' ? '借灯带伤到对手' : '活跃地形内有效命中', command: '指挥影伴', intercept: '营地外围截击', priority: '外围截击后排 / 南瓜' };
     return `${complete ? '✦' : '☆'} ${short[goal.kind] ?? goal.label}  ${progress}`;
   }
 
@@ -1910,7 +1933,7 @@ export class ArenaScene extends Phaser.Scene {
       const e = c as Enemy;
       if (!e.active || e === exclude) return;
       if (Phaser.Math.Distance.Between(x, y, e.x, e.y) < radius) {
-        e.takeDamage(damage);
+        this.damageEnemy(e, damage);
       }
     });
   }
@@ -1935,7 +1958,7 @@ export class ArenaScene extends Phaser.Scene {
       const line = this.add.line(0, 0, cx, cy, ne.x, ne.y, 0xfbbf24, 0.6).setDepth(15);
       this.tweens.add({ targets: line, alpha: 0, duration: 150, onComplete: () => line.destroy() });
       const roundDmg = Math.round(curDmg);
-      ne.takeDamage(roundDmg);
+      this.damageEnemy(ne, roundDmg);
       this.showDmgNum(ne.x, ne.y - 20, roundDmg);
       cx = ne.x;
       cy = ne.y;
@@ -1950,7 +1973,7 @@ export class ArenaScene extends Phaser.Scene {
       const e = c as Enemy;
       if (!e.active) return;
       if (Phaser.Math.Distance.Between(x, y, e.x, e.y) < 60) {
-        e.takeDamage(damage);
+        this.damageEnemy(e, damage);
       }
     });
   }
@@ -2041,7 +2064,7 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     this.upgrading = true;
-    this.input.keyboard?.resetKeys();
+    this.resetCombatInput();
     this.physics.pause();
     this.time.paused = true;
     this.tweens.pauseAll();
@@ -2084,10 +2107,16 @@ export class ArenaScene extends Phaser.Scene {
       this.drawCard(card, cx, cy, cardW, cardH, catColor, false);
       this.upgradeUI.push(card);
 
-      // Color dot indicator
-      const dot = this.add.graphics().setScrollFactor(0).setDepth(302);
-      dot.fillStyle(catColor); dot.fillCircle(cx - cardW / 2 + 18, cy - 34, 6);
-      this.upgradeUI.push(dot);
+      const emblemId = upg.unlocksSkill ?? upg.requiresSkill
+        ?? (upg.path ? OPERATIVES.find(operative => operative.path === upg.path)?.signatureSkill : undefined);
+      if (emblemId) {
+        this.upgradeUI.push(this.add.image(cx - cardW / 2 + 18, cy - 31, skillTexture(emblemId))
+          .setDisplaySize(24, 24).setScrollFactor(0).setDepth(302));
+      } else {
+        const dot = this.add.graphics().setScrollFactor(0).setDepth(302);
+        dot.fillStyle(catColor); dot.fillCircle(cx - cardW / 2 + 18, cy - 34, 6);
+        this.upgradeUI.push(dot);
+      }
 
       const nt = this.add.text(cx - cardW / 2 + 32, cy - 40, upg.name, {
         fontSize: '16px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold', color: '#35483e',
@@ -2270,7 +2299,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private finishUpgrade(pool: 'wave' | 'level'): void {
-    this.input.keyboard?.resetKeys();
+    this.resetCombatInput();
     this.time.paused = false;
     this.tweens.resumeAll();
     this.upgrading = false;
@@ -2321,7 +2350,7 @@ export class ArenaScene extends Phaser.Scene {
   private togglePause(): void {
     if (this.dead || this.upgrading || this.tutorial.isActive) return;
     if (this.paused && this.pauseUI.length === 0) return;
-    this.input.keyboard?.resetKeys();
+    this.resetCombatInput();
     this.paused = !this.paused;
     if (!this.paused) {
       this.clearPauseUI();
@@ -2386,6 +2415,16 @@ export class ArenaScene extends Phaser.Scene {
 
   /* ────────────────── Main Update Loop ────────────────── */
 
+  private canAcceptCombatAction(): boolean {
+    return this.sys.isActive() && this.game.hasFocus && !this.dead && !this.paused && !this.upgrading &&
+      !this.tutorial.isActive && (this.waveMgr?.wave ?? 0) > 0 && !this.waveMgr.allWavesDone;
+  }
+
+  private resetCombatInput(): void {
+    this.hero.clearActionInput();
+    this.input.keyboard?.resetKeys();
+  }
+
   update(time: number, delta: number) {
     try {
       this._updateInner(time, delta);
@@ -2395,6 +2434,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private _updateInner(time: number, _delta: number): void {
+    if (!this.canAcceptCombatAction()) this.hero.clearActionInput();
     // Hitlag: skip game logic for a few real-time ms (freeze frame effect)
     const realNow = performance.now();
     if (this.hitlagUntil > 0 && realNow < this.hitlagUntil) return;

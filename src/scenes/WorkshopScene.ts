@@ -24,19 +24,19 @@ export class WorkshopScene extends Phaser.Scene {
     CampaignProgressionManager.reconcilePendingRewards();
     const state=MetaProgressionManager.getState();
     const overview=MetaProgressionManager.getProgressionOverview(state);
-    backdrop(this,'旅人行囊  /  LITTLE THINGS BECOME A JOURNEY');
+    backdrop(this,'棉棉的行囊  /  LITTLE THINGS BECOME A JOURNEY');
     button(this,759,35,140,'查看试玩记录',()=>openPlaytestRecords(this),{secondary:true,height:33,size:12});
     button(this,921,35,138,'返回  ESC',()=>this.back(),{secondary:true,height:33,size:12});
     heading(this,42,92,'把收获，缝进下一程。',35);
     label(this,45,145,`已送达 ${overview.clearedStages}/50 封信 · 营地研究 ${overview.researchOwned}/6 · 成长随旅途永久保留`,13,UI.muted);
     label(this,978,104,`${state.shadowCores} 暖晶`,24,UI.amber,true).setOrigin(1,0);
-    const tabs:[WorkshopTab,string][]=[['equipment','随身装备'],['research','营地研究'],['specialization','旅人专精']];
+    const tabs:[WorkshopTab,string][]=[['equipment','随身装备'],['research','营地研究'],['specialization','邮装专精']];
     tabs.forEach(([id,name],index)=>button(this,139+index*228,197,202,name,()=>this.refresh({tab:id}),{secondary:this.tab!==id,height:42,size:15}));
     paperCard(this,512,457,950,448);
     if(this.tab==='equipment')this.drawEquipment();
     else if(this.tab==='research')this.drawResearch();
     else this.drawSpecializations();
-    label(this,47,708,this.notice || (this.tab==='specialization'?'每位旅人同时装备一种专精；已经掌握的专精可以免费重配。':'暖晶来自关卡与模式挑战；行囊里的成长会跟你一起出发。'),12,this.notice?UI.green:UI.muted).setWordWrapWidth(929,true);
+    label(this,47,708,this.notice || (this.tab==='specialization'?'每套邮装同时搭配一种专精；已经掌握的专精可以免费重配。':'暖晶来自邮路练习与模式挑战；行囊里的成长会跟你一起出发。'),12,this.notice?UI.green:UI.muted).setWordWrapWidth(929,true);
     label(this,512,750,'TAB 选择 · ENTER 确认 · ESC 返回',11,UI.muted).setOrigin(.5);
     shortcut(this,'ESC',()=>this.back());
   }

@@ -3,6 +3,7 @@ import { sanitizeCampaignState } from './CampaignProgressionManager';
 import { sanitizeRunCheckpoint } from './RunCheckpointManager';
 import { OPERATIVES } from '../data/operatives';
 import { MAX_ENDLESS_LEVEL, MAX_ENDLESS_WAVE } from '../config/gameConfig';
+import { POSTAL_JOURNEY_STORAGE_KEY, sanitizePostalJourney } from './PostalJourneyManager';
 
 export const SAVE_BACKUP_FORMAT = 'sunlit-echoes-journey-backup';
 export const SAVE_BACKUP_VERSION = 1;
@@ -16,6 +17,7 @@ export const BACKUP_KEYS = {
   shadowTrials: 'sunlit_shadow_trials_v1',
   tutorial: 'shadowlegion_tutorial_v4',
   waveSamples: 'sunlit_echoes_wave_metrics_v1',
+  postal: POSTAL_JOURNEY_STORAGE_KEY,
 } as const;
 export type BackupSection = keyof typeof BACKUP_KEYS;
 export interface BackupStorage {
@@ -30,6 +32,7 @@ export interface BackupPreview {
   shadowCores: number;
   operativeCount: number;
   hasCheckpoint: boolean;
+  postal: { delivered: boolean; addressPieces: number } | null;
   included: string[];
   preserved: string[];
   cleared: string[];
@@ -44,12 +47,14 @@ const SECTIONS = Object.keys(BACKUP_KEYS) as BackupSection[];
 const NAMES: Record<BackupSection, string> = {
   meta: '暖晶与伙伴成长', campaign: '路线与星章', checkpoint: '起点续玩', settings: '声音与操作设置',
   scores: '本机成绩', shadowTrials: '影子切磋纪录', tutorial: '初次旅行教学', waveSamples: '试玩用时记录',
+  postal: '森林邮路与回信',
 };
 const LIMITS: Record<BackupSection, number> = {
   meta: 512 * 1024, campaign: 100000, checkpoint: 65536, settings: 2048,
   scores: 16384, shadowTrials: 8192, tutorial: 100, waveSamples: 150000,
+  postal: 4096,
 };
-const VERSIONED: Partial<Record<BackupSection, number>> = { meta: 3, campaign: 1, checkpoint: 1, settings: 1 };
+const VERSIONED: Partial<Record<BackupSection, number>> = { meta: 3, campaign: 1, checkpoint: 1, settings: 1, postal: 1 };
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isDate = (value: unknown): value is string => typeof value === 'string' && value.length <= 40 && Number.isFinite(Date.parse(value));
 const finite = (value: unknown, min: number, max: number, integer = false): value is number =>
@@ -153,6 +158,7 @@ function prepare(text: string): PreparedBackup | BackupFailure {
     else if (section === 'scores') clean = sanitizeScores(value);
     else if (section === 'shadowTrials') clean = sanitizeShadowTrials(value);
     else if (section === 'waveSamples') clean = sanitizeWaveSamples(value);
+    else if (section === 'postal') clean = sanitizePostalJourney(value);
     else if (section === 'tutorial' && value === 'done') clean = 'done';
     if (clean === null) return fail(`invalid-${section}`, `${NAMES[section]}记录损坏，尚未修改本机旅途。`);
     data[section] = clean;
@@ -162,10 +168,11 @@ function prepare(text: string): PreparedBackup | BackupFailure {
     createdAt: parsed.createdAt, clearedStages: Object.values(campaign.stageResults).filter(record => record.stars > 0).length,
     stars: campaign.totalStars, shadowCores: meta.shadowCores, operativeCount: meta.unlockedOperatives.length,
     hasCheckpoint: Boolean(data.checkpoint), included, preserved, cleared, routeRebuilt,
+    postal: data.postal ? (() => { const route = sanitizePostalJourney(data.postal)!; return { delivered: route.deliveryCompleted, addressPieces: route.foundAddressIds.length }; })() : null,
   } };
 }
 
-/** No enumeration, network, engine state or cache mutation: only eight game-owned localStorage keys. */
+/** No enumeration, network, engine state or cache mutation: only the listed game-owned keys. */
 export class SaveBackupManager {
   static previewBackup(text: string): BackupPreviewResult {
     const prepared = prepare(text);

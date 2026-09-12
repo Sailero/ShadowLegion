@@ -17,9 +17,10 @@ const notices = [
 ].join('\n\n---\n\n');
 writeFileSync(resolve(destination, 'THIRD-PARTY-NOTICES.txt'), notices);
 const art = JSON.parse(readFileSync('docs/art-generation-manifest.json', 'utf8'));
+const mailcatArt = JSON.parse(readFileSync('docs/mailcat-art-manifest.json', 'utf8'));
 writeFileSync(resolve(destination, 'ARTWORK.json'), JSON.stringify({ generator: art.generator,
   provenance: 'Original game artwork. Full generation prompts and original source images are retained in the source repository.',
-  assets: art.assets.map(asset => ({ file: asset.path.replace('src/public/', ''), encoding: asset.encoding ?? 'Original generated PNG with transparency',
+  assets: [...art.assets, ...mailcatArt.assets].map(asset => ({ file: asset.path.replace('src/public/', ''), encoding: asset.encoding ?? 'Original generated PNG with transparency',
     sha256: createHash('sha256').update(readFileSync(asset.path)).digest('hex') })),
 }, null, 2) + '\n');
 function files(dir) {

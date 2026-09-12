@@ -61,10 +61,10 @@ export const LEVEL_UPGRADES: UpgradeDef[] = [
 ];
 
 export const BUILD_INFO: Record<BuildPath, { name: string; color: number; promise: string }> = {
-  nova: { name: '花火游侠', color: 0xf97316, promise: '转线截击，让花火连成一串' },
-  storm: { name: '爆米花炮手', color: 0xd59067, promise: '弹丸铺成扇面，守住一整条路' },
-  rift: { name: '抱抱守卫', color: 0xa292bc, promise: '护盾与减速，替营地争取时间' },
-  engineer: { name: '蜜蜂工匠', color: 0x5b9d91, promise: '部署帮手，再去照看另一条路' },
+  nova: { name: '花火邮装', color: 0xf97316, promise: '转线截击，让花火连成一串' },
+  storm: { name: '爆米花邮装', color: 0xd59067, promise: '弹丸铺成扇面，守住一整条路' },
+  rift: { name: '抱抱邮装', color: 0xa292bc, promise: '护盾与减速，替营地争取时间' },
+  engineer: { name: '蜜蜂邮装', color: 0x5b9d91, promise: '部署帮手，再去照看另一条路' },
 };
 
 export const EVOLUTION_INFO: Record<BuildPath, { name: string; desc: string }> = {

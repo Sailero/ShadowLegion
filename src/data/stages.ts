@@ -55,6 +55,7 @@ const T = (seconds: number): StageGoal => G('time', seconds, `在 ${seconds} 秒
 const D = (count: number): StageGoal => G('dash', count, `使用 ${count} 次闪避，练习转线与回防`);
 const S = (count: number): StageGoal => G('skill', count, `释放 ${count} 次拿手技能`);
 const H = (count: number): StageGoal => G('terrain', count, `命中危险区中的对手 ${count} 次`);
+const L = (count: number): StageGoal => G('terrain', count, `借烟花灯带造成 ${count} 次有效伤害`);
 const P = (count: number): StageGoal => G('priority', count, `在营地外围优先击退 ${count} 位后排来客或南瓜`);
 const I = (count: number): StageGoal => G('intercept', count, `在距营地至少 240 步处截住 ${count} 位来客`);
 const A = (count: number): StageGoal => G('command', count, `安排影伴切换同行 / 守营 ${count} 次`);
@@ -101,16 +102,16 @@ const CHAPTER_STAGE_SEEDS: StageSeed[][] = [
     { name: '港湾毕业航线', description: '纸燕滑翔手带着伙伴完成最后一次巡港。留意纸片齐射和冲锋之间的空当。', goal: C(.65), bonus: P(10), encounters: [E([1, 0], [['ninja', 5], ['archer', 5], ['bat', 6]]), E([2, 0], [['summoner', 3], ['medic', 3], ['tank', 3]]), E([0, 1, 2], [['bomber', 4], ['slime', 8]], 'ninja')] },
   ],
   [
-    { name: '灯带开场', description: '南北街口的来客会经过灯带。先看闪烁预告，再在花火绽放前轻快走开。', goal: H(8), bonus: C(.8), encounters: [E([2], [['slime', 14], ['tank', 2]]), E([3], [['tank', 3], ['archer', 5]])] },
+    { name: '灯带开场', description: '南北街口的来客会经过灯带。先看闪烁预告，再在花火绽放前轻快走开。', goal: L(8), bonus: C(.8), encounters: [E([2], [['slime', 14], ['tank', 2]]), E([3], [['tank', 3], ['archer', 5]])] },
     { name: '东街点心队', description: '茶师带着大块头走东街。先截断治疗，别让它们一起坐到营灯边。', goal: P(7), bonus: I(8), encounters: [E([1], [['medic', 3], ['tank', 3], ['slime', 8]]), E([3, 1], [['medic', 3], ['archer', 4], ['bat', 6]])] },
-    { name: '彩屑十字路', description: '南瓜从交错街口涌来。看清圆圈，再看清灯带，给闪避留一点余地。', goal: D(6), bonus: H(10), encounters: [E([2, 3], [['bomber', 6], ['slime', 10]]), E([0, 1], [['bomber', 5], ['ninja', 5], ['archer', 3]])] },
+    { name: '彩屑十字路', description: '南瓜从交错街口涌来。看清圆圈，再看清灯带，给闪避留一点余地。', goal: D(6), bonus: L(10), encounters: [E([2, 3], [['bomber', 6], ['slime', 10]]), E([0, 1], [['bomber', 5], ['ninja', 5], ['archer', 3]])] },
     { name: '暖灯换班表', description: '四个路口依次热闹起来。你去处理远程阵地，影伴负责身后的慢来客。', goal: A(3), bonus: C(.75), encounters: [E([0, 2], [['archer', 6], ['tank', 3]]), E([1, 3], [['ninja', 6], ['summoner', 3], ['slime', 8]])] },
-    { name: '花朵小团长', description: '集市精英在灯带旁指挥队伍。不要只追着团长，把它招呼来的伙伴一起引向花火。', goal: H(12), bonus: P(10), encounters: [E([0, 1], [['archer', 5], ['medic', 3], ['slime', 8]]), E([2, 3], [['bomber', 5], ['tank', 3]]), E([1, 2], [['ninja', 4], ['bat', 5]], 'summoner')] },
-    { name: '灯带借个光', description: '两束烟花隔街交替开放。让橡果龟慢慢经过，把自己的技能留给支援者。', goal: H(18), bonus: S(3), encounters: [E([0, 1], [['tank', 5], ['medic', 3]]), E([2, 3], [['summoner', 3], ['archer', 5], ['slime', 10]])] },
+    { name: '花朵小团长', description: '集市精英在灯带旁指挥队伍。不要只追着团长，把它招呼来的伙伴一起引向花火。', goal: L(12), bonus: P(10), encounters: [E([0, 1], [['archer', 5], ['medic', 3], ['slime', 8]]), E([2, 3], [['bomber', 5], ['tank', 3]]), E([1, 2], [['ninja', 4], ['bat', 5]], 'summoner')] },
+    { name: '灯带借个光', description: '两束烟花隔街交替开放。让橡果龟慢慢经过，把自己的技能留给支援者。', goal: L(18), bonus: S(3), encounters: [E([0, 1], [['tank', 5], ['medic', 3]]), E([2, 3], [['summoner', 3], ['archer', 5], ['slime', 10]])] },
     { name: '四街急件', description: '纸燕和飞蛾穿过花坛。主动作远处拦截，比追着漏网来客回营更省力。', goal: I(14), bonus: T(205), encounters: [E([2, 3], [['ninja', 7], ['bat', 9]]), E([0, 1], [['ninja', 6], ['bomber', 5], ['archer', 4]])] },
     { name: '茶香绕街', description: '折线小摊把茶师和召集员分开。抓住它们尚未会合的时间窗口逐个处理。', goal: P(13), bonus: C(.7), encounters: [E([0, 2], [['medic', 4], ['summoner', 3], ['tank', 2]]), E([1, 3], [['archer', 5], ['summoner', 3], ['bomber', 4]])] },
     { name: '花灯大合奏', description: '一边是慢队伍，一边是快来客。用影伴指令和技能切换，把不同节奏分开。', goal: S(5), bonus: A(3), encounters: [E([0, 1], [['tank', 5], ['medic', 3], ['slime', 10]]), E([2, 3], [['ninja', 7], ['bat', 8], ['bomber', 4]])] },
-    { name: '集市谢幕礼', description: '花灯大团长要检验你对四街的了解。先拆支援组合，再借灯带处理最后的巡游。', goal: H(16), bonus: C(.65), encounters: [E([0, 2], [['tank', 4], ['archer', 6], ['medic', 3]]), E([1, 3], [['ninja', 6], ['bomber', 5], ['summoner', 2]]), E([0, 1, 2, 3], [['medic', 3], ['bat', 6]], 'summoner')] },
+    { name: '集市谢幕礼', description: '花灯大团长要检验你对四街的了解。先拆支援组合，再借灯带处理最后的巡游。', goal: L(16), bonus: C(.65), encounters: [E([0, 2], [['tank', 4], ['archer', 6], ['medic', 3]]), E([1, 3], [['ninja', 6], ['bomber', 5], ['summoner', 2]]), E([0, 1, 2, 3], [['medic', 3], ['bat', 6]], 'summoner')] },
   ],
   [
     { name: '走进晴空里', description: '十字溪谷让横向、纵向花桥轮流放慢。先观察水色，再把第一批来客引入溪流。', goal: H(15), bonus: C(.8), encounters: [E([0, 2], [['tank', 4], ['slime', 12]]), E([1, 3], [['archer', 6], ['ninja', 5], ['medic', 2]])] },

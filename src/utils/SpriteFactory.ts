@@ -1,4 +1,13 @@
 import Phaser from 'phaser';
+import { OPERATIVE_VISUALS, type OperativeVisual } from '../data/operativeVisuals';
+import { CatSpriteFactory } from './CatSpriteFactory';
+
+export interface OperativeSpriteSources {
+  portraitTexture?: string;
+  combatTexture?: string;
+  /** Disable until a replacement character's pose has matching accessory anchors. */
+  accessories?: boolean;
+}
 
 /** Original procedural paper-cut sprites; texture keys and collision sizes stay stable. */
 export class SpriteFactory {
@@ -6,7 +15,157 @@ export class SpriteFactory {
     this.hero(scene); this.enemies(scene); this.bullets(scene);
     this.xpGem(scene); this.particles(scene); this.defenseCore(scene);
     this.paintedSprites(scene);
+    if (!CatSpriteFactory.createAll(scene)) this.createOperativeSprites(scene);
     this.paintedGround(scene);
+  }
+  /** Composite once at portrait resolution, then downsample the identical outfit for combat. */
+  static createOperativeSprites(scene: Phaser.Scene, sources: OperativeSpriteSources = {}): void {
+    const combatKey = sources.combatTexture ?? 'hero';
+    const preferredPortrait = sources.portraitTexture ?? 'traveler-portrait';
+    const sourceKey = scene.textures.exists(preferredPortrait) ? preferredPortrait : combatKey;
+    const source = scene.textures.get(sourceKey).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const heroFrame = scene.textures.get(combatKey).get();
+    for (const appearance of Object.values(OPERATIVE_VISUALS)) {
+      for (const key of [appearance.portraitTexture, appearance.heroTexture]) {
+        if (scene.textures.exists(key)) scene.textures.remove(key);
+      }
+      const portrait = scene.textures.createCanvas(appearance.portraitTexture, 280, 280);
+      if (!portrait) continue;
+      const context = portrait.context;
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(source, 0, 0, 280, 280);
+      context.save();
+      context.scale(2.8, 2.8);
+      if (sources.accessories !== false) this.drawOperativeOutfit(context, appearance.accessory);
+      context.restore();
+      portrait.refresh();
+      // Preserve the source frame dimensions, origin and Arcade body offsets.
+      // The ordinary hero and the two shadow appearances retain their original textures.
+      const combat = scene.textures.createCanvas(appearance.heroTexture, heroFrame.width, heroFrame.height);
+      if (!combat) continue;
+      combat.context.imageSmoothingEnabled = true;
+      combat.context.imageSmoothingQuality = 'high';
+      combat.context.drawImage(portrait.canvas, 0, 0, heroFrame.width, heroFrame.height);
+      combat.refresh();
+    }
+  }
+
+  /** Accessories occupy cape/hand space; the original face and ear silhouette remain clear. */
+  private static drawOperativeOutfit(c: CanvasRenderingContext2D, accessory: OperativeVisual['accessory']): void {
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    const shape = (fill: string, stroke: string, draw: () => void, width = 1.2) => {
+      c.beginPath(); draw(); c.fillStyle = fill; c.fill();
+      c.strokeStyle = stroke; c.lineWidth = width; c.stroke();
+    };
+    const ellipse = (x: number, y: number, rx: number, ry: number, fill: string, stroke: string, angle = 0) =>
+      shape(fill, stroke, () => c.ellipse(x, y, rx, ry, angle, 0, Math.PI * 2));
+    const line = (points: number[][], color: string, width = 1) => {
+      c.beginPath(); c.moveTo(points[0][0], points[0][1]);
+      for (const point of points.slice(1)) c.lineTo(point[0], point[1]);
+      c.strokeStyle = color; c.lineWidth = width; c.stroke();
+    };
+    const leaf = (x: number, y: number, direction = 1) => {
+      shape('#b6c789', '#718354', () => {
+        c.moveTo(x, y); c.quadraticCurveTo(x - 5 * direction, y - 7, x - 12 * direction, y - 5);
+        c.quadraticCurveTo(x - 9 * direction, y + 2, x, y);
+      }, .9);
+      line([[x - direction, y], [x - 9 * direction, y - 4]], '#e6e1ae', .7);
+    };
+    const patchStitches = (points: number[][]) => {
+      c.save(); c.setLineDash([1.5, 2]); line(points, '#fff1cf', .8); c.restore();
+    };
+
+    if (accessory === 'flower') {
+      // A peach flower wand gives the swift traveller a light, radial outline.
+      line([[69, 73], [86, 57]], '#796a41', 3.8);
+      line([[69, 72], [86, 56]], '#c0ae70', 1.2);
+      for (let i = 0; i < 5; i++) {
+        const angle = i * Math.PI * 2 / 5 - Math.PI / 2;
+        ellipse(87 + Math.cos(angle) * 5, 55 + Math.sin(angle) * 5, 4.2, 3.4, i % 2 ? '#efbb92' : '#f5d1a5', '#b48156', angle);
+      }
+      ellipse(87, 55, 3.6, 3.6, '#e1aa50', '#a27b41');
+      ellipse(86.3, 54.4, 1.25, 1.25, '#fff1b9', '#fff1b9');
+      leaf(80, 62); leaf(80, 63, -1);
+      // Two floating scarf ends are attached to the existing neck knot.
+      shape('#e3a16e', '#a4754e', () => {
+        c.moveTo(39, 52); c.quadraticCurveTo(27, 48, 18, 53); c.lineTo(23, 57);
+        c.lineTo(17, 61); c.quadraticCurveTo(31, 60, 42, 56); c.closePath();
+      });
+      patchStitches([[22, 54], [31, 53], [38, 54]]);
+    } else if (accessory === 'popcorn') {
+      // Striped bucket pack plus two round brass mouths, visibly wider than the wand.
+      shape('#c98757', '#875f3f', () => {
+        c.moveTo(20, 51); c.lineTo(43, 52); c.lineTo(40, 76);
+        c.quadraticCurveTo(31, 81, 22, 74); c.closePath();
+      }, 1.5);
+      for (let i = 0; i < 3; i++) {
+        shape('#f3ddaf', '#e4c391', () => {
+          const x = 23 + i * 6;
+          c.moveTo(x, 54); c.lineTo(x + 3, 54); c.lineTo(x + 2, 75); c.lineTo(x, 74); c.closePath();
+        }, .6);
+      }
+      for (const [x, y, r] of [[23, 50, 4.4], [30, 46, 5.3], [38, 49, 4.8], [29, 53, 4.6], [36, 54, 3.5]]) {
+        ellipse(x, y, r, r * .85, '#f9e6b3', '#bc9a5a');
+        ellipse(x - 1, y - 1, r * .36, r * .3, '#fff5d5', '#fff5d5');
+      }
+      for (const [x, y] of [[87, 56], [88, 65]]) {
+        shape('#bd8754', '#775a3d', () => {
+          c.moveTo(66, 68); c.lineTo(x - 2, y - 4); c.lineTo(x + 4, y + 3); c.lineTo(70, 77); c.closePath();
+        }, 1.4);
+        ellipse(x + 1, y, 6, 4.8, '#edc881', '#906b40', -.35);
+        ellipse(x + 2, y, 2.9, 2.4, '#82663e', '#c69b58', -.35);
+        line([[71, 69], [x - 1, y - 2]], '#f5db9e', .85);
+      }
+    } else if (accessory === 'quilt') {
+      // A broad scalloped quilt shield is a material/silhouette cue, not a global tint.
+      shape('#b9a6c4', '#80718f', () => {
+        c.moveTo(69, 55); c.quadraticCurveTo(81, 52, 89, 61);
+        c.quadraticCurveTo(94, 71, 88, 82); c.quadraticCurveTo(82, 91, 71, 93);
+        c.quadraticCurveTo(59, 88, 57, 76); c.quadraticCurveTo(54, 64, 61, 59); c.closePath();
+      }, 1.5);
+      shape('#dfd3de', '#a997b3', () => {
+        c.moveTo(69, 60); c.quadraticCurveTo(80, 56, 85, 64); c.quadraticCurveTo(90, 76, 83, 84);
+        c.lineTo(72, 89); c.quadraticCurveTo(61, 82, 61, 72); c.quadraticCurveTo(60, 64, 69, 60);
+      }, .8);
+      line([[64, 63], [84, 79]], '#b3a0b9', .85);
+      line([[62, 72], [79, 86]], '#b3a0b9', .85);
+      line([[78, 60], [62, 79]], '#b3a0b9', .85);
+      line([[85, 67], [69, 87]], '#b3a0b9', .85);
+      patchStitches([[69, 59], [78, 58], [86, 65], [88, 73], [84, 83], [72, 90], [62, 82], [59, 71], [63, 63], [69, 59]]);
+      // A warm heart patch keeps the defensive equipment soft and welcoming.
+      shape('#efc78f', '#b58d65', () => {
+        c.moveTo(73, 69); c.bezierCurveTo(66, 62, 64, 74, 73, 79);
+        c.bezierCurveTo(85, 72, 79, 63, 73, 69);
+      }, .9);
+    } else {
+      // A honeycomb tool pack and pale wings identify the deployable-helper specialist.
+      ellipse(19, 54, 6.8, 10.5, '#e3ecda', '#8da497', -.55);
+      ellipse(41, 52, 6.3, 10, '#edf0d6', '#8da497', .5);
+      shape('#d9b669', '#8e814d', () => {
+        c.moveTo(28, 49); c.lineTo(42, 56); c.lineTo(42, 73); c.lineTo(29, 81);
+        c.lineTo(17, 73); c.lineTo(17, 57); c.closePath();
+      }, 1.5);
+      for (const [x, y] of [[25, 61], [34, 61], [29.5, 69]]) {
+        shape('#f3d891', '#b29452', () => {
+          for (let i = 0; i < 6; i++) {
+            const a = i * Math.PI / 3 + Math.PI / 6;
+            const px = x + Math.cos(a) * 4.2, py = y + Math.sin(a) * 4.2;
+            if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+          }
+          c.closePath();
+        }, .8);
+      }
+      line([[24, 51], [21, 44], [23, 41]], '#667e68', 1.5);
+      ellipse(23, 40, 2.6, 2.6, '#d9bf6c', '#8b8151');
+      // A small matching bee on the original wand links the pack to the hand.
+      ellipse(85, 51, 4, 6, '#e8edd4', '#92a68c', -.5);
+      ellipse(92, 52, 3.7, 5.3, '#e8edd4', '#92a68c', .55);
+      ellipse(88, 58, 7, 5.4, '#e5be68', '#8c814d', -.25);
+      line([[85, 54], [87, 62]], '#8b8358', 2);
+      line([[90, 54], [92, 61]], '#8b8358', 1.8);
+      ellipse(93, 57, 1, 1, '#485e4b', '#485e4b');
+    }
   }
   /** Atlas frames are normalized to stable physics sizes; the original alpha is preserved. */
   private static paintedSprites(scene: Phaser.Scene): void {

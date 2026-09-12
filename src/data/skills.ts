@@ -11,6 +11,8 @@ export interface SkillDef {
   name: string;
   desc: string;
   chargeCost: number;
+  icon: 'flower' | 'popcorn' | 'tea' | 'bee';
+  purpose: string;
   color: number;
   maxLevel: number;
   levels: SkillLevel[];
@@ -20,6 +22,7 @@ export interface SkillDef {
 export const SKILLS: SkillDef[] = [
   {
     id: 'burst',
+    icon: 'flower', purpose: '全场爆发',
     name: '花火派对',
     desc: '一圈暖暖的花火，击退全场的小捣蛋',
     chargeCost: 100,
@@ -34,6 +37,7 @@ export const SKILLS: SkillDef[] = [
   },
   {
     id: 'barrage',
+    icon: 'popcorn', purpose: '环射压制',
     name: '爆米花雨',
     desc: '把快乐撒向四周，旋转弹丸替你分担来路',
     chargeCost: 100,
@@ -48,6 +52,7 @@ export const SKILLS: SkillDef[] = [
   },
   {
     id: 'timerift',
+    icon: 'tea', purpose: '定点减速',
     name: '慢悠悠茶会',
     desc: '原地摆一桌茶会，请路过的对手慢一点',
     chargeCost: 80,
@@ -62,6 +67,7 @@ export const SKILLS: SkillDef[] = [
   },
   {
     id: 'sentry',
+    icon: 'bee', purpose: '驻场射击',
     name: '蜜蜂小帮手',
     desc: '留下一位勤快小帮手，自动照看附近的来客',
     chargeCost: 90,

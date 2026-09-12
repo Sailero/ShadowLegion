@@ -9,11 +9,12 @@ const { ArenaScene } = await import('../scenes/ArenaScene.ts');
 
 function clearedBuildScene() {
   const events = [], registry = new Map(), scheduled = [];
+  let inputClears = 0;
   const scene = Object.assign(Object.create(ArenaScene.prototype), {
     dead: false, upgrading: false, paused: false, openingDrafts: 0,
     currentLevel: 46, endless: true, operativeId: 'engineer', score: 1234, kills: 67,
     elapsedBeforeChapterMs: 90000, activeRunMs: 12000, combatTime: 12000,
-    defenseHp: 100, defenseMaxHp: 100, hero: {},
+    defenseHp: 100, defenseMaxHp: 100, hero: { clearActionInput() { inputClears++; } },
     input: { keyboard: { resetKeys() {} } },
     time: { paused: false, delayedCall: (delay, callback) => scheduled.push({ delay, callback }) },
     tweens: { resumeAll() {} },
@@ -23,11 +24,11 @@ function clearedBuildScene() {
     upgradeMgr: { pickThree: () => [], getAppliedIds: () => ['damage', 'sentry'] },
     waveMgr: { wave: 5, startNextWave: () => events.push('start-wave'), scheduleNextWave: () => events.push('schedule-wave') },
   });
-  return { scene, events, registry, scheduled };
+  return { scene, events, registry, scheduled, inputClears: () => inputClears };
 }
 
 test('an exhausted upgrade pool consumes all opening drafts and starts combat once', () => {
-  const { scene, events, scheduled } = clearedBuildScene();
+  const { scene, events, scheduled, inputClears } = clearedBuildScene();
   scene.openingDrafts = 2;
   scene.waveMgr.wave = 0;
   scene.combatTime = 0;
@@ -37,12 +38,14 @@ test('an exhausted upgrade pool consumes all opening drafts and starts combat on
   assert.equal(scene.time.paused, false);
   assert.deepEqual(events, ['resume', 'start-wave']);
   assert.equal(scheduled.length, 0);
+  assert.equal(inputClears(), 2, 'both skipped drafts cancel discrete combat input');
 });
 
 test('an exhausted station reward preserves the endless run instead of opening a fresh draft', () => {
-  const { scene, events, registry, scheduled } = clearedBuildScene();
+  const { scene, events, registry, scheduled, inputClears } = clearedBuildScene();
   scene.showUpgradeUI('level');
   assert.equal(scene.paused, true);
+  assert.equal(inputClears(), 1, 'station transition clears pending actions');
   assert.deepEqual(registry.get('appliedUpgrades'), ['damage', 'sentry']);
   assert.equal(scheduled.length, 1);
   scheduled[0].callback();

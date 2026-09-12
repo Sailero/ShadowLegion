@@ -1,5 +1,6 @@
 import { SettingsManager } from './SettingsManager';
 type OscType = OscillatorType;
+export type PostalCueKind = 'address' | 'delivery' | 'command' | 'dash';
 
 export class SoundManager {
   private static instance: SoundManager;
@@ -10,6 +11,7 @@ export class SoundManager {
   private lastKillAt = -Infinity;
   private masterVol = 0.3;
   private unlockBound = false;
+  private lastPostalAt = -Infinity;
 
   private constructor() {}
 
@@ -129,6 +131,44 @@ export class SoundManager {
     gain.connect(this.output!);
     source.start(t);
     source.stop(t + durationSec + 0.01);
+  }
+
+  /** Optional, quiet action feedback: never queue a stale success cue behind audio unlock. */
+  postalCue(kind: PostalCueKind): boolean {
+    const nodes: Array<{ osc: OscillatorNode; gain?: GainNode }> = [];
+    try {
+      const notes: Record<PostalCueKind, readonly number[]> = {
+        address: [523.25, 659.25], delivery: [392, 523.25, 659.25], command: [440], dash: [349.23],
+      };
+      if (!Object.prototype.hasOwnProperty.call(notes, kind) || SettingsManager.get().volume <= 0) return false;
+      const now = performance.now();
+      if (now - this.lastPostalAt < 80) return false;
+      const ctx = this.ensureCtx();
+      if (ctx.state !== 'running') return false;
+      this.lastPostalAt = now;
+      const gentle = kind === 'address' || kind === 'delivery';
+      for (const [index, freq] of notes[kind].entries()) {
+        const osc = ctx.createOscillator();
+        const node: { osc: OscillatorNode; gain?: GainNode } = { osc }; nodes.push(node);
+        const gain = ctx.createGain(); node.gain = gain;
+        const start = ctx.currentTime + index * .09, duration = gentle ? .16 : .1;
+        osc.type = gentle ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(.0001, start);
+        gain.gain.linearRampToValueAtTime(gentle ? .08 : .055, start + .015);
+        gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+        osc.connect(gain); gain.connect(this.output!);
+        osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch { /* optional audio cleanup */ } };
+        osc.start(start); osc.stop(start + duration + .01);
+      }
+      return true;
+    } catch {
+      for (const { osc, gain } of nodes) {
+        try { osc.stop(); } catch { /* may not have started */ }
+        try { osc.disconnect(); gain?.disconnect(); } catch { /* no gameplay dependency */ }
+      }
+      return false;
+    }
   }
 
   shoot(): void {

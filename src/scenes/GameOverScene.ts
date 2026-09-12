@@ -2,11 +2,14 @@ import Phaser from 'phaser';
 import { GameMode, getShadowTrial } from '../data/modes';
 import { getOperative, OperativeId } from '../data/operatives';
 import { getStage } from '../data/stages';
+import { getStoriesForCompletedStage } from '../data/story';
 import type { CombatProfile } from '../systems/RunRecorder';
 import { CampaignProgressionManager, type StageCompletion, type StageResultReward } from '../systems/CampaignProgressionManager';
 import { MetaProgressionManager, type RunSummary } from '../systems/MetaProgressionManager';
 import { ScoreManager } from '../systems/ScoreManager';
 import { ShadowTrialManager, type ShadowTrialResult } from '../systems/ShadowTrialManager';
+import { catAnimationKey, catAtlasKey } from '../systems/CatAnimator';
+import { SettingsManager } from '../systems/SettingsManager';
 import { backdrop, button, heading, label, paperCard, portrait, shortcut, stamp, titleRule, UI } from '../ui/theme';
 
 interface ResultData {
@@ -38,13 +41,19 @@ export class GameOverScene extends Phaser.Scene {
     const saved=stageResult?.saved??data.reward?.saved??true;
     const trialSaved=mode!=='shadow'||!victory||data.trialResult?.saved===true;
     backdrop(this,'一封旅途回信  /  A LETTER TO TOMORROW');
-    const title=stageResult?.campaignCompleted?'五十封信，都有了回响。':victory?(mode==='campaign'?`第 ${stageId} 封信，送到了。`:mode==='shadow'?'昨天的自己，向你击了个掌。':'这一程，走得很好。'):'歇一歇，故事还会继续。';
+    const title=stageResult?.campaignCompleted?'一路练习，默契装满了邮袋。':victory?(mode==='campaign'?`第 ${stageId} 段路，走得很好。`:mode==='shadow'?'昨天的自己，向你击了个掌。':'这一程，走得很好。'):'歇一歇，故事还会继续。';
     heading(this,45,93,title,36);
     label(this,49,150,mode==='campaign'?`${stage.label} · ${stage.name}`:mode==='shadow'?`影子试炼 ${trialTier} · ${getShadowTrial(trialTier).name}`:`无尽漫游 · 第 ${data.level??1} 站 · ${data.wave??0} 波`,14,UI.muted);
     paperCard(this,512,423,929,449);
     this.add.graphics().lineStyle(1,UI.line,.7).lineBetween(513,219,513,626);
-    stamp(this,432,261,victory?'已送达':'待续',38,victory?UI.green:UI.amber);
-    portrait(this,159,310,operativeId,144);
+    stamp(this,432,261,victory?'已走过':'待续',38,victory?UI.green:UI.amber);
+    if (this.textures?.exists(catAtlasKey(operativeId, true))) {
+      const cat = this.add.sprite(159,310,catAtlasKey(operativeId, true),'idle-0').setDisplaySize(144,144);
+      if (!SettingsManager.get().reducedMotion) {
+        cat.play(catAnimationKey(operativeId,victory?'celebrate':'idle',true));
+        if (victory) cat.once('animationcomplete',()=>cat.play(catAnimationKey(operativeId,'idle',true)));
+      }
+    } else portrait(this,159,310,operativeId,144);
     heading(this,260,268,getOperative(operativeId).name,25);
     label(this,262,311,`熟练度 ${mastery.rank} · ${mastery.title}`,12,UI.green,true);
     label(this,262,347,`本次熟练度 +${stageResult?.masteryXp??data.reward?.masteryXp??0}`,12,UI.muted);
@@ -69,6 +78,9 @@ export class GameOverScene extends Phaser.Scene {
     label(this,549,513,'这是行为偏好，不是能力评分。',11,UI.muted);
     const suggestion=stageResult?.campaignCompleted?'去无尽漫游延续流派，或与五阶影子换一种方式切磋。':victory?'下一封信和新的风景正在等你。也可以先回工坊，整理刚刚得到的收获。':/营地|防线|暖灯|据点/.test(data.defeatReason??'')?'下次试试按 E 安排影伴守营，自己沿树荫截住来路。':'下次留一次轻跃给危险的弹幕，技能充满后，用 SPACE 打开退路。';
     label(this,549,548,suggestion,13,UI.green,true).setWordWrapWidth(386,true).setLineSpacing(8);
+    if (mode === 'campaign' && victory && saved && data.profileSaved !== false && getStoriesForCompletedStage(stageId).length) {
+      button(this,740,627,384,'一封远方回信到了 · 打开回信册  →',()=>this.scene.start('LetterBookScene'),{secondary:true,height:32,size:13});
+    }
 
     const next=stageResult?.nextStageId;
     const canNext=mode==='campaign'&&victory&&saved&&data.profileSaved!==false&&next&&CampaignProgressionManager.isStageUnlocked(next);
@@ -78,7 +90,7 @@ export class GameOverScene extends Phaser.Scene {
     const protectedSave=needsSave&&(stageResult?.error==='future-save-version'||MetaProgressionManager.getWriteProtection()==='future-version');
     const retry={mode,stageId:mode==='campaign'?stageId:undefined,trialTier,operativeId,freshRun:true};
     button(this,214,696,335,protectedSave?'新版存档已保护':needsSave?'重试保存这封回信  ·  S':canNext?'下一封信，准备出发  →':victory&&mode==='campaign'?'把回信收进旅行地图':'再走一次这段路  ·  R',()=>needsSave?this.retryStageSave(data):canNext?this.scene.start('LoadoutScene',{mode:'campaign',stageId:next,operativeId}):victory&&mode==='campaign'?this.scene.start('CampaignScene',{stageId}):this.scene.start('ArenaScene',retry),{disabled:protectedSave,height:48,size:15});
-    button(this,540,696,280,mode==='campaign'?'打开旅行地图':mode==='shadow'?'选择另一封挑战书':'换一位旅人',()=>this.leaveResult(data,'map',()=>this.scene.start(mode==='campaign'?'CampaignScene':'LoadoutScene',mode==='campaign'?{stageId}:{mode,trialTier,operativeId})),{secondary:true,height:48,size:14});
+    button(this,540,696,280,mode==='campaign'?'打开旅行地图':mode==='shadow'?'选择另一封挑战书':'试试另一套邮装',()=>this.leaveResult(data,'map',()=>this.scene.start(mode==='campaign'?'CampaignScene':'LoadoutScene',mode==='campaign'?{stageId}:{mode,trialTier,operativeId})),{secondary:true,height:48,size:14});
     button(this,840,696,275,'去工坊整理行囊',()=>this.leaveResult(data,'workshop',()=>this.scene.start('WorkshopScene',{operativeId})),{secondary:true,height:48,size:14});
     const saveNotice=protectedSave?'存档来自更新版本，请使用新版继续；原有记录已保留。'
       :stageResult&&!saved&&!stageResult.routeSaved?'本次成果只留在当前页面 · S 重试保存；刷新或离开会丢失本次成果'

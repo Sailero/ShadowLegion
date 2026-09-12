@@ -1,0 +1,57 @@
+{
+  "date": "2026-09-12",
+  "method": "Connected Microsoft Edge via CUA screenshots, accessibility tree, ordinary clicks and key presses; Browser SDK read-only DOM and captured warn/error logs",
+  "origin": "http://localhost:4173/",
+  "storageScope": "Existing task QA origin retained from rc.3. No progress, position, damage or save state was injected through page scripts.",
+  "browserVersion": "not independently collected",
+  "screenshotEvidence": "Screenshots inspected in the tool conversation. This is an observation log; no PNG archive or video was exported.",
+  "firstForestFlow": {
+    "build": "Intermediate alpha production script index-C_QG5Gfp.js, before final environment paint, sound cues and copy polish",
+    "startupRegression": "An earlier alpha remained paused because Phaser had not received initial focus. After the BrowserFocus fix, a fresh Edge tab skipped the prologue into an active forest with objective 0/3.",
+    "flow": [
+      "Read prologue and skip into forest using Escape",
+      "Click ground to walk around the post office and trees",
+      "Find recipient paper in flowers; F advances confirmed address count to 1/3",
+      "Find address paper at the old oak; F advances to 2/3",
+      "Find landmark paper at the moss stone; F advances to 3/3",
+      "Walk near the bell stone and press E; echo travels to the stone before the physical bridge opens",
+      "Cross the open bridge while echo stays on the west bank",
+      "Press F at Li Jian's mailbox; delivery confirmation and the next recipient/address appear",
+      "Recall echo with E; original bridge closes, southern shortcut remains open",
+      "Walk south, cross the new shortcut with echo and return around the post office",
+      "Press F near the post office; menu displays forest letter delivered"
+    ],
+    "menuAfterDelivery": { "forestDelivered": true, "practiceStars": 2, "warmCrystals": 3, "practiceCheckpoint": "1-2" },
+    "limitations": "Tool-controlled point walking and key taps. This is not a human pace or held-key responsiveness sample. The full outbound collection and delivery loop was not repeated from a fresh save after final paint/audio/copy changes."
+  },
+  "finalBuildSmoke": {
+    "script": "assets/index-D5VG81Rx.js",
+    "reloadMethod": "CUA tab.reload on the same QA origin after final release:web; read-only DOM confirmed the production script and data-game-ready=true",
+    "retained": { "forestDelivered": true, "practiceStars": 2, "warmCrystals": 3, "practiceCheckpoint": "1-2" },
+    "flow": [
+      "Menu shows completed forest state after reload",
+      "Revisit forest without replaying prologue; delivery and open southern shortcut remain",
+      "Inspect watercolour trees, paper-textured ground, flowers and curved tile-roof post office; no missing textures observed",
+      "Escape opens readable pause panel; Return resumes; subsequent ground click moves cat and echo",
+      "Escape pause then Escape returns to menu",
+      "Open letter book: prologue and forest reply readable, other four replies and ending locked in this QA save",
+      "Open forest reply, inspect both pages using Right, press R to return to page 1, then Escape back to letter book",
+      "Escape returns to menu"
+    ],
+    "visibleFailuresObserved": [],
+    "capturedWarnErrorLogs": [],
+    "logScope": "Browser SDK dev.logs at startup and after this final-build smoke returned no captured warn/error entries; not proof of every uncaptured browser event or every game scene."
+  },
+  "notCovered": [
+    "All sixteen story pages rendered through ordinary unlock progression",
+    "Human listening, movement feel, full direction/animation review and reduced-motion review",
+    "Final-build fresh-save collection/delivery replay and 20-minute graphical soak",
+    "Nine-domain OS backup export/import/restore round trip",
+    "Native browser storage write failure and quota faults",
+    "Minimum hardware performance, native DPI, fullscreen and multiple monitors",
+    "Chrome/Firefox complete flows and Electron desktop package",
+    "Gamepad and remapping, currently not implemented",
+    "Five-region three-hour campaign, currently not implemented"
+  ],
+  "fullReleaseAcceptance": false
+}

@@ -100,7 +100,7 @@ const VALID_BUILDS: BuildPath[] = ['nova', 'storm', 'rift', 'engineer'];
 const VALID_OPERATIVES: OperativeId[] = ['ranger', 'gunner', 'warden', 'engineer'];
 const VALID_SKILLS = ['burst', 'barrage', 'timerift', 'sentry'];
 const UNLOCK_NAMES: Record<string, string> = {
-  gunner: '爆米花炮手', warden: '抱抱守卫', engineer: '蜜蜂工匠',
+  gunner: '爆米花邮装', warden: '抱抱邮装', engineer: '蜜蜂邮装',
   barrage: '爆米花雨', timerift: '慢悠悠茶会', sentry: '蜜蜂小帮手',
 };
 const int = (value: unknown, max = MAX_STAT, min = 0): number => typeof value === 'number' && Number.isFinite(value)

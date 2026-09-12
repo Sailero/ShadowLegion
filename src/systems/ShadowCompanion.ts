@@ -8,6 +8,7 @@ import { pointInRect } from '../data/chapters';
 import { Enemy } from '../entities/Enemy';
 import type { Hero } from '../entities/Hero';
 import type { BulletOpts } from '../entities/Projectile';
+import { CatAnimator } from './CatAnimator';
 import {
   chooseShadowTarget, deriveShadowTemperament, shadowLineBlocked,
   type ShadowMode, type ShadowPoint, type ShadowTemperament,
@@ -31,14 +32,20 @@ export class ShadowCompanion {
   private shots = 0;
   private commandUntil = 0;
   private position: ShadowPoint;
-  private portrait?: Phaser.GameObjects.Image;
+  private portrait?: Phaser.GameObjects.Sprite;
+  private animator?: CatAnimator;
+  private facingAngle = 0;
 
   constructor(private scene: Phaser.Scene, private options: ShadowCompanionOptions) {
     this.temperament = deriveShadowTemperament(options.profile);
     this.mode = this.temperament.mode;
     this.position = { x: options.core.x + 82, y: options.core.y + 48 };
     this.body = scene.add.graphics().setDepth(9);
-    if (scene.textures.exists('shadow_fox')) this.portrait = scene.add.image(this.position.x, this.position.y, 'shadow_fox').setDepth(9).setAlpha(.84);
+    if (scene.textures.exists('shadow_fox')) {
+      this.portrait = scene.add.sprite(this.position.x, this.position.y, 'shadow_fox').setDepth(9).setAlpha(.78);
+      this.animator = new CatAnimator(this.portrait, 'echo');
+      this.animator.update(0, { speed: 0 });
+    }
     this.label = scene.add.text(this.position.x, this.position.y - 30, this.temperament.name, {
       fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#315b51',
       backgroundColor: '#fff7df', padding: { x: 5, y: 3 },
@@ -62,6 +69,7 @@ export class ShadowCompanion {
 
   update(time: number, delta: number, hero: Hero, enemies: readonly Enemy[]): void {
     if (!this.body.active || !hero.active) return;
+    const before = { ...this.position };
     let anchor: ShadowPoint = { x: hero.x - 56, y: hero.y + 44 };
     if (this.mode === 'guard') {
       let nearest: Enemy | undefined;
@@ -80,8 +88,13 @@ export class ShadowCompanion {
       };
     }
     this.moveToward(this.options.spectator ? { x: this.options.core.x + 65, y: this.options.core.y + 45 } : anchor, time, delta);
+    const movedX = this.position.x - before.x, movedY = this.position.y - before.y;
+    const speed = delta > 0 ? Math.hypot(movedX, movedY) / delta * 1000 : 0;
+    this.animator?.update(delta, { speed, reducedMotion: SettingsManager.get().reducedMotion });
     const target = chooseShadowTarget(this.position, this.options.core, enemies, this.temperament, this.mode, this.options.chapter.obstacles);
-    const angle = target ? Math.atan2(target.y - this.position.y, target.x - this.position.x) : 0;
+    if (target) this.facingAngle = Math.atan2(target.y - this.position.y, target.x - this.position.x);
+    else if (Math.abs(movedX) > .01) this.facingAngle = Math.atan2(movedY, movedX);
+    const angle = this.facingAngle;
     if (!this.options.spectator && target && time - this.lastFire >= this.temperament.fireIntervalMs) {
       this.lastFire = time;
       this.shots++;
@@ -126,7 +139,7 @@ export class ShadowCompanion {
 
   private draw(time: number, angle: number): void {
     const g = this.body;
-    const bob = SettingsManager.get().reducedMotion ? 0 : Math.sin(time * 0.005) * 2.5;
+    const bob = this.animator || SettingsManager.get().reducedMotion ? 0 : Math.sin(time * 0.005) * 2.5;
     g.clear().setPosition(this.position.x, this.position.y);
     g.fillStyle(0x36584c, 0.14).fillEllipse(0, 14, 33, 11);
     g.lineStyle(2, this.temperament.color, 0.28).strokeCircle(0, bob, 24);
@@ -162,6 +175,7 @@ export class ShadowRival extends Enemy {
   private shotCount = 1;
   private rivalHealth?: Phaser.GameObjects.Graphics;
   private trial?: ShadowTrialDef;
+  private catAnimator?: CatAnimator;
 
   constructor(
     scene: Phaser.Scene, x: number, y: number, profile: unknown, chapterId: number,
@@ -184,7 +198,9 @@ export class ShadowRival extends Enemy {
       this.spd *= 1 + (options.tier - 1) * .08;
     }
     this.setData('shadowRival', true);
-    this.setTexture('hero').setScale(1).setTint(0xf3c58a).setAlpha(0.88);
+    this.setTexture(scene.textures.exists('shadow_cat_rival') ? 'shadow_cat_rival' : 'hero').setScale(1).setAlpha(0.88);
+    this.catAnimator = new CatAnimator(this, 'mirror');
+    this.catAnimator.update(0, { speed: 0 });
     (this.body as Phaser.Physics.Arcade.Body).setCircle(12, this.width / 2 - 12, this.height / 2 - 12);
     this.nextVolley = getBattleTime(scene) + 1800 + (options?.offsetMs ?? 0);
     this.shotCount = temperament.style === '火力手' ? 3 : temperament.style === '战术家' ? 2 : 1;
@@ -204,7 +220,7 @@ export class ShadowRival extends Enemy {
     const distance = Math.hypot(hero.x - this.x, hero.y - this.y);
     const body = this.body as Phaser.Physics.Arcade.Body;
     this.setFlipX(Math.cos(this.volleyAt ? this.volleyAngle : angle) < 0);
-    this.rotation = SettingsManager.get().reducedMotion ? 0 : Math.sin(time * .008) * .06;
+    this.rotation = 0;
     if (this.volleyAt) {
       body.setVelocity(0, 0);
       if (time >= this.volleyAt) {
@@ -233,6 +249,7 @@ export class ShadowRival extends Enemy {
         }
       }
     }
+    this.catAnimator?.update(_delta, { speed: body.velocity.length(), reducedMotion: SettingsManager.get().reducedMotion });
     this.rivalLabel?.setPosition(this.x, this.y - 43);
     this.rivalHealth?.clear().fillStyle(0x805d45, 0.22).fillRoundedRect(this.x - 26, this.y - 29, 52, 5, 2);
     this.rivalHealth?.fillStyle(0xd79866, 1).fillRoundedRect(this.x - 26, this.y - 29, 52 * Math.max(0, this.hp / this.maxHp), 5, 2);

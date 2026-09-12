@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameMode, getShadowTrial, SHADOW_TRIALS } from '../data/modes';
 import { getOperative, OPERATIVES, OperativeId } from '../data/operatives';
 import { getSkill } from '../data/skills';
+import { skillTexture } from '../ui/skillVisuals';
 import { getStage } from '../data/stages';
 import { PROGRESSION_MILESTONES } from '../data/progression';
 import { MetaProgressionManager } from '../systems/MetaProgressionManager';
@@ -36,12 +37,12 @@ export class LoadoutScene extends Phaser.Scene {
     backdrop(this, '出发前的一页  /  THE TRAVELER’S SATCHEL');
     button(this, 919, 35, 141, '返回  ESC', () => this.back(), { secondary: true, height: 33, size: 12 });
     heading(this, 41, 91, this.mode === 'campaign' ? `${stage.label} · ${stage.name}` : this.mode === 'shadow' ? '收到了，昨天的挑战书。' : '去看看，路的尽头还有什么。', 33);
-    label(this, 44, 142, this.mode === 'campaign' ? '选好旅人和拿手本领，就把这封信送往下一处风景。' : this.mode === 'shadow' ? '五封独立挑战书，三轮切磋。看清蓄力，找到自己的破绽。' : '五种风景不断轮转，保留本局搭配，向更远的波次进发。', 13, UI.muted);
+    label(this, 44, 142, this.mode === 'campaign' ? '选好邮装和拿手本领，先把下一段邮路练习走稳。' : this.mode === 'shadow' ? '五封独立挑战书，三轮切磋。看清蓄力，找到自己的破绽。' : '五种风景不断轮转，保留本局搭配，向更远的波次进发。', 13, UI.muted);
     paperCard(this, 512, 442, 951, 536);
     const seam = this.add.graphics();
     seam.lineStyle(1, UI.line,.8).lineBetween(419,194,419,687);
     seam.lineStyle(5,0xb7a280,.08).lineBetween(424,194,424,687);
-    label(this,60,201,'01  谁来送这封信？',14,UI.green,true);
+    label(this,60,201,'01  棉棉今天穿哪套邮装？',14,UI.green,true);
     OPERATIVES.forEach((item,index) => {
       const y=275+index*80;
       const unlocked=state.unlockedOperatives.includes(item.id);
@@ -52,7 +53,7 @@ export class LoadoutScene extends Phaser.Scene {
       portrait(this,91,y,item.id,56);
       label(this,135,y-22,item.name,17,unlocked?UI.ink:UI.muted,true);
       const milestone=PROGRESSION_MILESTONES.find(unlock=>unlock.operativeId===item.id);
-      label(this,135,y+7,unlocked?item.role:`通关 ${getStage(milestone?.stageId??1).label} 后加入`,11,UI.muted);
+      label(this,135,y+7,unlocked?item.role:`走过 ${getStage(milestone?.stageId??1).label} 后学会`,11,UI.muted);
       label(this,378,y-20,selected?'✓':unlocked?String(index+1):'锁',12,selected?UI.green:UI.muted,true).setOrigin(1,0);
       if(unlocked) choiceHit(this,226,y,342,72,()=>this.refresh({operativeId:item.id}));
       shortcut(this,String(index+1),()=>{if(unlocked)this.refresh({operativeId:item.id});});
@@ -65,7 +66,10 @@ export class LoadoutScene extends Phaser.Scene {
     heading(this,454,205,operative.name,29);
     portrait(this,911,253,this.selectedOperative,92);
     label(this,456,251,operative.trait,13,UI.muted).setWordWrapWidth(350,true).setLineSpacing(7);
-    label(this,456,315,`拿手本领 · ${getSkill(operative.signatureSkill)?.name ?? '花火'}`,14,UI.green,true);
+    const skill = getSkill(operative.signatureSkill)!;
+    this.add.image(474, 323, skillTexture(skill.id)).setDisplaySize(34, 34);
+    label(this,498,305,`拿手本领 · ${skill.name}`,14,UI.green,true);
+    label(this,498,328,`${skill.purpose} · ${skill.chargeCost} 点灵感`,11,UI.muted);
     titleRule(this,455,350,501);
     if(this.mode==='campaign') {
       label(this,456,375,'02  这次出发，要记住的事',14,UI.green,true);

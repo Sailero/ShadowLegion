@@ -21,6 +21,51 @@ const snapshot = () => [...entries.entries()].sort(([a], [b]) => a.localeCompare
 const stage = id => Campaign.recordStageResult(id, { completionId: `stage-${id}`, victory: true, operativeId: 'ranger', durationSec: 80, coreRatio: 1,
   commands: 5, dashes: 10, intercepts: 100, priorityKills: 100, terrainHits: 100, skills: 10 });
 
+const deliveredPostal = () => ({ version: 1, foundAddressIds: ['recipient', 'address', 'landmark'], deliveryCompleted: true, completionId: 'forest-delivery-1' });
+
+test('the forest letter survives export and restore without granting campaign stars or currency', () => {
+  write(BACKUP_KEYS.postal, deliveredPostal());
+  const exported = Backup.exportBackup(store);
+  assert.equal(exported.ok, true);
+  assert.deepEqual(exported.preview.postal, { delivered: true, addressPieces: 3 });
+  entries.clear();
+  assert.equal(Backup.restoreBackup(exported.text, store).ok, true);
+  assert.deepEqual(JSON.parse(entries.get(BACKUP_KEYS.postal)), deliveredPostal());
+  assert.equal(Meta.getState().shadowCores, 0);
+  assert.equal(Campaign.getState().totalStars, 0);
+});
+
+test('an old backup without postal data preserves the exact current forest journey', () => {
+  const original = JSON.stringify({ version: 1, foundAddressIds: ['recipient'], deliveryCompleted: false, completionId: null }, null, 2);
+  entries.set(BACKUP_KEYS.postal, original);
+  const text = envelope({ meta: meta() });
+  assert.equal(Backup.previewBackup(text).preview.preserved.includes('森林邮路与回信'), true);
+  assert.equal(Backup.restoreBackup(text, store).ok, true);
+  assert.equal(entries.get(BACKUP_KEYS.postal), original);
+});
+
+test('postal backup rejects missing address proof and protects a newer current journey', () => {
+  const incomplete = { ...deliveredPostal(), foundAddressIds: ['recipient'] };
+  assert.equal(Backup.previewBackup(envelope({ meta: meta(), postal: incomplete })).ok, false);
+  assert.equal(Backup.previewBackup(envelope({ meta: meta(), postal: { ...deliveredPostal(), version: 2 } })).ok, false);
+  write(BACKUP_KEYS.postal, { version: 2, futureRoute: true });
+  const before = snapshot();
+  assert.equal(Backup.restoreBackup(envelope({ meta: meta(), postal: deliveredPostal() }), store).code, 'newer-current-save');
+  assert.deepEqual(snapshot(), before);
+});
+
+test('a refused postal restore rolls every preceding game section back to its original bytes', () => {
+  write(BACKUP_KEYS.meta, meta({ shadowCores: 9 }));
+  write(BACKUP_KEYS.postal, { version: 1, foundAddressIds: ['address'], deliveryCompleted: false, completionId: null });
+  const before = snapshot();
+  let denied = false;
+  const flaky = { ...store, setItem(key, value) { if (key === BACKUP_KEYS.postal && !denied) { denied = true; throw new Error('quota'); } store.setItem(key, value); } };
+  const result = Backup.restoreBackup(envelope({ meta: meta({ shadowCores: 44 }), postal: deliveredPostal() }), flaky);
+  assert.equal(result.ok, false);
+  assert.equal(result.rollback, 'complete');
+  assert.deepEqual(snapshot(), before);
+});
+
 test('a future shadow reward ledger is rejected on export, preview and restore without erasing it', () => {
   const future = meta();
   future.modeProgress.shadowRewardLedger = { version: 2, futurePayments: [5] };
@@ -64,7 +109,7 @@ test('a durable unpaid campaign reward survives backup and is reconciled exactly
   assert.equal(Campaign.getStageRecord(1).clears, 1);
 });
 
-test('export reads exactly the eight game keys and preview performs no storage access or writes', () => {
+test('export reads exactly the nine game keys and preview performs no storage access or writes', () => {
   entries.set('another-application-token', 'private-unrelated-data');
   const reads = [];
   const readonly = { getItem(key) { reads.push(key); return store.getItem(key); }, setItem() { throw new Error('write forbidden'); }, removeItem() { throw new Error('remove forbidden'); } };
@@ -72,7 +117,7 @@ test('export reads exactly the eight game keys and preview performs no storage a
   assert.equal(result.ok, true);
   assert.deepEqual(reads.sort(), Object.values(BACKUP_KEYS).sort());
   assert.equal(result.text.includes('private-unrelated-data'), false);
-  assert.equal(Object.keys(JSON.parse(result.text).data).length, 8);
+  assert.equal(Object.keys(JSON.parse(result.text).data).length, 9);
   globalThis.localStorage = { getItem() { throw new Error('preview must be pure'); } };
   const preview = Backup.previewBackup(result.text);
   assert.equal(preview.ok, true);
