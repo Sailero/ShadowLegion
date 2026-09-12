@@ -1,6 +1,8 @@
+import { getBattleTime } from '../systems/BattleClock';
 import Phaser from 'phaser';
 import { HERO_CFG, ARENA_WIDTH, ARENA_HEIGHT } from '../config/gameConfig';
 import { getSkill, getSkillStatsForLevel } from '../data/skills';
+import { SettingsManager } from '../systems/SettingsManager';
 
 export interface FireEvent {
   x: number;
@@ -34,7 +36,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   private dashSpd: number;
   private dashDur: number;
   dashCooldown: number;
-  private lastDash = 0;
+  private lastDash = -10000;
   private dashing = false;
   private dashEnd = 0;
   private dashVx = 0;
@@ -79,6 +81,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   private regenTimer = 0;
   private swTimer = 0;
   speedMult = 1;
+  terrainSpeedMult = 1;
   damageMult = 1;
   atkSpdMult = 1;
   magnetRadius: number;
@@ -124,13 +127,17 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       SHIFT: kb.addKey('SHIFT', false),
       SPACE: kb.addKey('SPACE', false),
       Q: kb.addKey('Q', false),
+      UP: kb.addKey('UP', false),
+      DOWN: kb.addKey('DOWN', false),
+      LEFT: kb.addKey('LEFT', false),
+      RIGHT: kb.addKey('RIGHT', false),
     };
   }
 
   get isDashing(): boolean { return this.dashing; }
-  get isInvincible(): boolean { return this.dashing || this.scene.time.now < this.invUntil; }
-  get isBarrageActive(): boolean { return this.scene.time.now < this.barrageEndTime; }
-  get isTimeRiftActive(): boolean { return this.scene.time.now < this.timeRiftEndTime; }
+  get isInvincible(): boolean { return this.dashing || getBattleTime(this.scene) < this.invUntil; }
+  get isBarrageActive(): boolean { return getBattleTime(this.scene) < this.barrageEndTime; }
+  get isTimeRiftActive(): boolean { return getBattleTime(this.scene) < this.timeRiftEndTime; }
 
   getActiveSkill() { return getSkill(this.activeSkillId); }
 
@@ -157,14 +164,14 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     }
 
     let ix = 0, iy = 0;
-    if (this.keys.A.isDown) ix -= 1;
-    if (this.keys.D.isDown) ix += 1;
-    if (this.keys.W.isDown) iy -= 1;
-    if (this.keys.S.isDown) iy += 1;
+    if (this.keys.A.isDown || this.keys.LEFT.isDown) ix -= 1;
+    if (this.keys.D.isDown || this.keys.RIGHT.isDown) ix += 1;
+    if (this.keys.W.isDown || this.keys.UP.isDown) iy -= 1;
+    if (this.keys.S.isDown || this.keys.DOWN.isDown) iy += 1;
 
     if (!isDashing) {
       if (ix && iy) { const n = Math.SQRT1_2; ix *= n; iy *= n; }
-      const maxSpd = this.moveSpeed * this.speedMult;
+      const maxSpd = this.moveSpeed * this.speedMult * this.terrainSpeedMult;
 
       if (ix || iy) {
         const tx = ix * maxSpd;
@@ -189,7 +196,7 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       this.rotation = Phaser.Math.Angle.Between(this.x, this.y, wp.x, wp.y);
 
       const interval = this.fireRate / this.atkSpdMult;
-      if (ptr.isDown && !ptr.rightButtonDown() && time > this.lastFire + interval) {
+      if ((ptr.isDown && !ptr.rightButtonDown() || SettingsManager.get().autoFire) && time > this.lastFire + interval) {
         this.fire(time, wp.x, wp.y);
       }
     }
@@ -233,8 +240,9 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
       this.dash(time);
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE) && this.charge >= this.getSkillChargeCost()) {
-      this.useSkill();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+      if (this.charge >= this.getSkillChargeCost()) this.useSkill();
+      else this.scene.events.emit('actionUnavailable', { label: `还差 ${Math.ceil(this.getSkillChargeCost() - this.charge)} 点灵感，继续击退小捣蛋` });
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.Q)) {
@@ -295,10 +303,12 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount: number): boolean {
+    if (!Number.isFinite(amount) || amount <= 0 || this.hp <= 0) return false;
     if (this.isInvincible) return false;
 
     if (this.shieldStacks > 0) {
       this.shieldStacks--;
+      this.invUntil = getBattleTime(this.scene) + HERO_CFG.invincibleMs;
       this.scene.events.emit('shieldBreak', { x: this.x, y: this.y });
       return false;
     }
@@ -310,8 +320,8 @@ export class Hero extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.hp = Math.max(0, Math.round(this.hp - amount));
-    this.lastDamageTaken = this.scene.time.now;
-    this.invUntil = this.scene.time.now + HERO_CFG.invincibleMs;
+    this.lastDamageTaken = getBattleTime(this.scene);
+    this.invUntil = getBattleTime(this.scene) + HERO_CFG.invincibleMs;
     this.scene.events.emit('heroHit', { x: this.x, y: this.y, damage: amount });
 
     if (this.hp <= 0) {

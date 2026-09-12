@@ -1,128 +1,80 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 import { SoundManager } from '../systems/SoundManager';
-import {
-  MetaProgressionManager, WORKSHOP_MAX_RANK, WORKSHOP_MODULES,
-  WorkshopModuleId, workshopUpgradeCost,
-} from '../systems/MetaProgressionManager';
+import { MetaProgressionManager, WORKSHOP_MAX_RANK, WORKSHOP_MODULES,
+  WorkshopModuleId, workshopUpgradeCost } from '../systems/MetaProgressionManager';
+import { CHAPTERS } from '../data/chapters';
+import { OPERATIVES } from '../data/operatives';
+import { backdrop, button, drawFlower, label, paperCard, shortcut, UI } from '../ui/theme';
+import { openPlaytestRecords } from '../ui/playtestRecords';
 
 export class WorkshopScene extends Phaser.Scene {
+  private notice = '';
   constructor() { super('WorkshopScene'); }
+  init(data: { notice?: string } = {}) { this.notice = data.notice ?? ''; }
 
   create() {
-    const snd = SoundManager.get();
     const state = MetaProgressionManager.getState();
     const level = MetaProgressionManager.getWorkshopLevel(state);
     const bonuses = MetaProgressionManager.getBonuses(state);
-    this.cameras.main.setBackgroundColor(0x080c14);
+    backdrop(this, '营地工坊  /  LITTLE THINGS GROW');
+    button(this, 754, 39, 145, '查看试玩记录', () => openPlaytestRecords(this), { secondary: true, height: 34, size: 12 });
+    button(this, 914, 39, 135, '返回营地  ESC', () => this.scene.start('MenuScene'), { secondary: true, height: 34, size: 12 });
+    label(this, 45, 96, '把旅途收获，种进明天。', 31, UI.ink, true);
+    label(this, 47, 147, '暖晶来自冒险进度与通关。升级永久保留，每项最多 5 级。', 14, UI.muted);
+    paperCard(this, 842, 133, 271, 75, 0xf4e2c5);
+    label(this, 731, 111, '口袋里的暖晶', 11, UI.muted);
+    label(this, 952, 120, String(state.shadowCores), 30, UI.ink, true).setOrigin(1, 0);
+    label(this, 731, 135, `营地成长 ${level}/15`, 13, UI.green, true);
 
-    const glow = this.add.graphics();
-    for (let r = 330; r > 0; r -= 35) {
-      glow.fillStyle(0x172554, 0.018);
-      glow.fillCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, r);
-    }
-
-    this.add.text(GAME_WIDTH / 2, 72, '军 团 工 坊', {
-      fontSize: '36px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
-      stroke: '#000', strokeThickness: 4,
-    }).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 116, '把每次突围的数据与残骸，转化为下一局的微弱优势', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#64748b',
-    }).setOrigin(0.5);
-
-    this.add.text(GAME_WIDTH / 2, 165, `◆ 影核 ${state.shadowCores}    ·    工坊等级 ${level}/15`, {
-      fontSize: '20px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fbbf24',
-    }).setOrigin(0.5);
-
-    const cardY = 365;
+    const accents = [0xf0d4ac, 0xdce7ca, 0xe1d9e9];
     WORKSHOP_MODULES.forEach((module, index) => {
-      const x = 205 + index * 307;
+      const x = 196 + index * 316;
       const rank = state.modules[module.id];
       const cost = workshopUpgradeCost(rank);
       const canBuy = rank < WORKSHOP_MAX_RANK && state.shadowCores >= cost;
-
-      const card = this.add.graphics();
-      const draw = (hover: boolean) => {
-        card.clear();
-        card.fillStyle(hover && canBuy ? 0x172033 : 0x0f172a, 0.98);
-        card.fillRoundedRect(x - 128, cardY - 150, 256, 300, 12);
-        card.lineStyle(hover && canBuy ? 2 : 1, module.color, hover && canBuy ? 0.9 : 0.45);
-        card.strokeRoundedRect(x - 128, cardY - 150, 256, 300, 12);
-      };
-      draw(false);
-
-      this.add.circle(x, cardY - 98, 25, module.color, 0.16)
-        .setStrokeStyle(2, module.color, 0.8);
-      this.add.text(x, cardY - 98, `${index + 1}`, {
-        fontSize: '18px', fontFamily: 'monospace', fontStyle: 'bold',
-        color: `#${module.color.toString(16).padStart(6, '0')}`,
-      }).setOrigin(0.5);
-      this.add.text(x, cardY - 48, module.name, {
-        fontSize: '21px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
-      }).setOrigin(0.5);
-      this.add.text(x, cardY - 12, module.desc, {
-        fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
-      }).setOrigin(0.5);
-      this.add.text(x, cardY + 20, module.perRank, {
-        fontSize: '13px', fontFamily: 'monospace', color: `#${module.color.toString(16).padStart(6, '0')}`,
-      }).setOrigin(0.5);
-
+      paperCard(this, x, 359, 298, 313);
+      this.add.circle(x, 249, 29, accents[index]);
+      const icon = this.add.graphics();
+      if (index === 0) drawFlower(icon, x, 249, 18, UI.amber);
+      else if (index === 1) {
+        icon.fillStyle(UI.green).fillRoundedRect(x - 12, 233, 24, 28, 8);
+        icon.fillStyle(0xfaf1d2).fillRect(x - 2, 239, 4, 15).fillRect(x - 7, 244, 14, 4);
+      } else {
+        icon.fillStyle(0x9783aa).fillRoundedRect(x - 11, 236, 22, 27, 6);
+        icon.fillStyle(0xdccbb0).fillRoundedRect(x - 8, 231, 16, 7, 2);
+        icon.fillStyle(0xfff3c9).fillTriangle(x + 3, 239, x - 5, 250, x + 5, 248);
+        icon.fillTriangle(x - 3, 259, x + 5, 248, x - 5, 250);
+      }
+      label(this, x, 290, module.name, 22, UI.ink, true).setOrigin(0.5);
+      label(this, x, 328, module.desc, 13, UI.muted).setOrigin(0.5);
+      label(this, x, 358, module.perRank, 14, UI.green, true).setOrigin(0.5);
       const pips = this.add.graphics();
       for (let i = 0; i < WORKSHOP_MAX_RANK; i++) {
-        pips.fillStyle(i < rank ? module.color : 0x1e293b, i < rank ? 1 : 0.8);
-        pips.fillRoundedRect(x - 56 + i * 25, cardY + 54, 18, 8, 3);
+        pips.fillStyle(i < rank ? UI.green : UI.line).fillRoundedRect(x - 65 + i * 28, 391, 18, 9, 4);
       }
-
-      const label = rank >= WORKSHOP_MAX_RANK ? '已满级' : `升级  ◆${cost}`;
-      const buttonColor = rank >= WORKSHOP_MAX_RANK ? 0x111827 : canBuy ? 0x1d4ed8 : 0x172033;
-      const btn = this.add.rectangle(x, cardY + 105, 150, 40, buttonColor)
-        .setStrokeStyle(1, canBuy ? 0x60a5fa : 0x334155, 0.65);
-      const btnText = this.add.text(x, cardY + 105, label, {
-        fontSize: '14px', fontFamily: 'monospace', fontStyle: 'bold',
-        color: canBuy ? '#ffffff' : '#64748b',
-      }).setOrigin(0.5);
-
-      if (rank < WORKSHOP_MAX_RANK) {
-        btn.setInteractive({ useHandCursor: canBuy });
-        btn.on('pointerover', () => { draw(true); if (canBuy) btnText.setColor('#fbbf24'); });
-        btn.on('pointerout', () => { draw(false); btnText.setColor(canBuy ? '#ffffff' : '#64748b'); });
-        btn.on('pointerdown', () => this.buyModule(module.id, snd));
-      }
+      label(this, x, 420, `当前 ${rank} / ${WORKSHOP_MAX_RANK} 级`, 11, UI.muted).setOrigin(0.5);
+      const text = rank >= WORKSHOP_MAX_RANK ? '已经长得很茂盛了 ✓' : canBuy ? `升级  ·  ${cost} 暖晶` : `还差 ${cost - state.shadowCores} 暖晶`;
+      button(this, x, 472, 246, text, () => this.buyModule(module.id), { disabled: !canBuy, size: 14, height: 43 });
     });
 
-    const bestTime = state.bestVictorySec === null
-      ? '--:--'
-      : `${Math.floor(state.bestVictorySec / 60)}:${String(state.bestVictorySec % 60).padStart(2, '0')}`;
-    this.add.text(GAME_WIDTH / 2, 555,
-      `行动 ${state.totalRuns} 次  ·  战役胜利 ${state.wins} 次  ·  章节 ${state.clearedChapters.length}/4  ·  兵种 ${state.unlockedOperatives.length}/4  ·  最快 ${bestTime}`,
-      { fontSize: '14px', fontFamily: 'monospace', color: '#94a3b8' },
-    ).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 590,
-      `当前增幅：伤害 +${Math.round((bonuses.damageMult - 1) * 100)}%  ·  生命 +${bonuses.maxHpBonus}  ·  初始能量 +${bonuses.startCharge}`,
-      { fontSize: '14px', fontFamily: 'monospace', color: '#fbbf24' },
-    ).setOrigin(0.5);
-    this.add.text(GAME_WIDTH / 2, 625, '增幅刻意封顶；真正决定胜负的仍是局内构筑与操作', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#475569',
-    }).setOrigin(0.5);
-
-    const back = this.add.rectangle(GAME_WIDTH / 2, 690, 200, 46, 0x111827)
-      .setStrokeStyle(1, 0x334155, 0.7).setInteractive({ useHandCursor: true });
-    const backText = this.add.text(GAME_WIDTH / 2, 690, '返回菜单  [ESC]', {
-      fontSize: '15px', fontFamily: 'monospace', fontStyle: 'bold', color: '#cbd5e1',
-    }).setOrigin(0.5);
-    back.on('pointerover', () => backText.setColor('#fbbf24'));
-    back.on('pointerout', () => backText.setColor('#cbd5e1'));
-    back.on('pointerdown', () => { snd.buttonClick(); this.scene.start('MenuScene'); });
-    this.input.keyboard?.once('keydown-ESC', () => this.scene.start('MenuScene'));
+    const nextChapter = CHAPTERS[Math.min(3, state.highestChapterUnlocked - 1)];
+    const nextOperative = OPERATIVES.find(item => !state.unlockedOperatives.includes(item.id));
+    paperCard(this, 512, 590, 931, 103, 0xe9eddc);
+    label(this, 67, 556, this.notice || '下一份期待', 15, UI.green, true);
+    label(this, 67, 585, nextOperative
+      ? `通关 ${nextChapter.name}，邀请${nextOperative.name}加入你的旅途。`
+      : '伙伴已全部加入。换个流派通关，或在镜像切磋中读懂自己的习惯。', 14, UI.ink);
+    label(this, 67, 614, `当前增幅：伤害 +${Math.round((bonuses.damageMult - 1) * 100)}%  ·  生命 +${bonuses.maxHpBonus}  ·  初始能量 +${bonuses.startCharge}`, 12, UI.muted);
+    label(this, 50, 675, `已出发 ${state.totalRuns} 次  ·  通关 ${state.wins} 次  ·  探索 ${state.clearedChapters.length}/4 章`, 12, UI.muted);
+    label(this, 50, 707, '工坊增幅有限，地形选择和局内搭配会带来更多可能。', 12, UI.muted);
+    button(this, 814, 702, 325, '带上新装备，继续出发  →', () => this.scene.start('LoadoutScene', { chapter: state.highestChapterUnlocked }), { height: 50 });
+    shortcut(this, 'ESC', () => this.scene.start('MenuScene'));
   }
 
-  private buyModule(id: WorkshopModuleId, snd: SoundManager): void {
-    if (!MetaProgressionManager.purchase(id)) {
-      snd.buttonHover();
-      return;
-    }
-    snd.upgrade();
-    this.cameras.main.flash(100, 80, 120, 255, true);
-    this.scene.restart();
+  private buyModule(id: WorkshopModuleId): void {
+    if (!MetaProgressionManager.purchase(id)) return;
+    SoundManager.get().upgrade();
+    const name = WORKSHOP_MODULES.find(module => module.id === id)?.name ?? '装备';
+    this.scene.restart({ notice: `${name}已升级，下次出发就能带上。` });
   }
 }

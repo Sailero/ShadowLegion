@@ -61,17 +61,20 @@ export class UpgradeManager {
     }
   }
 
-  pickThree(pool: 'wave' | 'level', hero?: Hero): UpgradeDef[] {
+  pickThree(pool: 'wave' | 'level', hero?: Hero, defenseRatio = 1): UpgradeDef[] {
     const source = pool === 'wave' ? WAVE_UPGRADES : LEVEL_UPGRADES;
     const available = source.filter(upgrade => {
       if (upgrade.path && upgrade.path !== this.buildPath) return false;
       if (this.getStacks(upgrade.id) >= upgrade.maxStacks) return false;
-      if (hero && upgrade.id === 'heal' && hero.hp >= hero.maxHp * 0.92) return false;
+      if (hero && upgrade.id === 'heal' && hero.hp >= hero.maxHp * 0.92 && defenseRatio >= 0.92) return false;
       if (upgrade.unlocksSkill) {
         if (!this.availableSkills.has(upgrade.unlocksSkill)) return false;
         if (hero?.unlockedSkills.includes(upgrade.unlocksSkill)) return false;
       }
-      if (upgrade.requiresSkill && hero && !hero.unlockedSkills.includes(upgrade.requiresSkill)) return false;
+      if (upgrade.requiresSkill && hero) {
+        if (!hero.unlockedSkills.includes(upgrade.requiresSkill)) return false;
+        if ((hero.skillLevels[upgrade.requiresSkill] || 1) >= (getSkill(upgrade.requiresSkill)?.maxLevel ?? 5)) return false;
+      }
       return true;
     });
 
@@ -82,11 +85,17 @@ export class UpgradeManager {
     const utilityChoices = Phaser.Utils.Array.Shuffle(available.filter(upgrade => !upgrade.path && !upgrade.unlocksSkill && !upgrade.requiresSkill));
     const result: UpgradeDef[] = [];
 
-    if (pathChoices.length) result.push(pathChoices.shift()!);
-    if (utilityChoices.length) result.push(utilityChoices.shift()!);
-    if (skillChoices.length) result.push(skillChoices.shift()!);
-    else if (pathChoices.length) result.push(pathChoices.shift()!);
-    else if (utilityChoices.length) result.push(utilityChoices.shift()!);
+    const addFirstUnique = (choices: UpgradeDef[]): void => {
+      const choice = choices.find(item => !result.some(picked => picked.id === item.id));
+      if (choice) result.push(choice);
+    };
+    addFirstUnique(pathChoices);
+    addFirstUnique(utilityChoices);
+    addFirstUnique(skillChoices);
+    // A signature skill is both a path card and a skill card. Never offer it
+    // twice, and fill all three slots even when one of the pools is exhausted.
+    const fallback = Phaser.Utils.Array.Shuffle([...available]);
+    while (result.length < Math.min(3, available.length)) addFirstUnique(fallback);
 
     return Phaser.Utils.Array.Shuffle(result).slice(0, 3);
   }
@@ -145,7 +154,7 @@ export class UpgradeManager {
       case 'veteran_speed': hero.speedMult += 0.12; hero.dashCooldown = Math.max(450, Math.round(hero.dashCooldown * 0.88)); break;
       case 'veteran_energy': hero.chargePerKill += 4; hero.charge = hero.chargeMax; break;
       case 'veteran_multishot': hero.bulletCount += 1; hero.damageMult *= 0.95; break;
-      case 'veteran_repair': hero.heal(hero.maxHp); hero.scene.events.emit('defenseRepair', { ratio: 1 }); break;
+      case 'veteran_repair': hero.heal(hero.maxHp); hero.regenPerSec += 1; break;
     }
 
     if (upgrade.path && upgrade.path === this.buildPath) {

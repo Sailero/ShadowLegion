@@ -1,205 +1,88 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, WAVE_CFG } from '../config/gameConfig';
-import { SoundManager } from '../systems/SoundManager';
+import { WAVE_CFG } from '../config/gameConfig';
 import { ScoreManager } from '../systems/ScoreManager';
-import type { BuildPath } from '../data/upgrades';
+import { BUILD_INFO, BuildPath } from '../data/upgrades';
 import type { CombatProfile } from '../systems/RunRecorder';
-import type { RunReward } from '../systems/MetaProgressionManager';
+import { MetaProgressionManager, RunReward } from '../systems/MetaProgressionManager';
 import { getOperative, OperativeId } from '../data/operatives';
+import { CHAPTERS } from '../data/chapters';
+import { backdrop, button, label, paperCard, shortcut, UI } from '../ui/theme';
 
 export class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOverScene'); }
 
   create(data: {
-    score?: number; kills?: number; wave?: number;
-    level?: number; victory?: boolean; endless?: boolean;
+    score?: number; kills?: number; wave?: number; level?: number; victory?: boolean; endless?: boolean;
     durationSec?: number; build?: BuildPath | null; newHighScore?: boolean;
-    profile?: CombatProfile | null; reward?: RunReward | null;
-    defeatReason?: string; operativeId?: OperativeId;
+    profile?: CombatProfile | null; reward?: RunReward | null; defeatReason?: string; operativeId?: OperativeId;
+    shadowTrial?: boolean; startLevel?: number;
   }) {
-    const {
-      score = 0, kills = 0, wave = 0, level = 1,
-      victory = false, endless = false, durationSec = 0,
-      build = null, newHighScore = false, profile = null, reward = null,
-      defeatReason = '阵亡', operativeId = 'ranger',
-    } = data;
-    const snd = SoundManager.get();
-    this.cameras.main.setBackgroundColor(0x080c14);
-
-    const isNew = newHighScore;
-
-    const glow = this.add.graphics();
-    for (let r = 180; r > 0; r -= 25) {
-      glow.fillStyle(victory ? 0x0a2a1a : 0x2a0a0a, 0.025);
-      glow.fillCircle(GAME_WIDTH / 2, 110, r);
-    }
-
-    const titleStr = victory ? '战 役 胜 利' : defeatReason;
-    const titleColor = victory ? '#4ade80' : '#f87171';
-    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.14, titleStr, {
-      fontSize: '52px', fontFamily: 'monospace', fontStyle: 'bold', color: titleColor,
-      stroke: '#000', strokeThickness: 5,
-    }).setOrigin(0.5).setAlpha(0).setScale(0.5);
-    this.tweens.add({
-      targets: title, alpha: 1, scaleX: 1, scaleY: 1,
-      duration: 500, ease: 'Back.easeOut',
-    });
-
-    if (isNew && score > 0) {
-      const badge = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.21, '🏆 新纪录!', {
-        fontSize: '16px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fbbf24',
-      }).setOrigin(0.5).setAlpha(0);
-      this.tweens.add({
-        targets: badge, alpha: 1, y: GAME_HEIGHT * 0.21 - 2, duration: 400,
-        delay: 500, ease: 'Cubic.easeOut',
-      });
-      this.tweens.add({
-        targets: badge, alpha: { from: 1, to: 0.6 },
-        duration: 800, yoyo: true, repeat: -1, delay: 1000,
-      });
+    const { score = 0, kills = 0, wave = 0, level = 1, victory = false, endless = false,
+      durationSec = 0, build = null, newHighScore = false, profile = null, reward = null,
+      defeatReason = '旅途暂歇', operativeId = 'ranger', shadowTrial = false, startLevel = 1 } = data;
+    const state = MetaProgressionManager.getState();
+    const nextChapter = CHAPTERS[Math.min(3, state.highestChapterUnlocked - 1)];
+    backdrop(this, '同行日记  /  EVERY TRIP LEAVES AN ECHO');
+    label(this, 48, 100, victory ? '这一程，守护成功！' : '歇一歇，下次一起走更远。', victory ? 37 : 32, UI.ink, true);
+    const reason = defeatReason.includes('阵亡') || defeatReason.includes('击败') ? '体力耗尽' : defeatReason;
+    label(this, 50, 155, victory ? '营地又多了一段好故事。新的流派与新的影子，等你下次出发。' : `${reason}  ·  这次的收获和战斗习惯，都会成为下次的准备。`, 14, UI.muted);
+    if (newHighScore && score > 0) {
+      paperCard(this, 884, 120, 180, 49, 0xf4e1be);
+      label(this, 884, 120, '✦  创下新纪录', 15, UI.ink, true).setOrigin(0.5);
     }
 
     const stats = [
-      { label: '分数', value: ScoreManager.formatScore(score), color: '#fbbf24' },
-      { label: '击杀', value: `${kills}`, color: '#4ade80' },
-      { label: '用时', value: `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}`, color: '#60a5fa' },
-      { label: '兵种', value: getOperative(operativeId).name, color: `#${getOperative(operativeId).color.toString(16).padStart(6, '0')}` },
+      { title: '本次积分', value: ScoreManager.formatScore(score) },
+      { title: '击退捣蛋鬼', value: String(kills) },
+      { title: '同行时间', value: `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}` },
+      { title: '旅途进度', value: endless ? `第 ${level} 站 · ${wave} 波` : victory ? (startLevel === 1 ? '4 章 · 全部完成' : `第 ${startLevel}–${level} 章完成`) : `${Math.min(4, level)} 章 · ${Math.min(wave, WAVE_CFG.perLevel)}/${WAVE_CFG.perLevel} 波` },
     ];
-
-    const statsY = GAME_HEIGHT * 0.28;
-    const statsGap = 130;
-    const startX = GAME_WIDTH / 2 - statsGap * 1.5;
-
-    stats.forEach((s, i) => {
-      const sx = startX + i * statsGap;
-      const val = this.add.text(sx, statsY, s.value, {
-        fontSize: '30px', fontFamily: 'monospace', fontStyle: 'bold', color: s.color,
-      }).setOrigin(0.5).setAlpha(0);
-      this.add.text(sx, statsY + 30, s.label, {
-        fontSize: '12px', fontFamily: 'monospace', color: '#64748b',
-      }).setOrigin(0.5);
-      this.tweens.add({
-        targets: val, alpha: 1, y: statsY - 2,
-        duration: 350, delay: 300 + i * 120, ease: 'Cubic.easeOut',
-      });
+    stats.forEach((stat, index) => {
+      const x = 157 + index * 237;
+      paperCard(this, x, 250, 220, 103);
+      label(this, x, 221, stat.title, 12, UI.muted).setOrigin(0.5);
+      label(this, x, 261, stat.value, index === 3 ? 20 : 29, UI.ink, true).setOrigin(0.5);
     });
 
-    this.add.rectangle(GAME_WIDTH / 2, statsY + 52, 240, 1, 0x1e293b).setOrigin(0.5);
+    paperCard(this, 275, 437, 457, 219);
+    label(this, 68, 347, '带回营地的收获', 15, UI.ink, true);
+    label(this, 70, 389, `+${reward?.earned ?? 0}`, 44, UI.green, true);
+    label(this, 184, 410, '暖晶', 17, UI.green, true);
+    label(this, 70, 454, `进度 ${reward?.progressReward ?? 0}  +  通关 ${reward?.victoryReward ?? 0}  +  新流派 ${reward?.newBuildReward ?? 0}`, 13, UI.muted);
+    label(this, 70, 487, `口袋里共有 ${reward?.total ?? state.shadowCores} 暖晶，可在工坊永久升级。`, 13, UI.muted);
+    label(this, 70, 517, reward?.newBuildClear ? '新流派首次通关，额外的暖晶也收好啦。' : '抵达更多波次，也能积累下一局的准备。', 11, UI.green);
 
-    const scores = ScoreManager.getScores();
-    if (scores.length > 0) {
-      const boardY = statsY + 72;
-      this.add.text(GAME_WIDTH / 2, boardY, '排行榜', {
-        fontSize: '13px', fontFamily: 'monospace', color: '#475569',
-      }).setOrigin(0.5);
-      const top5 = scores.slice(0, 5);
-      top5.forEach((entry, i) => {
-        const ey = boardY + 22 + i * 20;
-        const isThisRun = entry.score === score && entry.kills === kills && entry.level === level;
-        this.add.text(GAME_WIDTH / 2 - 100, ey, `${i + 1}.`, {
-          fontSize: '12px', fontFamily: 'monospace',
-          color: isThisRun ? '#fbbf24' : '#475569',
-        });
-        this.add.text(GAME_WIDTH / 2 - 75, ey, ScoreManager.formatScore(entry.score), {
-          fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold',
-          color: isThisRun ? '#fbbf24' : '#94a3b8',
-        });
-        this.add.text(GAME_WIDTH / 2 + 35, ey, entry.endless ? `∞${entry.level}` : `${entry.level}-${entry.wave}/${WAVE_CFG.perLevel}`, {
-          fontSize: '12px', fontFamily: 'monospace',
-          color: '#475569',
-        });
-        this.add.text(GAME_WIDTH / 2 + 90, ey, `${entry.kills}K`, {
-          fontSize: '12px', fontFamily: 'monospace',
-          color: '#475569',
-        });
-      });
-    }
-
-    const panelY = 515;
-    const panelW = 330;
-    const panelH = 112;
-    const drawPanel = (x: number, color: number) => {
-      const panel = this.add.graphics();
-      panel.fillStyle(0x0f172a, 0.96);
-      panel.fillRoundedRect(x - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
-      panel.lineStyle(1, color, 0.55);
-      panel.strokeRoundedRect(x - panelW / 2, panelY - panelH / 2, panelW, panelH, 10);
-    };
-
-    const rewardX = GAME_WIDTH / 2 - 180;
-    drawPanel(rewardX, 0xfbbf24);
-    this.add.text(rewardX, panelY - 31, '本局回收', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
-    }).setOrigin(0.5);
-    this.add.text(rewardX, panelY, reward ? `+${reward.earned} 影核` : '+0 影核', {
-      fontSize: '24px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fbbf24',
-    }).setOrigin(0.5);
-    const rewardHint = reward?.newBuildClear
-      ? `新协议首胜奖励  ·  库存 ${reward.total}`
-      : `进度与胜利都会积累  ·  库存 ${reward?.total ?? 0}`;
-    this.add.text(rewardX, panelY + 32, rewardHint, {
-      fontSize: '11px', fontFamily: 'monospace', color: '#64748b',
-    }).setOrigin(0.5);
-
-    const profileX = GAME_WIDTH / 2 + 180;
-    drawPanel(profileX, 0x818cf8);
-    this.add.text(profileX, panelY - 31, '影子行为档案', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
-    }).setOrigin(0.5);
-    this.add.text(profileX, panelY - 2, profile?.style ?? '等待记录', {
-      fontSize: '22px', fontFamily: 'monospace', fontStyle: 'bold', color: '#a78bfa',
-    }).setOrigin(0.5);
-    this.add.text(
-      profileX, panelY + 31,
-      profile
-        ? `机动 ${profile.mobility}  火力 ${profile.firepower}  反应 ${profile.reflex}  技能 ${profile.technique}`
-        : '完成一次有效突围后生成',
-      { fontSize: '11px', fontFamily: 'monospace', color: '#64748b' },
-    ).setOrigin(0.5);
-
-    const retryData = { level: victory ? 1 : level, endless, operativeId, freshRun: true };
-    const btnY = 680;
-    this.makeBtn(GAME_WIDTH / 2 - 220, btnY, '再来一次', false, snd, () => {
-      this.scene.start('ArenaScene', retryData);
+    paperCard(this, 750, 437, 453, 219, 0xeaf0e2);
+    label(this, 545, 347, '留给下一次的影子', 15, UI.ink, true);
+    this.add.image(568, 410, 'hero').setTint(0x95b5a2).setAlpha(0.8).setScale(1.35);
+    label(this, 605, 385, profile?.style ?? '见习伙伴', 24, UI.green, true);
+    label(this, 605, 421, '下次，它会带着这次的习惯同行。', 12, UI.muted);
+    const metrics = [
+      { name: '移动', value: profile?.mobility ?? 0 }, { name: '火力', value: profile?.firepower ?? 0 },
+      { name: '闪避', value: profile?.reflex ?? 0 }, { name: '技能', value: profile?.technique ?? 0 },
+    ];
+    metrics.forEach((metric, index) => {
+      const x = 546 + index * 104;
+      label(this, x, 466, `${metric.name} ${metric.value}`, 12, UI.ink);
+      this.add.rectangle(x, 495, 84, 6, 0xd3dec8).setOrigin(0, 0.5);
+      if (metric.value > 0) this.add.rectangle(x, 495, 84 * Math.min(100, metric.value) / 100, 6, UI.green).setOrigin(0, 0.5);
     });
-    this.makeBtn(GAME_WIDTH / 2, btnY, '军团工坊', true, snd, () => {
-      this.scene.start('WorkshopScene');
-    });
-    this.makeBtn(GAME_WIDTH / 2 + 220, btnY, '返回菜单', true, snd, () => {
-      this.scene.start('MenuScene');
-    });
+    label(this, 546, 518, '这些数值表示行为偏好，不是能力评分。', 11, UI.muted);
 
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 24, '按 R 快速重试', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#1e293b',
-    }).setOrigin(0.5);
+    const recommendation = victory ? `试试另一种流派，或开启镜像切磋，挑战昨天的自己。`
+      : /营地|防线|据点|暖灯/.test(defeatReason) ? '下次试试：靠近营地截击，优先处理向帐篷推进的捣蛋鬼。'
+      : (profile?.reflex ?? 0) < 25 ? '下次试试：用 SHIFT 闪避穿过包围，技能充满后按 SPACE。'
+      : '下次试试：借树丛挡住弹幕，升级时围绕同一流派形成连锁。';
+    label(this, 50, 573, recommendation, 14, UI.green, true).setWordWrapWidth(930, true);
+    const buildName = build ? BUILD_INFO[build]?.name : getOperative(operativeId).name;
+    label(this, 50, 614, `本次流派 · ${buildName}    /    下一站 · ${nextChapter.name}    /    本设备最高分 · ${ScoreManager.formatScore(ScoreManager.getHighScore())}`, 12, UI.muted);
 
-    this.input.keyboard!.once('keydown-R', () => {
-      this.scene.start('ArenaScene', retryData);
-    });
-  }
-
-  private makeBtn(
-    x: number, y: number, label: string, dim: boolean,
-    snd: SoundManager, cb: () => void,
-  ): void {
-    const w = 200, h = 46;
-    const bg = dim ? 0x111827 : 0x1d4ed8;
-    const hov = dim ? 0x1e293b : 0x2563eb;
-    const g = this.add.graphics();
-    const draw = (c: number) => {
-      g.clear();
-      g.fillStyle(c);
-      g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 6);
-      g.lineStyle(1, dim ? 0x334155 : 0x3b82f6, 0.5);
-      g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 6);
-    };
-    draw(bg);
-    const t = this.add.text(x, y, label, {
-      fontSize: '16px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
-    }).setOrigin(0.5);
-    const hit = this.add.rectangle(x, y, w, h, 0, 0).setInteractive({ useHandCursor: true });
-    hit.on('pointerover', () => { draw(hov); t.setColor('#fbbf24'); snd.buttonHover(); });
-    hit.on('pointerout', () => { draw(bg); t.setColor('#e2e8f0'); });
-    hit.on('pointerdown', () => { snd.buttonClick(); cb(); });
+    const retryData = { level: victory ? 1 : level, endless, operativeId, freshRun: true, shadowTrial };
+    button(this, 215, 696, 336, victory ? '再启一程  ·  R' : '再试一次  ·  R', () => this.scene.start('ArenaScene', retryData), { height: 53, size: 17 });
+    button(this, 541, 696, 275, '去工坊种下收获', () => this.scene.start('WorkshopScene'), { secondary: true, height: 53 });
+    button(this, 838, 696, 275, '调整伙伴与路线', () => this.scene.start('LoadoutScene', { endless, operativeId, chapter: Math.min(level, state.highestChapterUnlocked), shadowTrial }), { secondary: true, height: 53 });
+    label(this, 512, 748, 'R 快速重试  ·  ESC 返回营地  ·  进度与暖晶已自动记录', 11, UI.muted).setOrigin(0.5);
+    shortcut(this, 'R', () => this.scene.start('ArenaScene', retryData));
+    shortcut(this, 'ESC', () => this.scene.start('MenuScene'));
   }
 }

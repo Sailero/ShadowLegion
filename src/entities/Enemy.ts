@@ -1,3 +1,4 @@
+import { getBattleTime } from '../systems/BattleClock';
 import Phaser from 'phaser';
 import { EnemyType, ELITE, WAVE_CFG } from '../config/gameConfig';
 
@@ -71,7 +72,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.cfg = cfg;
     this.isElite = elite;
     this.isBoss = boss;
-    const spawnedAt = scene.time.now;
+    const spawnedAt = getBattleTime(scene);
     this.lastFire = spawnedAt;
     this.bossLastCharge = spawnedAt;
     this.lastSummon = spawnedAt;
@@ -155,6 +156,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.medicAI(time, heroX, heroY);
         break;
     }
+
+    if (!this.active || !this.scene || !this.body) return;
 
     // Dodge movement
     if (this.isDodging) {
@@ -576,6 +579,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount: number): boolean {
+    if (!Number.isFinite(amount) || amount <= 0) return false;
     if (!this.active || this._dying) return false;
     // Dodging enemies take reduced damage
     if (this.isDodging) amount = Math.round(amount * 0.3);
@@ -604,6 +608,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   knockback(fromX: number, fromY: number, force: number): void {
+    if (!this.active || !this.body) return;
     const a = Phaser.Math.Angle.Between(fromX, fromY, this.x, this.y);
     const b = this.body as Phaser.Physics.Arcade.Body;
     b.velocity.x += Math.cos(a) * force;

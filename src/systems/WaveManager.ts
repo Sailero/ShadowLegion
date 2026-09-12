@@ -14,7 +14,7 @@ export class WaveManager {
   aliveCount = 0;
   private spawning = false;
   private waveActive = false;
-  private pendingSpawns: Array<{ type: string; elite: boolean; boss: boolean; bossName?: string }> = [];
+  private pendingSpawns: Array<{ type: string; elite: boolean; boss: boolean; bossName?: string; laneIndex: number }> = [];
   private spawnTimer = 0;
   private betweenWaves = false;
   private nextWaveAt = 0;
@@ -49,15 +49,23 @@ export class WaveManager {
     this.waveActive = true;
     this.spawning = true;
     this.pendingSpawns = [];
+    // The first encounter teaches one readable route. Later waves alternate
+    // evenly between the announced entrances instead of randomly piling up.
+    const laneIndices = this.chapter.id === 1 && this.wave === 1
+      ? [0]
+      : this.chapter.spawnPoints.map((_, index) => (index + this.wave - 1) % this.chapter.spawnPoints.length);
 
     for (const s of def.spawns) {
       const count = Phaser.Math.Between(s.min, s.max);
       for (let i = 0; i < count; i++) {
-        this.pendingSpawns.push({ type: s.type, elite: s.elite ?? false, boss: false });
+        this.pendingSpawns.push({
+          type: s.type, elite: s.elite ?? false, boss: false,
+          laneIndex: laneIndices[this.pendingSpawns.length % laneIndices.length],
+        });
       }
     }
     if (def.isBoss && def.bossType) {
-      this.pendingSpawns.push({ type: def.bossType, elite: true, boss: true, bossName: def.name });
+      this.pendingSpawns.push({ type: def.bossType, elite: true, boss: true, bossName: def.name, laneIndex: laneIndices[0] });
     }
 
     Phaser.Utils.Array.Shuffle(this.pendingSpawns);
@@ -70,6 +78,8 @@ export class WaveManager {
       isBoss: def.isBoss,
       name: def.name,
       hint: def.hint,
+      lanes: laneIndices.map(index => this.chapter.spawnPoints[index]),
+      primaryLane: this.chapter.spawnPoints[laneIndices[0]],
     });
   }
 
@@ -89,7 +99,7 @@ export class WaveManager {
       while (this.spawnTimer >= WAVE_CFG.spawnInterval && this.pendingSpawns.length > 0) {
         this.spawnTimer -= WAVE_CFG.spawnInterval;
         const s = this.pendingSpawns.pop()!;
-        this.spawnOne(s.type, s.elite, s.boss, s.bossName);
+        this.spawnOne(s.type, s.elite, s.boss, s.bossName, s.laneIndex);
       }
       if (this.pendingSpawns.length === 0) this.spawning = false;
     }
@@ -110,7 +120,7 @@ export class WaveManager {
     this.nextWaveAt = time + WAVE_CFG.delayMs;
   }
 
-  private spawnOne(type: string, elite: boolean, boss: boolean, bossName?: string): void {
+  private spawnOne(type: string, elite: boolean, boss: boolean, bossName?: string, laneIndex = 0): void {
     const cfg = ENEMY_TYPES[type];
     if (!cfg) return;
 
@@ -118,7 +128,7 @@ export class WaveManager {
     const endlessEliteChance = this.endlessScale > 1.5 ? Math.min(0.5, (this.endlessScale - 1.5) * 0.15) : 0;
     const isElite = elite || (!boss && endlessEliteChance > 0 && Math.random() < endlessEliteChance);
 
-    const pos = this.getSpawnPos();
+    const pos = this.getSpawnPos(laneIndex);
     const enemy = new Enemy(this.scene, pos.x, pos.y, cfg, isElite, boss);
     const hpScale = this.chapter.enemyHpScale * this.endlessScale;
     const damageScale = this.chapter.enemyDamageScale * (1 + (this.endlessScale - 1) * 0.55);
@@ -136,8 +146,8 @@ export class WaveManager {
     this.enemies.add(enemy);
   }
 
-  private getSpawnPos(): { x: number; y: number } {
-    const lane = Phaser.Utils.Array.GetRandom(this.chapter.spawnPoints);
+  private getSpawnPos(laneIndex: number): { x: number; y: number } {
+    const lane = this.chapter.spawnPoints[laneIndex] ?? this.chapter.spawnPoints[0];
     const edgeIsVertical = lane.x < 100 || lane.x > ARENA_WIDTH - 100;
     const x = Phaser.Math.Clamp(lane.x + (edgeIsVertical ? 0 : Phaser.Math.Between(-70, 70)), 30, ARENA_WIDTH - 30);
     const y = Phaser.Math.Clamp(lane.y + (edgeIsVertical ? Phaser.Math.Between(-70, 70) : 0), 30, ARENA_HEIGHT - 30);

@@ -11,10 +11,10 @@ function createWindow() {
     height: Math.min(850, workArea.height),
     minWidth: Math.min(800, workArea.width),
     minHeight: Math.min(600, workArea.height),
-    backgroundColor: '#080c14',
+    backgroundColor: '#f6f0df',
     autoHideMenuBar: true,
     show: false,
-    title: 'Shadow Legion - 暗影军团',
+    title: '暖影同行 · Sunlit Echoes',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

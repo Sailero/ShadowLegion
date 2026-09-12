@@ -1,3 +1,4 @@
+import { getBattleTime } from '../systems/BattleClock';
 import Phaser from 'phaser';
 import { ARENA_WIDTH, ARENA_HEIGHT } from '../config/gameConfig';
 
@@ -10,6 +11,7 @@ export interface BulletOpts {
   piercing?: boolean;
   homing?: boolean;
   owner: 'player' | 'enemy';
+  source?: 'hero' | 'shadow' | 'rival';
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
@@ -17,6 +19,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   piercing = false;
   homing = false;
   owner: 'player' | 'enemy' = 'player';
+  source: 'hero' | 'shadow' | 'rival' = 'hero';
   spd = 0;
   private born = 0;
   private lifespan = 3000;
@@ -36,12 +39,16 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.piercing = opts.piercing ?? false;
     this.homing = opts.homing ?? false;
     this.owner = opts.owner;
+    this.source = opts.source ?? 'hero';
     this.spd = opts.speed;
-    this.born = this.scene.time.now;
+    this.born = getBattleTime(this.scene);
     this.launchAngle = opts.angle;
     this.rotation = opts.angle;
     this.hitSet.clear();
     this.setTexture(opts.owner === 'player' ? 'bullet_player' : 'bullet_enemy');
+    this.clearTint();
+    if (this.source === 'shadow') this.setTint(0x68aa98);
+    if (this.source === 'rival') this.setTint(0xbc7192);
   }
 
   launch(): void {
@@ -83,7 +90,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     let minD = Infinity;
 
     for (const c of enemies) {
-      if (!c.active) continue;
+      if (!c.active || this.hitSet.has(c)) continue;
       const e = c as Phaser.Physics.Arcade.Sprite;
       const d = Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y);
       if (d < Projectile.HOMING_RANGE && d < minD) {

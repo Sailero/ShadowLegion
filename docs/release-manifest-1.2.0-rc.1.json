@@ -1,0 +1,27 @@
+{
+  "version": "1.2.0-rc.1",
+  "createdAt": "2026-09-12T05:18:38.392Z",
+  "node": "v24.16.0",
+  "files": [
+    {
+      "path": "assets/index-zeOvCgxB.js",
+      "bytes": 1657430,
+      "sha256": "35001d33351150137678406f144be42327bc75a11be24294bf9f3a13607cdeee"
+    },
+    {
+      "path": "DEPLOY.md",
+      "bytes": 969,
+      "sha256": "44cef740b70e61f7bdbacc6a1591f18714dbf7ebd7a3d0ff2fcbd62085cd0ac4"
+    },
+    {
+      "path": "index.html",
+      "bytes": 8580,
+      "sha256": "31b16c5ce61d18def79cb0a3719c1008eb73f8fa67dac704b94d58e2c94db0b5"
+    },
+    {
+      "path": "THIRD-PARTY-NOTICES.txt",
+      "bytes": 2261,
+      "sha256": "c68927860104a879f68d63671830893b1888ce8b57632fcb7123de29e0f17860"
+    }
+  ]
+}

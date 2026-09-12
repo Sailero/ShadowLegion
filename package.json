@@ -1,13 +1,24 @@
 {
   "name": "shadow-legion",
-  "version": "1.1.0",
-  "description": "暗影军团 - 俯视角动作生存游戏",
+  "version": "1.2.0-rc.1",
+  "description": "暖色地形守护与影子搭档的 PC 浏览器动作肉鸽",
   "main": "electron/main.cjs",
   "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.15.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "node --import ./scripts/test-loader.mjs --test src/test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "analyze:pacing": "node --import ./scripts/test-loader.mjs scripts/analyze-pacing.mjs",
+    "check:dist": "node scripts/check-dist.mjs",
+    "check": "npm run test && npm run build && npm run check:dist",
+    "check:security": "npm audit --audit-level=moderate",
+    "release:web": "npm run check && npm run check:security && node scripts/prepare-web-release.mjs",
     "prepare:electron": "node node_modules/electron/install.js",
     "desktop": "npm run build && npm run prepare:electron && electron .",
     "package:win": "npm run build && npm run prepare:electron && electron-builder --win portable --x64"

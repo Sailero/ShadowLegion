@@ -16,12 +16,40 @@ export interface CombatProfile {
   createdAt: string;
 }
 
-const pct = (value: number): number => Math.max(0, Math.min(100, Math.round(value)));
+export interface RunRecorderSnapshot {
+  version: 1;
+  activeMs: number;
+  movingMs: number;
+  firingMs: number;
+  shots: number;
+  dashes: number;
+  skills: number;
+  damageTaken: number;
+}
+
+export const MAX_RECORDED_RUN_MS = 7 * 24 * 60 * 60 * 1000;
+const pct = (value: number): number => Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
+
+/** Restore only bounded, finite measurements, never arbitrary object fields. */
+export function sanitizeRunRecorderSnapshot(value: unknown): RunRecorderSnapshot {
+  const source = typeof value === 'object' && value !== null && (value as { version?: unknown }).version === 1
+    ? value as Record<string, unknown> : {};
+  const read = (key: string, max = 1000000000): number =>
+    typeof source[key] === 'number' && Number.isFinite(source[key])
+      ? Math.max(0, Math.min(max, source[key] as number)) : 0;
+  const activeMs = read('activeMs', MAX_RECORDED_RUN_MS);
+  return {
+    version: 1, activeMs,
+    movingMs: read('movingMs', activeMs), firingMs: read('firingMs', activeMs),
+    shots: Math.floor(read('shots')), dashes: Math.floor(read('dashes')), skills: Math.floor(read('skills')),
+    damageTaken: read('damageTaken'),
+  };
+}
 
 /**
  * Records a deliberately small, explainable behavior snapshot. It is not an
- * AI model yet: the snapshot is the stable data contract that a future Shadow
- * companion, Ghost opponent or offline trainer can consume.
+ * learning model: the snapshot drives the current rules-based Shadow companion
+ * and optional mirror rival. It stores habits, not exact movement recordings.
  */
 export class RunRecorder {
   private activeMs = 0;
@@ -33,16 +61,37 @@ export class RunRecorder {
   private damageTaken = 0;
 
   recordFrame(deltaMs: number, moving: boolean, firing: boolean): void {
+    if (!Number.isFinite(deltaMs)) return;
     const delta = Math.max(0, Math.min(100, deltaMs));
     this.activeMs += delta;
     if (moving) this.movingMs += delta;
     if (firing) this.firingMs += delta;
   }
 
-  recordShot(count = 1): void { this.shots += Math.max(1, Math.round(count)); }
+  recordShot(count = 1): void { if (Number.isFinite(count) && count > 0) this.shots += Math.max(1, Math.round(count)); }
   recordDash(): void { this.dashes++; }
   recordSkill(): void { this.skills++; }
-  recordDamage(amount: number): void { this.damageTaken += Math.max(0, amount); }
+  recordDamage(amount: number): void { if (Number.isFinite(amount)) this.damageTaken += Math.max(0, amount); }
+
+  serialize(): RunRecorderSnapshot {
+    return sanitizeRunRecorderSnapshot({
+      version: 1, activeMs: this.activeMs, movingMs: this.movingMs, firingMs: this.firingMs,
+      shots: this.shots, dashes: this.dashes, skills: this.skills, damageTaken: this.damageTaken,
+    });
+  }
+
+  static restore(value: unknown): RunRecorder {
+    const snapshot = sanitizeRunRecorderSnapshot(value);
+    const recorder = new RunRecorder();
+    recorder.activeMs = snapshot.activeMs;
+    recorder.movingMs = snapshot.movingMs;
+    recorder.firingMs = snapshot.firingMs;
+    recorder.shots = snapshot.shots;
+    recorder.dashes = snapshot.dashes;
+    recorder.skills = snapshot.skills;
+    recorder.damageTaken = snapshot.damageTaken;
+    return recorder;
+  }
 
   finish(build: BuildPath | null, maxHp: number): CombatProfile {
     const minutes = Math.max(this.activeMs / 60000, 0.25);

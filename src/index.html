@@ -2,25 +2,113 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Shadow Legion - 暗影军团</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#e9eddf" />
+  <meta name="description" content="暖影同行：守护花园营地、搭配技能流派，和记住你战斗习惯的影子一起冒险。适合键盘与鼠标的 PC 浏览器游戏。" />
+  <title>暖影同行 · Sunlit Echoes</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0e17;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      font-family: 'Microsoft YaHei', sans-serif;
-    }
-    #game-container { position: relative; }
-    canvas { display: block; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; }
+    body { background: #dfe6d4; overflow: hidden; font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; color: #30483e; }
+    body::before { content: ''; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 10% 5%, #f2e2bd99, transparent 50%), radial-gradient(ellipse at 90% 95%, #b6cfb17a, transparent 50%); }
+    #game-container { position: absolute; inset: 0; }
+    canvas { display: block; box-shadow: 0 10px 90px #56604b26; }
+    .boot-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; overflow: auto; padding: 24px; background: #e9eddf; }
+    .boot-overlay[hidden], .boot-stage[hidden] { display: none; }
+    .boot-card { width: min(470px, 100%); padding: 36px 32px; border: 1px solid #d1d8c2; border-radius: 24px; background: #fffcf4; text-align: center; box-shadow: 0 12px 60px #53664914; }
+    .boot-flower { width: 55px; height: 55px; margin-bottom: 15px; }
+    .boot-brand { margin: 0 0 24px; color: #3e7057; font-size: 12px; letter-spacing: 3px; font-weight: 600; }
+    .boot-card h1 { margin: 0 0 16px; font-size: 27px; line-height: 1.5; }
+    .boot-card p { margin: 0; color: #5f695d; font-size: 14px; line-height: 1.9; }
+    .boot-retry { display: inline-block; width: 100%; margin-top: 26px; padding: 13px 18px; border: 0; border-radius: 11px; background: #3e7057; color: #fffcf4; font: 600 15px 'Microsoft YaHei', sans-serif; text-decoration: none; cursor: pointer; }
+    .boot-retry:hover { background: #2f5c46; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .boot-noscript { z-index: 1001; }
+    .settings-dialog { width: min(480px, calc(100vw - 36px)); max-height: calc(100vh - 48px); overflow: auto; padding: 32px; border: 1px solid #cbd2bb; border-radius: 22px; background: #fffcf4; color: #30483e; box-shadow: 0 18px 90px #243a3438; }
+    .settings-dialog::backdrop { background: #30483e80; backdrop-filter: blur(5px); }
+    .settings-eyebrow { font-size: 12px; letter-spacing: 2px; color: #567256; }
+    .settings-dialog h2 { margin: 12px 0; font-size: 28px; }
+    .settings-dialog p { margin: 0 0 28px; color: #687165; font-size: 14px; }
+    .setting-volume { display: flex; justify-content: space-between; font-size: 15px; font-weight: 600; }
+    .settings-dialog input[type=range] { width: 100%; margin: 18px 0 22px; accent-color: #3e7057; cursor: pointer; }
+    .setting-toggle { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 19px 0; border-top: 1px solid #e2e3d6; cursor: pointer; }
+    .setting-toggle strong { font-size: 15px; }
+    .setting-toggle small { display: block; color: #687165; font-size: 12px; margin-top: 6px; line-height: 1.6; }
+    .setting-toggle input { flex: 0 0 auto; width: 20px; height: 20px; accent-color: #3e7057; cursor: pointer; }
+    .settings-note { background: #edf0e2; border-radius: 12px; padding: 14px; font-size: 12px; line-height: 1.9; color: #567256; }
+    .settings-done { width: 100%; margin-top: 25px; padding: 13px; border: 0; border-radius: 11px; background: #3e7057; color: #fffcf4; font: 600 15px 'Microsoft YaHei', sans-serif; cursor: pointer; }
+    .settings-done:hover { background: #2f5c46; }
+    .metrics-dialog { width: min(670px, calc(100vw - 36px)); }
+    .metrics-dialog h2 { font-size: 25px; }
+    .metrics-table-scroll { max-height: 260px; overflow: auto; margin: 0 0 22px; border: 1px solid #e2e3d6; border-radius: 12px; }
+    .metrics-table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; text-align: left; font-variant-numeric: tabular-nums; }
+    .metrics-table caption { padding: 13px; text-align: left; color: #5f695d; font-size: 12px; }
+    .metrics-table th { padding: 11px 13px; background: #edf0e2; font-size: 12px; font-weight: 600; }
+    .metrics-table td { padding: 12px 13px; border-top: 1px solid #e2e3d6; }
+    .metrics-empty { padding: 26px 18px; text-align: center; background: #f4eedf; border-radius: 12px; margin-bottom: 22px; }
+    .metrics-empty strong { font-size: 16px; }
+    .metrics-empty p { margin: 12px 0 0; }
+    .metrics-actions { display: flex; gap: 14px; }
+    .metrics-export { color: #30483e; background: #e8eddd; }
+    .metrics-export:hover { background: #dbe5cd; }
+    .settings-done:disabled { background: #e7e7dc; color: #5f695d; cursor: default; }
+    :focus-visible { outline: 3px solid #cb8141; outline-offset: 4px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
   </style>
 </head>
 <body>
-  <div id="game-container"></div>
+  <div id="game-boot-overlay" class="boot-overlay">
+    <section class="boot-card" aria-label="暖影同行启动状态">
+      <svg class="boot-flower" viewBox="0 0 64 64" aria-hidden="true"><g fill="#e7bc83"><circle cx="32" cy="15" r="12"/><circle cx="48" cy="27" r="12"/><circle cx="42" cy="46" r="12"/><circle cx="22" cy="46" r="12"/><circle cx="16" cy="27" r="12"/></g><circle cx="32" cy="31" r="10" fill="#fff0b6"/></svg>
+      <div class="boot-brand">暖影同行 / SUNLIT ECHOES</div>
+      <div id="game-loading" class="boot-stage" role="status" aria-live="polite">
+        <h1>正在铺好野餐毯…</h1>
+        <p>影子伙伴正在准备出发。<br>第一次来，可能需要稍等片刻。</p>
+      </div>
+      <div id="game-load-error" class="boot-stage" role="alert" hidden>
+        <h1>旅途还差一点准备。</h1>
+        <p>这次没能顺利打开营地。<br>请稍等片刻，再试着刷新页面。</p>
+        <button id="game-load-retry" class="boot-retry" type="button">重新打开营地</button>
+      </div>
+    </section>
+  </div>
+  <main id="game-container" role="application" aria-label="暖影同行，PC 键盘鼠标游戏" aria-describedby="game-help"></main>
+  <p class="sr-only" id="game-help">WASD 移动，鼠标瞄准，左键射击，SHIFT 或右键闪避，空格释放技能，Q 切换技能，E 安排影伴同行或守营，ESC 暂停。菜单可使用 Tab 选择，Enter 确认。在营地主菜单按 S 打开设置。</p>
+  <noscript><div class="boot-overlay boot-noscript"><section class="boot-card"><div class="boot-brand">暖影同行 / SUNLIT ECHOES</div><h1>让浏览器也准备好。</h1><p>请在浏览器设置中允许此页面运行 JavaScript，然后刷新页面，我们就能一起出发。</p><a class="boot-retry" href="">重新打开页面</a></section></div></noscript>
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const overlay = document.getElementById('game-boot-overlay');
+      const loading = document.getElementById('game-loading');
+      const failure = document.getElementById('game-load-error');
+      const retry = document.getElementById('game-load-retry');
+      root.dataset.gameReady = 'false';
+      let waiting;
+      const showFailure = () => {
+        if (root.dataset.gameReady === 'true') return;
+        window.clearTimeout(waiting);
+        loading.hidden = true;
+        failure.hidden = false;
+        retry.focus({ preventScroll: true });
+      };
+      const ready = () => {
+        root.dataset.gameReady = 'true';
+        window.clearTimeout(waiting);
+        overlay.hidden = true;
+        loading.hidden = true;
+        failure.hidden = true;
+        window.removeEventListener('error', showFailure, true);
+        window.removeEventListener('unhandledrejection', showFailure);
+        window.removeEventListener('sunlit:boot-error', showFailure);
+      };
+      retry.addEventListener('click', () => window.location.reload());
+      window.addEventListener('error', showFailure, true);
+      window.addEventListener('unhandledrejection', showFailure);
+      window.addEventListener('sunlit:boot-error', showFailure);
+      window.addEventListener('sunlit:ready', ready, { once: true });
+      waiting = window.setTimeout(showFailure, 35000);
+    })();
+  </script>
   <script type="module" src="./main.ts"></script>
 </body>
 </html>

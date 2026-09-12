@@ -69,14 +69,14 @@ export class ScoreManager {
 
     const entry = value as Record<string, unknown>;
     return (
-      typeof entry.score === 'number' &&
-      typeof entry.kills === 'number' &&
-      typeof entry.level === 'number' &&
-      typeof entry.wave === 'number' &&
+      typeof entry.score === 'number' && Number.isFinite(entry.score) && entry.score >= 0 &&
+      typeof entry.kills === 'number' && Number.isFinite(entry.kills) && entry.kills >= 0 &&
+      typeof entry.level === 'number' && Number.isFinite(entry.level) && entry.level >= 1 &&
+      typeof entry.wave === 'number' && Number.isFinite(entry.wave) && entry.wave >= 0 &&
       typeof entry.date === 'string' &&
       typeof entry.endless === 'boolean' &&
-      (entry.durationSec === undefined || typeof entry.durationSec === 'number') &&
-      (entry.build === undefined || entry.build === null || ['nova', 'storm', 'rift'].includes(entry.build as string))
+      (entry.durationSec === undefined || (typeof entry.durationSec === 'number' && Number.isFinite(entry.durationSec) && entry.durationSec >= 0)) &&
+      (entry.build === undefined || entry.build === null || ['nova', 'storm', 'rift', 'engineer'].includes(entry.build as string))
     );
   }
 }

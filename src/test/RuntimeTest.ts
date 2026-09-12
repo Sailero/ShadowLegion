@@ -182,7 +182,7 @@ export function runDataTests(): Result[] {
     const loss = calculateRunReward({ wave: 3, level: 1, victory: false, endless: false }, false);
     const win = calculateRunReward({ wave: 5, level: 4, victory: true, endless: false }, true);
     assert(loss.earned === 1, `wave 3 loss reward=${loss.earned}`);
-    assert(win.earned === 9 && win.newBuildClear, `first clear reward=${win.earned}`);
+    assert(win.earned === 13 && win.newBuildClear, `first clear reward=${win.earned}`);
   });
 
   t('Run recorder creates bounded Shadow profile', () => {
@@ -228,8 +228,18 @@ export function runDataTests(): Result[] {
 export function runSceneTests(scene: Phaser.Scene): Result[] {
   const R: Result[] = [];
   const t = (name: string, fn: () => void) => {
+    const hero = (scene as Phaser.Scene & { hero?: Hero }).hero;
+    const snapshot = hero ? {
+      hp: hero.hp, maxHp: hero.maxHp, invUntil: hero.invUntil,
+      shieldStacks: hero.shieldStacks, dodgeChance: hero.dodgeChance, charge: hero.charge,
+    } : null;
     try { fn(); R.push({ name, ok: true }); }
     catch (e: unknown) { R.push({ name, ok: false, msg: (e as Error).message }); }
+    finally {
+      // Developer checks must not refill, consume or leave altered run resources,
+      // even when an assertion throws before a test's own cleanup executes.
+      if (hero && snapshot) Object.assign(hero, snapshot);
+    }
   };
 
   /* eslint-disable @typescript-eslint/no-explicit-any */

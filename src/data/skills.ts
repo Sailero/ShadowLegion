@@ -20,52 +20,52 @@ export interface SkillDef {
 export const SKILLS: SkillDef[] = [
   {
     id: 'burst',
-    name: '能量爆发',
-    desc: '清除近屏压力并击退敌人',
+    name: '花火派对',
+    desc: '一圈暖暖的花火，击退全场的小捣蛋',
     chargeCost: 100,
     color: 0xfbbf24,
     maxLevel: 5,
     growthDesc: '升级：伤害倍率 +0.5x',
     levels: [
       { damage: 1, radius: 9999, duration: 0, cooldown: 0, desc: 'Lv1: 1.5x全屏伤害 + 击退' },
-      { damage: 1, radius: 9999, duration: 0, cooldown: 0, desc: 'Lv2: 2.0x伤害 + 暴击+5%' },
-      { damage: 1, radius: 9999, duration: 0, cooldown: 0, desc: 'Lv3: 2.5x伤害 + 暴击+5% + 回复5%HP' },
+      { damage: 1, radius: 9999, duration: 0, cooldown: 0, desc: 'Lv2: 2.0x全场伤害 + 击退' },
+      { damage: 1, radius: 9999, duration: 0, cooldown: 0, desc: 'Lv3: 2.5x伤害 + 击退 + 回复5%生命' },
     ],
   },
   {
     id: 'barrage',
-    name: '弹幕风暴',
-    desc: '短时间向四周倾泻旋转弹幕',
+    name: '爆米花雨',
+    desc: '把快乐撒向四周，旋转弹丸替你分担来路',
     chargeCost: 100,
-    color: 0xef4444,
+    color: 0xd59067,
     maxLevel: 5,
     growthDesc: '升级：弹道、伤害与持续时间提升',
     levels: [
-      { damage: 5, radius: 0, duration: 1500, cooldown: 0, desc: 'Lv1: 8方向1.5秒 + 弹道+1' },
-      { damage: 7, radius: 0, duration: 2000, cooldown: 0, desc: 'Lv2: 12方向2秒 + 弹道+1 + 攻速+8%' },
-      { damage: 10, radius: 0, duration: 2500, cooldown: 0, desc: 'Lv3: 16方向2.5秒 + 弹道+1 + 攻速+8%' },
+      { damage: 5, radius: 0, duration: 1500, cooldown: 0, desc: 'Lv1: 8方向 · 1.5秒 · 每弹5伤害' },
+      { damage: 7, radius: 0, duration: 2000, cooldown: 0, desc: 'Lv2: 10方向 · 2秒 · 每弹7伤害' },
+      { damage: 10, radius: 0, duration: 2500, cooldown: 0, desc: 'Lv3: 12方向 · 2.5秒 · 每弹10伤害' },
     ],
   },
   {
     id: 'timerift',
-    name: '时空裂隙',
-    desc: '制造减速力场并压制近身敌人',
+    name: '慢悠悠茶会',
+    desc: '原地摆一桌茶会，请路过的对手慢一点',
     chargeCost: 80,
-    color: 0x818cf8,
+    color: 0xa292bc,
     maxLevel: 5,
     growthDesc: '升级：范围、伤害与持续时间提升',
     levels: [
-      { damage: 4, radius: 200, duration: 2500, cooldown: 0, desc: 'Lv1: 200范围2.5秒 + 闪避+5%' },
-      { damage: 7, radius: 260, duration: 3000, cooldown: 0, desc: 'Lv2: 260范围3秒 + 闪避+5% + 护盾+1' },
-      { damage: 10, radius: 320, duration: 4000, cooldown: 0, desc: 'Lv3: 320范围4秒 + 闪避+5% + 护盾+1' },
+      { damage: 4, radius: 200, duration: 2500, cooldown: 0, desc: 'Lv1: 200范围 · 立即伤害与2.5秒减速' },
+      { damage: 7, radius: 260, duration: 3000, cooldown: 0, desc: 'Lv2: 260范围 · 3秒 · 使用时护盾+1' },
+      { damage: 10, radius: 320, duration: 4000, cooldown: 0, desc: 'Lv3: 320范围 · 4秒 · 使用时护盾+1' },
     ],
   },
   {
     id: 'sentry',
-    name: '蜂群哨戒',
-    desc: '部署自动索敌的临时火力节点',
+    name: '蜜蜂小帮手',
+    desc: '留下一位勤快小帮手，自动照看附近的来客',
     chargeCost: 90,
-    color: 0x22d3ee,
+    color: 0x5b9d91,
     maxLevel: 5,
     growthDesc: '升级：射程、单发伤害与驻场时间提升',
     levels: [
@@ -83,7 +83,7 @@ export function getSkill(id: string): SkillDef | undefined {
 export function getSkillStatsForLevel(id: string, level: number): SkillLevel | null {
   const skill = getSkill(id);
   if (!skill) return null;
-  const lvl = Math.min(skill.maxLevel, Math.max(1, level));
+  const lvl = Number.isFinite(level) ? Math.min(skill.maxLevel, Math.max(1, Math.floor(level))) : 1;
 
   if (lvl <= skill.levels.length) {
     return skill.levels[lvl - 1];
@@ -100,7 +100,7 @@ export function getSkillStatsForLevel(id: string, level: number): SkillLevel | n
         ...base,
         damage: base.damage + extra * 2,
         duration: base.duration + extra * 200,
-        desc: `Lv${lvl}: ${16 + extra * 2}方向 ${((base.duration + extra * 200) / 1000).toFixed(1)}秒`,
+        desc: `Lv${lvl}: ${6 + lvl * 2}方向 ${((base.duration + extra * 200) / 1000).toFixed(1)}秒`,
       };
     case 'timerift':
       return {

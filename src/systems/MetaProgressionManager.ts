@@ -2,6 +2,7 @@ import type { BuildPath } from '../data/upgrades';
 import type { CombatProfile } from './RunRecorder';
 import type { OperativeId } from '../data/operatives';
 import { WAVE_CFG } from '../config/gameConfig';
+import { sanitizeCombatProfile } from './ShadowDirector';
 
 export type WorkshopModuleId = 'arsenal' | 'armor' | 'reactor';
 
@@ -45,6 +46,7 @@ export interface RunSummary {
   durationSec: number;
   victory: boolean;
   endless: boolean;
+  startLevel?: number;
   build: BuildPath | null;
   profile: CombatProfile;
 }
@@ -61,9 +63,9 @@ export interface RunReward {
 export const WORKSHOP_MAX_RANK = 5;
 
 export const WORKSHOP_MODULES: WorkshopModuleDef[] = [
-  { id: 'arsenal', name: '武器校准', desc: '提高所有武器基础伤害', color: 0xf97316, perRank: '每级伤害 +3%' },
-  { id: 'armor', name: '反应装甲', desc: '提高每次突围的初始生命', color: 0x22c55e, perRank: '每级生命 +5' },
-  { id: 'reactor', name: '过载电池', desc: '开局携带更多技能能量', color: 0x818cf8, perRank: '每级初始能量 +8' },
+  { id: 'arsenal', name: '花火调校', desc: '给弹丸添一点暖意，提高基础伤害', color: 0xd59067, perRank: '每级伤害 +3%' },
+  { id: 'armor', name: '软绒背心', desc: '出发时多带一点安心，提高初始生命', color: 0x6c9b7c, perRank: '每级生命 +5' },
+  { id: 'reactor', name: '灵感便当', desc: '开局携带更多灵感，更快使出拿手技能', color: 0xa292bc, perRank: '每级初始灵感 +8' },
 ];
 
 const STORAGE_KEY = 'shadowlegion_meta_v1';
@@ -95,17 +97,23 @@ export function workshopUpgradeCost(currentRank: number): number {
   return rank >= WORKSHOP_MAX_RANK ? 0 : rank + 2;
 }
 
-export function calculateRunReward(summary: Pick<RunSummary, 'wave' | 'level' | 'victory' | 'endless'>, isNewBuild: boolean): Omit<RunReward, 'total'> {
-  const effectiveWave = summary.endless
-    ? Math.max(1, (Math.max(1, summary.level) - 1) * WAVE_CFG.perLevel + summary.wave)
-    : summary.wave;
+export function isFullCampaignVictory(summary: Pick<RunSummary, 'level' | 'victory' | 'endless' | 'startLevel'>): boolean {
+  return summary.victory && !summary.endless && (summary.startLevel ?? 1) === 1 && summary.level === WAVE_CFG.levels;
+}
+
+export function calculateRunReward(summary: Pick<RunSummary, 'wave' | 'level' | 'victory' | 'endless' | 'startLevel'>, isNewBuild: boolean): Omit<RunReward, 'total'> {
+  const level = Number.isFinite(summary.level) ? Math.max(1, Math.floor(summary.level)) : 1;
+  const startLevel = Number.isFinite(summary.startLevel)
+    ? Math.max(1, Math.min(level, Math.floor(summary.startLevel!))) : 1;
+  const wave = Number.isFinite(summary.wave) ? Math.max(0, Math.min(WAVE_CFG.perLevel, Math.floor(summary.wave))) : 0;
+  const effectiveWave = Math.max(1, (level - startLevel) * WAVE_CFG.perLevel + wave);
   const progressReward = Math.min(6, Math.floor(Math.max(0, effectiveWave - 1) / 2));
   const victoryReward = summary.victory ? 4 : 0;
-  const newBuildReward = summary.victory && isNewBuild ? 3 : 0;
+  const newBuildReward = isFullCampaignVictory(summary) && isNewBuild ? 3 : 0;
   return {
     earned: progressReward + victoryReward + newBuildReward,
     progressReward, victoryReward, newBuildReward,
-    newBuildClear: summary.victory && isNewBuild,
+    newBuildClear: isFullCampaignVictory(summary) && isNewBuild,
   };
 }
 
@@ -175,13 +183,13 @@ export class MetaProgressionManager {
     state.wins += summary.victory ? 1 : 0;
     state.totalKills += Math.max(0, Math.round(summary.kills));
     state.bestWave = Math.max(state.bestWave, Math.max(0, Math.round(summary.wave)));
-    state.lastProfile = summary.profile;
-    if (summary.victory && summary.durationSec > 0) {
+    state.lastProfile = sanitizeCombatProfile(summary.profile);
+    if (isFullCampaignVictory(summary) && summary.durationSec > 0) {
       state.bestVictorySec = state.bestVictorySec === null
         ? summary.durationSec
         : Math.min(state.bestVictorySec, summary.durationSec);
     }
-    if (summary.victory && summary.build && !state.clearedBuilds.includes(summary.build)) {
+    if (isFullCampaignVictory(summary) && summary.build && !state.clearedBuilds.includes(summary.build)) {
       state.clearedBuilds.push(summary.build);
     }
     state.shadowCores += reward.earned;
@@ -224,11 +232,11 @@ export class MetaProgressionManager {
     const clearedBuilds = Array.isArray(src.clearedBuilds)
       ? [...new Set(src.clearedBuilds.filter((item): item is BuildPath => VALID_BUILDS.includes(item as BuildPath)))]
       : [];
-    const highestChapterUnlocked = typeof src.highestChapterUnlocked === 'number'
+    const highestChapterUnlocked = typeof src.highestChapterUnlocked === 'number' && Number.isFinite(src.highestChapterUnlocked)
       ? Math.max(1, Math.min(WAVE_CFG.levels, Math.floor(src.highestChapterUnlocked)))
       : (num('wins') > 0 ? 2 : 1);
     const clearedChapters = Array.isArray(src.clearedChapters)
-      ? [...new Set(src.clearedChapters.filter((item): item is number => typeof item === 'number' && item >= 1 && item <= WAVE_CFG.levels))]
+      ? [...new Set(src.clearedChapters.filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 1 && item <= WAVE_CFG.levels))]
       : [];
     const unlockedOperatives = Array.isArray(src.unlockedOperatives)
       ? [...new Set(src.unlockedOperatives.filter((item): item is OperativeId => VALID_OPERATIVES.includes(item as OperativeId)))]
@@ -247,12 +255,10 @@ export class MetaProgressionManager {
     if (highestChapterUnlocked >= 4) { earnedOperatives.push('engineer'); earnedSkills.push('sentry'); }
     earnedOperatives.forEach(id => { if (!unlockedOperatives.includes(id)) unlockedOperatives.push(id); });
     earnedSkills.forEach(id => { if (!unlockedSkills.includes(id)) unlockedSkills.push(id); });
-    const bestVictorySec = typeof src.bestVictorySec === 'number' && src.bestVictorySec > 0
+    const bestVictorySec = typeof src.bestVictorySec === 'number' && Number.isFinite(src.bestVictorySec) && src.bestVictorySec > 0
       ? Math.floor(src.bestVictorySec)
       : null;
-    const lastProfile = typeof src.lastProfile === 'object' && src.lastProfile !== null
-      ? src.lastProfile as CombatProfile
-      : null;
+    const lastProfile = sanitizeCombatProfile(src.lastProfile);
 
     return {
       version: 2,

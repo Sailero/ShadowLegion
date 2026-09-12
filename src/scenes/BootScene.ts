@@ -1,36 +1,17 @@
 import Phaser from 'phaser';
 import { SpriteFactory } from '../utils/SpriteFactory';
-import { COLORS, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
+import { SettingsManager } from '../systems/SettingsManager';
+import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
+import { drawFlower, label, UI } from '../ui/theme';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
-
   create() {
     SpriteFactory.createAll(this);
-
-    const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, COLORS.bg);
-    const title = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 24, 'SHADOW LEGION', {
-      fontSize: '48px', fontFamily: 'Arial', fontStyle: 'bold', color: '#fbbf24',
-      stroke: '#000', strokeThickness: 4,
-    }).setOrigin(0.5).setAlpha(0);
-
-    const sub = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 36, '暗影军团', {
-      fontSize: '22px', fontFamily: 'Arial', color: '#9ca3af',
-    }).setOrigin(0.5).setAlpha(0);
-
-    this.tweens.add({
-      targets: [title, sub],
-      alpha: 1,
-      duration: 600,
-      onComplete: () => {
-        this.tweens.add({
-          targets: [title, sub, bg],
-          alpha: 0,
-          delay: 800,
-          duration: 400,
-          onComplete: () => this.scene.start('MenuScene'),
-        });
-      },
-    });
+    this.cameras.main.setBackgroundColor(UI.paper);
+    drawFlower(this.add.graphics(), GAME_WIDTH / 2, GAME_HEIGHT / 2 - 73, 25, UI.amber);
+    label(this, GAME_WIDTH / 2, GAME_HEIGHT / 2, '暖影同行', 39, UI.ink, true).setOrigin(0.5);
+    label(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 48, 'SUNLIT ECHOES', 13, UI.green, true).setLetterSpacing(4).setOrigin(0.5);
+    this.time.delayedCall(SettingsManager.get().reducedMotion ? 50 : 380, () => this.scene.start('MenuScene'));
   }
 }

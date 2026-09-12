@@ -19,6 +19,12 @@ import type { UpgradeDef } from '../data/upgrades';
 import { ChapterDef, getChapter, pointInRect } from '../data/chapters';
 import { getOperative, OperativeId } from '../data/operatives';
 import type { ChapterUnlockResult } from '../systems/MetaProgressionManager';
+import { SettingsManager } from '../systems/SettingsManager';
+import { ShadowCompanion, ShadowRival } from '../systems/ShadowCompanion';
+import { JourneyDirector } from '../systems/JourneyDirector';
+import { openSettings } from '../ui/theme';
+import { RunCheckpointManager } from '../systems/RunCheckpointManager';
+import { SessionMetricsManager } from '../systems/SessionMetricsManager';
 
 const MAX_PARTICLES = 30;
 
@@ -77,6 +83,20 @@ export class ArenaScene extends Phaser.Scene {
   private defenseInvUntil = 0;
   private elapsedBeforeChapterMs = 0;
   private pulseDamageAt = 0;
+  private shadow!: ShadowCompanion;
+  private journey!: JourneyDirector;
+  private shadowTrial = false;
+  private shadowTrialSpawned = false;
+  private shadowText!: Phaser.GameObjects.Text;
+  private objectiveText!: Phaser.GameObjects.Text;
+  private actionHint!: Phaser.GameObjects.Text;
+  private lastActionHint = -10000;
+  private combatTime = 0;
+  private lastHudUpdate = -1000;
+  private waveStartedAt = 0;
+  private pointerDashHandler?: (ptr: Phaser.Input.Pointer) => void;
+  private blurHandler?: () => void;
+  private commandHandler?: () => void;
 
   /* ── Hitlag ── */
   private hitlagUntil = 0;
@@ -111,8 +131,18 @@ export class ArenaScene extends Phaser.Scene {
 
   init(data: {
     level?: number; score?: number; kills?: number; endless?: boolean;
-    operativeId?: OperativeId; freshRun?: boolean; elapsedMs?: number;
+    operativeId?: OperativeId; freshRun?: boolean; elapsedMs?: number; shadowTrial?: boolean; resumeCheckpoint?: boolean; startLevel?: number;
   }) {
+    if (data.resumeCheckpoint) {
+      const saved = RunCheckpointManager.load();
+      if (saved) {
+        data = { ...saved, elapsedMs: saved.elapsedMs, freshRun: false };
+        this.registry.set('appliedUpgrades', saved.appliedUpgrades);
+        this.registry.set('runRecorder', RunRecorder.restore(saved.recorder));
+        this.registry.set('shadowTrial', saved.shadowTrial);
+        this.registry.set('runStartLevel', saved.startLevel);
+      } else data = { level: 1, freshRun: true };
+    }
     this.currentLevel = data.level || 1;
     this.score = data.score || 0;
     this.kills = data.kills || 0;
@@ -121,6 +151,11 @@ export class ArenaScene extends Phaser.Scene {
     this.dead = false;
     this.comboCount = 0;
     this.hitlagUntil = 0;
+    this.comboResetTime = 0;
+    this.lastComboVal = 0;
+    this.lastShakeTime = -10000;
+    this.lastDmgNumTime = -10000;
+    this.defenseInvUntil = 0;
     this.activeParticleCount = 0;
     this.waveEnemyTotal = 0;
     this.riftCenter = { x: 0, y: 0 };
@@ -132,12 +167,24 @@ export class ArenaScene extends Phaser.Scene {
     this.chapter = getChapter(this.currentLevel, this.endless);
     this.elapsedBeforeChapterMs = data.elapsedMs || 0;
     this.pulseDamageAt = 0;
+    this.shadowTrial = data.shadowTrial ?? this.registry.get('shadowTrial') ?? false;
+    this.shadowTrialSpawned = false;
+    this.combatTime = 0;
+    this.lastHudUpdate = -1000;
+    this.waveStartedAt = 0;
+    this.lastActionHint = -10000;
     if (data.freshRun) {
+      RunCheckpointManager.clear();
       this.registry.remove('appliedUpgrades');
+      this.registry.remove('runRecorder');
+      this.registry.set('shadowTrial', this.shadowTrial);
+      this.registry.set('runStartLevel', this.currentLevel);
     }
   }
 
   create() {
+    this.data.set('battleTime', 0);
+    this.time.paused = false;
     this.drawArena();
     this.physics.world.setBounds(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
     this.physics.world.timeScale = 1;
@@ -170,7 +217,14 @@ export class ArenaScene extends Phaser.Scene {
     this.tutorial = new TutorialManager(this);
     this.upgradeMgr = new UpgradeManager(metaState.unlockedSkills);
     this.upgradeMgr.initializeOperative(this.hero, this.operativeId);
-    this.runRecorder = new RunRecorder();
+    this.runRecorder = this.registry.get('runRecorder') ?? new RunRecorder();
+    this.registry.set('runRecorder', this.runRecorder);
+    this.journey = new JourneyDirector(this.chapter.id, this.shadowTrial);
+    this.shadow = new ShadowCompanion(this, {
+      profile: metaState.lastProfile, chapter: this.chapter,
+      core: { x: this.defenseCore.x, y: this.defenseCore.y },
+      onFire: opts => this.spawnBullet({ ...opts, source: 'shadow' }),
+    });
 
     this.setupCollisions();
     this.setupCamera();
@@ -181,12 +235,35 @@ export class ArenaScene extends Phaser.Scene {
       this.input.keyboard?.off('keydown-ESC', this.togglePause, this);
       this.clearUpgradeHotkeys();
       this.clearPauseUI();
+      this.shadow.destroy();
+      this.tutorial.destroy();
+      if (this.commandHandler) this.input.keyboard?.off('keydown-E', this.commandHandler);
+      if (this.pointerDashHandler) this.input.off('pointerdown', this.pointerDashHandler);
+      if (this.blurHandler) this.game.events.off(Phaser.Core.Events.BLUR, this.blurHandler);
+      this.physics.world.timeScale = 1;
+      this.time.paused = false;
+      // Scene event emitters persist across restart. Only remove our gameplay events.
+      for (const name of ['heroFire', 'enemyFire', 'bossTelegraph', 'heroDash', 'heroSkill',
+        'skillSwitch', 'heroHit', 'heroDodge', 'heroDeath', 'shieldBreak', 'enemyDeath',
+        'enemySplit', 'enemySummon', 'enemyBlastTelegraph', 'enemyBlast', 'enemySupportPulse',
+        'defenseRepair', 'waveStart', 'waveComplete', 'levelComplete', 'shadowDefeated', 'actionUnavailable']) {
+        this.events.removeAllListeners(name);
+      }
     });
 
     const saved = this.registry.get('appliedUpgrades') as string[] | undefined;
     if (saved) {
       for (const id of saved) this.upgradeMgr.applyById(this.hero, id);
     }
+    this.upgradeMgr.consumeEvolution();
+    const savedCheckpoint = RunCheckpointManager.save({
+      level: this.currentLevel, operativeId: this.operativeId, endless: this.endless,
+      startLevel: this.registry.get('runStartLevel') ?? this.currentLevel,
+      score: this.score, kills: this.kills, elapsedMs: this.elapsedBeforeChapterMs,
+      appliedUpgrades: this.upgradeMgr.getAppliedIds(), shadowTrial: this.shadowTrial,
+      recorder: this.runRecorder.serialize(),
+    });
+    if (!savedCheckpoint) this.showActionHint('本次进度暂时无法保存；仍可继续游玩');
 
     this.waveMgr = new WaveManager(this, this.currentLevel, this.enemies, this.endless);
     this.waveMgr.startNextWave();
@@ -196,90 +273,101 @@ export class ArenaScene extends Phaser.Scene {
     this.createBgParticles();
 
     if (this.input.mouse) this.input.mouse.disableContextMenu();
-    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-      if (!this.paused && ptr.rightButtonDown()) this.hero.dash(this.time.now);
-    });
+    this.pointerDashHandler = (ptr: Phaser.Input.Pointer) => {
+      if (!this.paused && !this.upgrading && !this.dead && !this.tutorial.isActive && ptr.rightButtonDown()) this.hero.dash(this.combatTime);
+    };
+    this.input.on('pointerdown', this.pointerDashHandler);
+    this.commandHandler = () => {
+      if (this.dead || this.paused || this.upgrading || this.tutorial.isActive) return;
+      const mode = this.shadow.toggleMode();
+      this.journey.record('command');
+      this.showActionHint(mode === 'guard' ? '影伴：营地交给我！' : '影伴：一起去散步！');
+      this.snd.buttonClick();
+    };
+    this.input.keyboard?.on('keydown-E', this.commandHandler);
+    this.blurHandler = () => {
+      if (!this.paused && !this.upgrading && !this.dead && !this.tutorial.isActive) this.togglePause();
+      this.input.keyboard?.resetKeys();
+    };
+    this.game.events.on(Phaser.Core.Events.BLUR, this.blurHandler);
   }
 
   /* ────────────────── Arena Drawing ────────────────── */
 
   private drawArena(): void {
-    const g = this.add.graphics();
-    const palette = this.chapter.colors;
-    g.fillStyle(palette.ground);
-    g.fillRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
-
-    for (let r = 350; r > 0; r -= 25) {
-      g.fillStyle(palette.accent, 0.012);
-      g.fillCircle(ARENA_WIDTH / 2, ARENA_HEIGHT / 2, r);
+    const g = this.add.graphics().setDepth(-1);
+    const p = this.chapter.colors;
+    const cx = ARENA_WIDTH / 2, cy = ARENA_HEIGHT / 2;
+    g.fillStyle(p.ground).fillRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
+    // Soft meadows and a readable path to the shared picnic lantern.
+    for (let i = 0; i < 34; i++) {
+      const x = (i * 347 + 97) % ARENA_WIDTH, y = (i * 193 + 83) % ARENA_HEIGHT;
+      g.fillStyle(p.grid, 0.16).fillEllipse(x, y, 160 + i % 4 * 35, 90);
     }
-
-    g.lineStyle(1, palette.grid, 0.2);
-    for (let x = 0; x <= ARENA_WIDTH; x += 80) g.lineBetween(x, 0, x, ARENA_HEIGHT);
-    for (let y = 0; y <= ARENA_HEIGHT; y += 80) g.lineBetween(0, y, ARENA_WIDTH, y);
-    g.lineStyle(1, palette.detail, 0.09);
-    for (let x = 40; x < ARENA_WIDTH; x += 80) g.lineBetween(x, 0, x, ARENA_HEIGHT);
-    for (let y = 40; y < ARENA_HEIGHT; y += 80) g.lineBetween(0, y, ARENA_WIDTH, y);
-
-    for (const zone of this.chapter.hazards) {
-      g.fillStyle(palette.hazard, 0.08);
-      g.fillRoundedRect(zone.x - zone.width / 2, zone.y - zone.height / 2, zone.width, zone.height, 12);
-      g.lineStyle(2, palette.hazard, 0.24);
-      g.strokeRoundedRect(zone.x - zone.width / 2, zone.y - zone.height / 2, zone.width, zone.height, 12);
-    }
-
-    for (const obstacle of this.chapter.obstacles) {
-      g.fillStyle(palette.detail, 0.9);
-      g.fillRoundedRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height, 10);
-      g.fillStyle(0xffffff, 0.035);
-      g.fillRoundedRect(obstacle.x - obstacle.width / 2 + 5, obstacle.y - obstacle.height / 2 + 5, obstacle.width - 10, 10, 4);
-      g.lineStyle(2, palette.accent, 0.35);
-      g.strokeRoundedRect(obstacle.x - obstacle.width / 2, obstacle.y - obstacle.height / 2, obstacle.width, obstacle.height, 10);
-    }
-
     for (const lane of this.chapter.spawnPoints) {
-      g.lineStyle(2, palette.accent, 0.16);
-      g.lineBetween(lane.x, lane.y, ARENA_WIDTH / 2, ARENA_HEIGHT / 2);
-      g.fillStyle(palette.accent, 0.7);
-      g.fillCircle(lane.x, lane.y, 10);
-      g.lineStyle(2, palette.accent, 0.45);
-      g.strokeCircle(lane.x, lane.y, 18);
+      g.lineStyle(64, 0xfaf0d6, 0.6).lineBetween(lane.x, lane.y, cx, cy);
+      g.lineStyle(2, p.accent, 0.12).lineBetween(lane.x, lane.y, cx, cy);
+      g.fillStyle(0xfff9e8).fillCircle(lane.x, lane.y, 23);
+      g.lineStyle(3, p.accent, 0.6).strokeCircle(lane.x, lane.y, 23);
+      this.add.text(lane.x, lane.y + (lane.y > cy ? -38 : 38), lane.label, {
+        fontFamily: 'Microsoft YaHei, sans-serif', fontSize: '13px', color: '#53654b',
+        backgroundColor: '#fff8e7', padding: { x: 7, y: 4 },
+      }).setOrigin(0.5).setDepth(0);
     }
-
-    g.lineStyle(4, palette.accent, 0.38);
-    g.strokeRect(2, 2, ARENA_WIDTH - 4, ARENA_HEIGHT - 4);
-    g.lineStyle(1, palette.accent, 0.14);
-    g.strokeRect(6, 6, ARENA_WIDTH - 12, ARENA_HEIGHT - 12);
-
-    const bLen = 30, bOff = 10;
-    g.lineStyle(2, palette.accent, 0.5);
-    g.lineBetween(bOff, bOff, bOff + bLen, bOff);
-    g.lineBetween(bOff, bOff, bOff, bOff + bLen);
-    g.lineBetween(ARENA_WIDTH - bOff, bOff, ARENA_WIDTH - bOff - bLen, bOff);
-    g.lineBetween(ARENA_WIDTH - bOff, bOff, ARENA_WIDTH - bOff, bOff + bLen);
-    g.lineBetween(bOff, ARENA_HEIGHT - bOff, bOff + bLen, ARENA_HEIGHT - bOff);
-    g.lineBetween(bOff, ARENA_HEIGHT - bOff, bOff, ARENA_HEIGHT - bOff - bLen);
-    g.lineBetween(ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff, ARENA_WIDTH - bOff - bLen, ARENA_HEIGHT - bOff);
-    g.lineBetween(ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff, ARENA_WIDTH - bOff, ARENA_HEIGHT - bOff - bLen);
-
-    g.lineStyle(1, palette.accent, 0.14);
-    const cx0 = ARENA_WIDTH / 2, cy0 = ARENA_HEIGHT / 2;
-    for (let ring = 1; ring <= 3; ring++) {
-      const r = ring * 120;
-      for (let i = 0; i < 6; i++) {
-        const a1 = (Math.PI / 3) * i - Math.PI / 6;
-        const a2 = (Math.PI / 3) * (i + 1) - Math.PI / 6;
-        g.lineBetween(cx0 + Math.cos(a1) * r, cy0 + Math.sin(a1) * r,
-                      cx0 + Math.cos(a2) * r, cy0 + Math.sin(a2) * r);
+    for (let i = 0; i < 190; i++) {
+      const x = (i * 137 + 41) % ARENA_WIDTH, y = (i * 227 + 57) % ARENA_HEIGHT;
+      if (Math.hypot(x - cx, y - cy) < 155 || this.chapter.obstacles.some(o => pointInRect(x, y, o))) continue;
+      if (i % 4 === 0) {
+        g.fillStyle(i % 8 ? 0xfff8e3 : 0xe8a994, 0.75);
+        for (let petal = 0; petal < 5; petal++) {
+          const a = petal * Math.PI * 2 / 5;
+          g.fillCircle(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 3);
+        }
+        g.fillStyle(0xc39a43).fillCircle(x, y, 2);
+      } else {
+        g.lineStyle(1, p.detail, 0.22).lineBetween(x - 3, y - 4, x, y + 3).lineBetween(x, y + 3, x + 4, y - 2);
       }
     }
-
-    g.lineStyle(1, palette.accent, 0.35);
-    g.lineBetween(cx0 - 15, cy0, cx0 + 15, cy0);
-    g.lineBetween(cx0, cy0 - 15, cx0, cy0 + 15);
-    g.strokeCircle(cx0, cy0, 8);
-
-    g.setDepth(-1);
+    for (const zone of this.chapter.hazards) {
+      g.fillStyle(p.hazard, 0.16).fillRoundedRect(zone.x - zone.width / 2, zone.y - zone.height / 2, zone.width, zone.height, 18);
+      g.lineStyle(2, p.hazard, 0.45).strokeRoundedRect(zone.x - zone.width / 2, zone.y - zone.height / 2, zone.width, zone.height, 18);
+      for (let i = 0; i < 6; i++) {
+        const x = zone.x - zone.width * .38 + zone.width * .15 * i;
+        g.lineStyle(2, p.hazard, .28).lineBetween(x, zone.y - 12, x + 10, zone.y - 8).lineBetween(x + 10, zone.y - 8, x + 20, zone.y - 12);
+      }
+      this.add.text(zone.x, zone.y - zone.height / 2 + 12, this.chapter.specialName, {
+        fontFamily: 'Microsoft YaHei, sans-serif', fontSize: '12px', color: '#675d46',
+        backgroundColor: '#fff5dc', padding: { x: 8, y: 3 },
+      }).setOrigin(.5, 0).setDepth(3);
+    }
+    for (const o of this.chapter.obstacles) {
+      const x = o.x - o.width / 2, y = o.y - o.height / 2;
+      g.fillStyle(0x6c7750, .12).fillRoundedRect(x + 5, y + 7, o.width, o.height, 13);
+      const fill = this.chapter.id === 1 ? 0x9ab17c : this.chapter.id === 2 ? 0xd9b78c : this.chapter.id === 3 ? 0xb6aa83 : 0xdfac8a;
+      g.fillStyle(fill).fillRoundedRect(x, y, o.width, o.height, 13);
+      g.lineStyle(3, p.detail, .5).strokeRoundedRect(x, y, o.width, o.height, 13);
+      g.lineStyle(2, 0xfff8df, .55).lineBetween(x + 14, y + 7, x + o.width - 14, y + 7);
+      if (this.chapter.id === 1) {
+        for (let i = 0; i < 5; i++) {
+          g.fillStyle(i % 2 ? 0xbbca8f : 0xa8bf82, .8).fillEllipse(x + 18 + (o.width - 36) * i / 4, o.y, 27, o.height - 12);
+          g.fillStyle(0xf6d095).fillCircle(x + 18 + (o.width - 36) * i / 4, o.y - 8, 3);
+        }
+      } else {
+        for (let n = 20; n < o.width - 8; n += 28) g.lineStyle(2, p.detail, .2).lineBetween(x + n, y + 6, x + n, y + o.height - 6);
+      }
+    }
+    g.fillStyle(0xf8edd0).fillCircle(cx, cy, 76);
+    g.lineStyle(2, 0xb49a69, .55).strokeCircle(cx, cy, 77);
+    g.fillStyle(0xe2b08b, .28).fillRoundedRect(cx - 50, cy - 40, 100, 80, 10);
+    for (let i = -2; i <= 2; i++) {
+      g.lineStyle(2, 0xfff9e6, .7).lineBetween(cx - 46, cy + i * 14, cx + 46, cy + i * 14);
+      g.lineBetween(cx + i * 17, cy - 35, cx + i * 17, cy + 35);
+    }
+    this.add.text(cx, cy + 59, '我们的暖灯营地', {
+      fontSize: '13px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#655539',
+      backgroundColor: '#fff7df', padding: { x: 8, y: 3 },
+    }).setOrigin(.5).setDepth(1);
+    g.lineStyle(10, p.detail, .22).strokeRoundedRect(5, 5, ARENA_WIDTH - 10, ARENA_HEIGHT - 10, 24);
   }
 
   private createMapGeometry(): void {
@@ -306,6 +394,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private updateBgParticles(time: number): void {
+    if (SettingsManager.get().reducedMotion) return;
     const g = this.bgParticles;
     if (!g) return;
     g.clear();
@@ -372,14 +461,15 @@ export class ArenaScene extends Phaser.Scene {
     if (!activeZones.length) return;
     this.pulseDamageAt = time + 650;
     if (activeZones.some(zone => pointInRect(this.hero.x, this.hero.y, zone))) this.hero.takeDamage(6);
-    for (const child of this.enemies.getChildren()) {
+    for (const child of [...this.enemies.getChildren()]) {
       const enemy = child as Enemy;
       if (!enemy.active || !activeZones.some(zone => pointInRect(enemy.x, enemy.y, zone))) continue;
       const damage = enemy.isBoss ? 12 : 20;
+      this.journey.record('terrainHit');
       enemy.takeDamage(damage);
       this.showDmgNum(enemy.x, enemy.y - 20, damage);
     }
-    this.cameras.main.flash(50, 160, 80, 255, true);
+    this.feedbackFlash(50, 160, 80, 255, true);
   }
 
   /* ────────────────── Physics ────────────────── */
@@ -426,6 +516,16 @@ export class ArenaScene extends Phaser.Scene {
       }
 
       let dmg = bullet.damage;
+      if (this.chapter.hazardKind === 'sand' || this.chapter.hazardKind === 'tide') {
+        if (this.chapter.hazards.some(zone => pointInRect(enemy.x, enemy.y, zone) && this.isHazardZoneActive(zone, this.combatTime))) this.journey.record('terrainHit');
+      }
+      if (bullet.source === 'shadow') {
+        const ex = enemy.x, ey = enemy.y;
+        enemy.takeDamage(dmg);
+        this.showDmgNum(ex, ey - 20, dmg);
+        this.hitParticles(ex, ey, 0x6d9c85);
+        return;
+      }
 
       // Pierce damage retention: scale based on how many enemies already pierced
       if (bullet.piercing && bullet.hitSet.size > 1) {
@@ -456,8 +556,12 @@ export class ArenaScene extends Phaser.Scene {
       enemy.knockback(bullet.x, bullet.y, 80);
       const killed = enemy.takeDamage(dmg);
       this.hitParticles(enemy.x, enemy.y, enemy.cfg.color);
-      if (!killed && enemy.active) {
-        this.tweens.add({ targets: enemy, scaleX: 1.25, scaleY: 0.8, duration: 50, yoyo: true });
+      if (!killed && enemy.active && !SettingsManager.get().reducedMotion) {
+        const scale = (enemy.getData('impactScale') as number | undefined) ?? enemy.scaleX;
+        enemy.setData('impactScale', scale);
+        this.tweens.killTweensOf(enemy);
+        enemy.setScale(scale);
+        this.tweens.add({ targets: enemy, scaleX: scale * 1.1, scaleY: scale * .92, duration: 55, yoyo: true });
       }
 
       // Frost: slow strength = 0.5 - stacks*0.05 (min 0.15), duration = 1000 + stacks*300
@@ -506,7 +610,7 @@ export class ArenaScene extends Phaser.Scene {
       const took = this.hero.takeDamage(dmg);
       if (took) {
         this.snd.heroHit();
-        this.cameras.main.shake(80, 0.005);
+        this.feedbackShake(80, 0.005);
       }
     } catch (err) { console.error('[onEnemyBulletHitHero]', err); }
   }
@@ -514,6 +618,7 @@ export class ArenaScene extends Phaser.Scene {
   private onEnemyBulletHitDefense(_coreObj: Phaser.Types.Physics.Arcade.GameObjectWithBody, bulletObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
     if (this.dead) return;
     const bullet = bulletObj as unknown as Projectile;
+    if (bullet.source === 'rival') return;
     if (!bullet.active || bullet.damage <= 0) return;
     const damage = bullet.damage;
     bullet.recycle();
@@ -521,21 +626,22 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onEnemyTouchDefense(_coreObj: Phaser.Types.Physics.Arcade.GameObjectWithBody, enemyObj: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
+    if ((enemyObj as Enemy).getData('shadowRival')) return;
     if (this.dead) return;
     const enemy = enemyObj as unknown as Enemy;
     if (!enemy.active) return;
     const nextHitAt = (enemy.getData('defenseHitAt') as number | undefined) ?? 0;
-    if (this.time.now < nextHitAt) return;
-    enemy.setData('defenseHitAt', this.time.now + 1100);
+    if (this.combatTime < nextHitAt) return;
+    enemy.setData('defenseHitAt', this.combatTime + 1100);
     this.damageDefense(enemy.dmg);
     enemy.knockback(this.defenseCore.x, this.defenseCore.y, 90);
   }
 
   private damageDefense(amount: number): void {
-    if (this.dead || this.time.now < this.defenseInvUntil) return;
+    if (this.dead || this.combatTime < this.defenseInvUntil) return;
     const damage = Math.max(1, Math.round(amount));
     this.defenseHp = Math.max(0, this.defenseHp - damage);
-    this.defenseInvUntil = this.time.now + 90;
+    this.defenseInvUntil = this.combatTime + 90;
     this.defenseCore.setTintFill(0xff4455);
     this.time.delayedCall(90, () => { if (this.defenseCore.active) this.defenseCore.clearTint(); });
     this.showDmgNum(this.defenseCore.x, this.defenseCore.y - 52, damage, true);
@@ -585,8 +691,8 @@ export class ArenaScene extends Phaser.Scene {
 
       const chargeGain = Math.round(xpVal * 1.2);
       const t = this.add.text(gem.x, gem.y - 5, `+${chargeGain}⚡`, {
-        fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24',
-        stroke: '#000', strokeThickness: 2,
+        fontSize: '11px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#94612d',
+        stroke: '#fff8e7', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(50);
       this.tweens.add({ targets: t, y: gem.y - 25, alpha: 0, duration: 400, onComplete: () => t.destroy() });
 
@@ -606,214 +712,98 @@ export class ArenaScene extends Phaser.Scene {
   /* ────────────────── UI Creation ────────────────── */
 
   private createUI(): void {
-    this.hpGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
+    const text = (x: number, y: number, size = 14, color = '#3d5144') => this.add.text(x, y, '', {
+      fontSize: `${size}px`, fontFamily: 'Microsoft YaHei, sans-serif', color,
+    }).setScrollFactor(0).setDepth(102);
+    this.hpGfx = this.add.graphics().setScrollFactor(0).setDepth(99);
     this.barGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.enemyHpGfx = this.add.graphics().setDepth(50);
     this.shieldGfx = this.add.graphics().setDepth(12);
-
-    this.hpText = this.add.text(125, 26, '', {
-      fontSize: '13px', fontFamily: 'monospace', color: '#fff', fontStyle: 'bold',
-    }).setScrollFactor(0).setDepth(102).setOrigin(0.5);
-
-    this.skillNameText = this.add.text(16, 58, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#d1d5db',
-    }).setScrollFactor(0).setDepth(102).setOrigin(0, 0.5);
-
-    this.waveText = this.add.text(GAME_WIDTH / 2, 12, '', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#e2e8f0', fontStyle: 'bold',
-    }).setScrollFactor(0).setDepth(100).setOrigin(0.5, 0);
-
-    this.scoreText = this.add.text(GAME_WIDTH - 14, 12, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#94a3b8',
-    }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
-
-    this.runTimerText = this.add.text(GAME_WIDTH - 14, 34, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#475569',
-    }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
-
-    this.infoText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 8, '', {
-      fontSize: '12px', fontFamily: 'monospace', color: '#fbbf24',
-      stroke: '#000', strokeThickness: 3,
-      align: 'center', lineSpacing: 2,
-      wordWrap: { width: GAME_WIDTH - 40 },
-    }).setScrollFactor(0).setDepth(100).setOrigin(0.5, 1);
-
-    this.comboText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70, '', {
-      fontSize: '28px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fbbf24',
-      stroke: '#000', strokeThickness: 4,
-    }).setScrollFactor(0).setDepth(105).setOrigin(0.5).setAlpha(0);
-
+    this.hpText = text(30, 24, 14).setFontStyle('bold');
+    this.skillNameText = text(30, 77, 12);
+    this.waveText = text(512, 24, 17).setOrigin(.5, 0).setFontStyle('bold');
+    this.chapterText = text(512, 52, 13).setOrigin(.5, 0);
+    this.defenseText = text(512, 82, 12).setOrigin(.5);
+    this.scoreText = text(986, 27, 16).setOrigin(1, 0).setFontStyle('bold');
+    this.runTimerText = text(986, 56, 13).setOrigin(1, 0);
+    this.shadowText = text(28, GAME_HEIGHT - 172, 13).setWordWrapWidth(274, true);
+    this.objectiveText = text(28, GAME_HEIGHT - 136, 13).setWordWrapWidth(274, true).setLineSpacing(7);
+    this.actionHint = text(512, 170, 15, '#665237').setOrigin(.5).setAlpha(0).setDepth(145)
+      .setBackgroundColor('#fff6da').setPadding(12, 7);
+    this.infoText = text(575, GAME_HEIGHT - 48, 14).setOrigin(.5).setAlign('center').setLineSpacing(7);
+    this.comboText = text(512, 222, 25, '#98613b').setOrigin(.5).setAlpha(0).setFontStyle('bold');
     this.waveProgressGfx = this.add.graphics().setScrollFactor(0).setDepth(99);
     this.bossHudGfx = this.add.graphics().setScrollFactor(0).setDepth(106);
-    this.bossNameText = this.add.text(GAME_WIDTH / 2, 50, '', {
-      fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fca5a5',
-    }).setScrollFactor(0).setDepth(107).setOrigin(0.5).setVisible(false);
+    this.bossNameText = text(512, 115, 13, '#913f50').setOrigin(.5).setDepth(107).setVisible(false);
     this.minimapGfx = this.add.graphics().setScrollFactor(0).setDepth(110);
     this.offscreenGfx = this.add.graphics().setScrollFactor(0).setDepth(95);
     this.crosshairGfx = this.add.graphics().setScrollFactor(0).setDepth(120);
     this.defenseHudGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.hazardGfx = this.add.graphics().setDepth(2);
-    this.defenseText = this.add.text(352, 26, '', {
-      fontSize: '12px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
-    }).setScrollFactor(0).setDepth(102).setOrigin(0.5);
-    this.chapterText = this.add.text(GAME_WIDTH / 2, 34, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#64748b',
-    }).setScrollFactor(0).setDepth(100).setOrigin(0.5, 0);
+    const pause = this.add.text(GAME_WIDTH - 18, 91, '暂停 / ESC', {
+      fontFamily: 'Microsoft YaHei, sans-serif', fontSize: '12px', color: '#536849',
+      backgroundColor: '#f3ebd5', padding: { x: 8, y: 3 },
+    }).setOrigin(1,.5).setScrollFactor(0).setDepth(104).setInteractive({ useHandCursor: true });
+    pause.on('pointerdown', () => this.togglePause());
   }
 
-  /* ────────────────── UI Update ────────────────── */
-
   private updateUI(time: number): void {
-    const g = this.hpGfx;
-    g.clear();
-
-    // HUD panel background
-    const panelW = 240, panelH = 72;
-    g.fillStyle(0x0a0e17, 0.85);
-    g.fillRoundedRect(8, 8, panelW, panelH, 6);
-    g.lineStyle(1, 0x1e3a5f, 0.5);
-    g.strokeRoundedRect(8, 8, panelW, panelH, 6);
-
-    // HP bar with rounded ends
-    const bw = 210, bh = 18, bx = 18, by = 16;
-    g.fillStyle(0x1a1a2e);
-    g.fillRoundedRect(bx - 1, by - 1, bw + 2, bh + 2, 4);
-    g.fillStyle(0x1f2937);
-    g.fillRoundedRect(bx, by, bw, bh, 3);
-    const pct = Math.max(0, this.hero.hp / this.hero.maxHp);
-    const hpColor = pct > 0.5 ? 0x22c55e : pct > 0.25 ? 0xeab308 : 0xef4444;
-    if (pct > 0.01) {
-      g.fillStyle(hpColor);
-      g.fillRoundedRect(bx, by, Math.max(6, bw * pct), bh, 3);
-      // Glossy highlight
-      g.fillStyle(0xffffff, 0.12);
-      g.fillRoundedRect(bx + 1, by + 1, Math.max(4, bw * pct - 2), bh * 0.4, 2);
-    }
-    if (pct <= 0.25 && pct > 0) {
-      g.fillStyle(0xff0000, 0.12 + Math.sin(time * 0.01) * 0.08);
-      g.fillRoundedRect(bx, by, Math.max(6, bw * pct), bh, 3);
-    }
-    g.lineStyle(1, 0x374151, 0.6);
-    g.strokeRoundedRect(bx, by, bw, bh, 3);
-
-    // HP icon
-    g.fillStyle(0xef4444);
-    g.fillRect(bx + 2, by + 4, 3, bh - 8);
-    g.fillRect(bx + 1, by + 5, 5, bh - 10);
-
-    this.hpText.setText(`${Math.round(this.hero.hp)} / ${this.hero.maxHp}`);
-    this.hpText.setPosition(bx + bw / 2, by + bh / 2 + 1);
-
-    // Skill charge bar
-    const cg = this.barGfx;
-    cg.clear();
-    const activeSkill = this.hero.getActiveSkill();
-    const skillColor = activeSkill?.color ?? COLORS.chargeBar;
-    const chargeCost = this.hero.getSkillChargeCost();
-    const chargePct = Math.min(1, this.hero.charge / chargeCost);
-
-    const cx = 18, cy = 42, cw = 140, ch = 12;
-    cg.fillStyle(0x1f2937);
-    cg.fillRoundedRect(cx, cy, cw, ch, 3);
-    if (chargePct > 0.01) {
-      cg.fillStyle(chargePct >= 1 ? skillColor : Phaser.Display.Color.ValueToColor(skillColor).darken(40).color);
-      cg.fillRoundedRect(cx, cy, Math.max(4, cw * chargePct), ch, 3);
-      if (chargePct >= 1) {
-        cg.fillStyle(0xffffff, 0.15 + Math.sin(time * 0.008) * 0.1);
-        cg.fillRoundedRect(cx, cy, cw, ch, 3);
-      }
-    }
-    cg.lineStyle(1, 0x374151, 0.5);
-    cg.strokeRoundedRect(cx, cy, cw, ch, 3);
-
-    const skillName = activeSkill?.name ?? '技能';
-    const lvl = this.hero.getSkillLevel(this.hero.activeSkillId);
-    const buildPath = this.upgradeMgr.getBuildPath();
-    const buildPrefix = buildPath
-      ? `${this.upgradeMgr.isEvolved() ? EVOLUTION_INFO[buildPath].name : BUILD_INFO[buildPath].name} · `
-      : '';
-    const skillStr = this.hero.unlockedSkills.length > 1
-      ? `${buildPrefix}${skillName} Lv${lvl} [Q]`
-      : `${buildPrefix}${skillName} Lv${lvl}`;
-    this.skillNameText.setText(skillStr);
-    this.skillNameText.setPosition(cx + 2, cy + ch + 6);
-
-    // Dash bar
-    const dashPct = this.hero.dashCooldownPct(time);
-    const dx = 168, dy = 42, dw = 60;
-    cg.fillStyle(0x1f2937);
-    cg.fillRoundedRect(dx, dy, dw, ch, 3);
-    cg.fillStyle(dashPct >= 1 ? 0x60a5fa : 0x1e3a5f);
-    cg.fillRoundedRect(dx, dy, Math.max(4, dw * dashPct), ch, 3);
-    cg.lineStyle(1, 0x374151, 0.5);
-    cg.strokeRoundedRect(dx, dy, dw, ch, 3);
-
-    // Shield drawn in world space to follow hero exactly
+    this.drawCrosshair();
+    this.drawEnemyHpBars();
+    this.drawOffscreenIndicators();
+    this.updateCombo(time);
     this.shieldGfx.clear();
     if (this.hero.shieldStacks > 0) {
-      const sa = 0.4 + Math.sin(time * 0.005) * 0.2;
-      const hx = this.hero.x, hy = this.hero.y;
-      for (let si = 0; si < Math.min(this.hero.shieldStacks, 5); si++) {
-        this.shieldGfx.lineStyle(2, 0x60a5fa, sa * (1 - si * 0.15));
-        this.shieldGfx.strokeCircle(hx, hy, 22 + si * 5);
-      }
-      if (this.hero.shieldStacks > 1) {
-        this.shieldCountText?.setText(`×${this.hero.shieldStacks}`);
-      }
+      this.shieldGfx.lineStyle(3, 0x719dba, .6).strokeCircle(this.hero.x, this.hero.y, 25);
     }
-
-    // Barrage/TimeRift active indicator
-    if (this.hero.isBarrageActive) {
-      cg.lineStyle(2, 0xef4444, 0.5 + Math.sin(time * 0.012) * 0.3);
-      cg.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 35);
-    }
-    if (this.hero.isTimeRiftActive) {
-      cg.lineStyle(2, 0x818cf8, 0.4 + Math.sin(time * 0.008) * 0.2);
-      cg.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 36);
-    }
-
-    // Wave & Score (top center + right)
-    const modeLabel = this.endless ? `无尽 ${this.currentLevel}` : `第 ${this.chapter.id} 章`;
-    const waveName = this.currentWaveName ? ` · ${this.currentWaveName}` : '';
-    this.waveText.setText(`${modeLabel}   ${this.waveMgr.wave}/${this.waveMgr.totalWaves}${waveName}   剩余 ${this.waveMgr.aliveCount}`);
-    this.chapterText.setText(`${this.chapter.name} · ${getOperative(this.operativeId).name} · ${this.chapter.specialName}`);
-    this.scoreText.setText(`${this.score} 分   ${this.kills} 杀`);
-    const totalSec = Math.floor((this.elapsedBeforeChapterMs + this.activeRunMs) / 1000);
-    this.runTimerText.setText(`${String(Math.floor(totalSec / 60)).padStart(2, '0')}:${String(totalSec % 60).padStart(2, '0')}`);
-
-    const dg = this.defenseHudGfx;
-    dg.clear();
-    const dbx = 260, dby = 16, dbw = 184, dbh = 18;
-    dg.fillStyle(0x0a0e17, 0.88);
-    dg.fillRoundedRect(dbx - 8, dby - 8, dbw + 16, 34, 6);
-    dg.fillStyle(0x1f2937);
-    dg.fillRoundedRect(dbx, dby, dbw, dbh, 3);
-    const defensePct = Math.max(0, this.defenseHp / this.defenseMaxHp);
-    const defenseColor = defensePct > 0.5 ? this.chapter.colors.accent : defensePct > 0.25 ? 0xf59e0b : 0xef4444;
-    dg.fillStyle(defenseColor);
-    dg.fillRoundedRect(dbx, dby, Math.max(4, dbw * defensePct), dbh, 3);
-    dg.lineStyle(1, this.chapter.colors.accent, 0.55);
-    dg.strokeRoundedRect(dbx, dby, dbw, dbh, 3);
-    this.defenseText.setText(`防线 ${Math.ceil(this.defenseHp)} / ${this.defenseMaxHp}`).setPosition(dbx + dbw / 2, dby + dbh / 2 + 1);
-
-    const lines: string[] = [];
-    if (activeSkill) {
-      const chargeStr = chargePct >= 1 ? '✦ 就绪 ✦' : `⚡${Math.round(chargePct * 100)}%`;
-      lines.push(`${skillName} Lv${lvl}  ${chargeStr}  ${chargePct >= 1 ? '[ SPACE 释放 ]' : ''}`);
-    }
-    const controls: string[] = [];
-    if (this.hero.unlockedSkills.length > 1) controls.push('Q切换');
-    controls.push('SHIFT闪避', 'ESC暂停');
-    lines.push(controls.join('  |  '));
-    this.infoText.setText(lines.join('\n'));
-
+    if (time - this.lastHudUpdate < 90) return;
+    this.lastHudUpdate = time;
+    const g = this.hpGfx.clear();
+    const panel = (x: number, y: number, w: number, h: number) => {
+      g.fillStyle(0x6b7958, .1).fillRoundedRect(x, y + 3, w, h, 14);
+      g.fillStyle(0xfffbef, .96).fillRoundedRect(x, y, w, h, 14);
+      g.lineStyle(1, 0xc7cdb6, .9).strokeRoundedRect(x, y, w, h, 14);
+    };
+    panel(14, 12, 246, 96);
+    panel(273, 12, 478, 96);
+    panel(764, 12, 246, 96);
+    panel(14, GAME_HEIGHT - 185, 294, 164);
+    panel(320, GAME_HEIGHT - 84, 512, 64);
+    const bar = (x: number, y: number, w: number, pct: number, color: number, h = 10) => {
+      g.fillStyle(0xe3e5d6).fillRoundedRect(x, y, w, h, 5);
+      if (pct > 0) g.fillStyle(color).fillRoundedRect(x, y, Math.max(5, w * Math.min(1, pct)), h, 5);
+    };
+    const hpPct = Math.max(0, this.hero.hp / this.hero.maxHp);
+    bar(30, 52, 213, hpPct, hpPct > .3 ? 0x75a484 : 0xd48670, 14);
+    this.hpText.setText(`小队体力  ${Math.ceil(this.hero.hp)} / ${this.hero.maxHp}`);
+    const activeSkill = this.hero.getActiveSkill();
+    const chargePct = Math.min(1, this.hero.charge / this.hero.getSkillChargeCost());
+    const dash = this.hero.dashCooldownPct(time);
+    this.skillNameText.setText(`轻跃 ${dash >= 1 ? '就绪' : `${((1-dash) * this.hero.dashCooldown / 1000).toFixed(1)}s`}   ·   灵感 ${Math.floor(chargePct * 100)}%`);
+    this.waveText.setText(`${this.endless ? '漫游' : '第'} ${this.currentLevel} ${this.endless ? '站' : '章'}   ·   第 ${this.waveMgr.wave} / ${this.waveMgr.totalWaves} 波   ·   余 ${this.waveMgr.aliveCount}`);
+    this.chapterText.setText(`${this.chapter.name}  ·  ${this.currentWaveName}`);
+    const ratio = Math.max(0, this.defenseHp / this.defenseMaxHp);
+    bar(326, 74, 372, ratio, ratio > .3 ? 0xe3bd72 : 0xd48670, 19);
+    this.defenseText.setText(`暖灯营地  ${Math.ceil(this.defenseHp)} / ${this.defenseMaxHp}`);
+    this.scoreText.setText(`${this.score.toLocaleString()} 分  ·  击退 ${this.kills}`);
+    const total = Math.floor((this.elapsedBeforeChapterMs + this.activeRunMs) / 1000);
+    this.runTimerText.setText(`${getOperative(this.operativeId).name}  ·  ${String(Math.floor(total / 60)).padStart(2,'0')}:${String(total % 60).padStart(2,'0')}`);
+    const shadow = this.shadow.getStatus();
+    this.shadowText.setText(`影伴 · ${shadow.mode === 'guard' ? '留守营地' : '结伴出发'}   [E 切换]`);
+    this.objectiveText.setText(this.journey.getObjectives().map(o => `${o.completed ? '✓' : '○'} ${o.title}  ${o.progress}/${o.target}`).join('\n'));
+    const build = this.upgradeMgr.getBuildPath();
+    this.infoText.setText(`${activeSkill?.name ?? '技能'}  ${chargePct >= 1 ? '[ SPACE · 可以施放 ]' : `灵感 ${Math.floor(chargePct*100)}%`}\n${build ? BUILD_INFO[build].name : '自由搭配'}  ·  SHIFT 轻跃  ·  E 影伴  ·  Q 换技能`);
     this.drawWaveProgress();
-    this.drawOffscreenIndicators();
     this.drawMinimap();
-    this.drawEnemyHpBars();
     this.drawBossHud();
-    this.drawCrosshair();
-    this.updateCombo(time);
+  }
+
+  private showActionHint(label: string): void {
+    if (this.combatTime - this.lastActionHint < 700) return;
+    this.lastActionHint = this.combatTime;
+    this.actionHint.setText(label).setAlpha(1);
+    this.tweens.killTweensOf(this.actionHint);
+    this.tweens.add({ targets: this.actionHint, alpha: 0, delay: 1800, duration: 250 });
   }
 
   private drawWaveProgress(): void {
@@ -821,7 +811,7 @@ export class ArenaScene extends Phaser.Scene {
     pg.clear();
     const pw = GAME_WIDTH - 20, ph = 4;
     const px = 10, py = GAME_HEIGHT - 6;
-    pg.fillStyle(0x0f172a, 0.7);
+    pg.fillStyle(0xfffbef, 0.7);
     pg.fillRoundedRect(px, py, pw, ph, 2);
     if (this.waveEnemyTotal > 0) {
       const alive = this.waveMgr.aliveCount;
@@ -883,11 +873,11 @@ export class ArenaScene extends Phaser.Scene {
     const sx = mw / ARENA_WIDTH, sy = mh / ARENA_HEIGHT;
 
     // Panel bg
-    mg.fillStyle(0x080c14, 0.85);
+    mg.fillStyle(0xfffbef, 0.85);
     mg.fillRoundedRect(mx - 2, my - 2, mw + 4, mh + 4, 4);
-    mg.fillStyle(0x0f172a, 0.9);
+    mg.fillStyle(0xfffbef, 0.9);
     mg.fillRoundedRect(mx, my, mw, mh, 3);
-    mg.lineStyle(1, 0x1e3a5f, 0.5);
+    mg.lineStyle(1, 0xa8bba3, 0.5);
     mg.strokeRoundedRect(mx, my, mw, mh, 3);
 
     // Camera viewport
@@ -939,7 +929,7 @@ export class ArenaScene extends Phaser.Scene {
       const ey = e.y - e.cfg.bodyRadius * e.scaleY - 12;
       eg.fillStyle(0x000000, 0.5);
       eg.fillRoundedRect(ex - 1, ey - 1, w + 2, h + 2, 1);
-      eg.fillStyle(0x1f2937);
+      eg.fillStyle(0xe3e5d6);
       eg.fillRect(ex, ey, w, h);
       const barColor = ep > 0.5 ? 0x22c55e : ep > 0.25 ? 0xeab308 : 0xef4444;
       eg.fillStyle(barColor);
@@ -963,7 +953,7 @@ export class ArenaScene extends Phaser.Scene {
     const width = 360;
     const height = 12;
     const x = (GAME_WIDTH - width) / 2;
-    const y = 68;
+    const y = 130;
     const pct = Math.max(0, boss.hp / boss.maxHp);
     g.fillStyle(0x020617, 0.9);
     g.fillRoundedRect(x - 3, y - 3, width + 6, height + 6, 5);
@@ -984,7 +974,7 @@ export class ArenaScene extends Phaser.Scene {
     if (!pointer.active) return;
     const x = pointer.x;
     const y = pointer.y;
-    g.lineStyle(1.5, pointer.isDown ? 0xfbbf24 : 0x93c5fd, 0.8);
+    g.lineStyle(2, pointer.isDown ? 0x9d6237 : 0x426655, 0.95);
     g.strokeCircle(x, y, 9);
     g.lineBetween(x - 14, y, x - 6, y);
     g.lineBetween(x + 6, y, x + 14, y);
@@ -1009,7 +999,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private addCombo(): void {
     this.comboCount++;
-    this.comboResetTime = this.time.now + this.comboDuration;
+    this.comboResetTime = this.combatTime + this.comboDuration;
     if (this.comboCount >= 3) {
       const bonus = this.comboCount * 2;
       this.score += bonus;
@@ -1019,6 +1009,11 @@ export class ArenaScene extends Phaser.Scene {
   /* ────────────────── Events ────────────────── */
 
   private bindEvents(): void {
+    this.events.on('actionUnavailable', (ev: { label: string }) => this.showActionHint(ev.label));
+    this.events.on('shadowDefeated', () => {
+      this.journey.record('shadowDefeat');
+      this.showActionHint('和昨日的自己击掌！镜像切磋完成');
+    });
     this.events.on('heroFire', this.onHeroFire, this);
     this.events.on('enemyFire', this.onEnemyFire, this);
     this.events.on('bossTelegraph', this.onBossTelegraph, this);
@@ -1063,8 +1058,9 @@ export class ArenaScene extends Phaser.Scene {
   private announce(msg: string, color: number, dur = 800): void {
     const hex = '#' + color.toString(16).padStart(6, '0');
     const t = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.35, msg, {
-      fontFamily: 'monospace', fontSize: '26px', color: hex,
-      stroke: '#000', strokeThickness: 3,
+      fontFamily: 'Microsoft YaHei, sans-serif', fontSize: '22px', color: hex,
+      wordWrap: { width: 720, useAdvancedWrap: true }, align: 'center', lineSpacing: 8,
+      stroke: '#fff8e7', strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(150);
     this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: dur, onComplete: () => t.destroy() });
   }
@@ -1074,10 +1070,10 @@ export class ArenaScene extends Phaser.Scene {
     this.tweens.add({ targets: flash, scaleX: 1.8, scaleY: 1.8, alpha: 0, duration: 70, onComplete: () => flash.destroy() });
   }
 
-  private onEnemyFire(ev: { x: number; y: number; angle: number; speed: number; damage: number }): void {
+  private onEnemyFire(ev: { x: number; y: number; angle: number; speed: number; damage: number; source?: 'rival' }): void {
     try {
       if (this.dead) return;
-      this.spawnBullet({ x: ev.x, y: ev.y, angle: ev.angle, speed: ev.speed, damage: ev.damage, owner: 'enemy' });
+      this.spawnBullet({ x: ev.x, y: ev.y, angle: ev.angle, speed: ev.speed, damage: ev.damage, owner: 'enemy', source: ev.source });
     } catch (err) { console.error('[onEnemyFire]', err); }
   }
 
@@ -1125,12 +1121,12 @@ export class ArenaScene extends Phaser.Scene {
     this.tweens.add({ targets: blast, radius: ev.radius, alpha: 0, duration: 260, onComplete: () => blast.destroy() });
     if (Phaser.Math.Distance.Between(ev.x, ev.y, this.hero.x, this.hero.y) <= ev.radius) this.hero.takeDamage(ev.damage);
     if (Phaser.Math.Distance.Between(ev.x, ev.y, this.defenseCore.x, this.defenseCore.y) <= ev.radius) this.damageDefense(ev.damage);
-    this.cameras.main.shake(140, 0.008);
+    this.feedbackShake(140, 0.008);
   }
 
   private onEnemySupportPulse(ev: { x: number; y: number; radius: number; amount: number }): void {
     let healed = 0;
-    for (const child of this.enemies.getChildren()) {
+    for (const child of [...this.enemies.getChildren()]) {
       const enemy = child as Enemy;
       if (!enemy.active || Phaser.Math.Distance.Between(ev.x, ev.y, enemy.x, enemy.y) > ev.radius) continue;
       healed += enemy.heal(ev.amount);
@@ -1166,6 +1162,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private onDash(ev: { x: number; y: number; angle: number }): void {
     this.runRecorder.recordDash();
+    this.journey.record('dash');
     this.snd.dash();
     this.tutorial.onDash();
     for (let i = 0; i < 4; i++) {
@@ -1195,6 +1192,7 @@ export class ArenaScene extends Phaser.Scene {
     try {
       if (this.dead) return;
       this.runRecorder.recordSkill();
+      this.journey.record('skill');
       const skill = getSkill(ev.skillId);
       if (!skill) return;
       const stats = getSkillStatsForLevel(ev.skillId, ev.level);
@@ -1214,9 +1212,9 @@ export class ArenaScene extends Phaser.Scene {
         }
         case 'barrage': {
           this.snd.skillBarrage();
-          this.hero.barrageEndTime = this.time.now + stats.duration;
-          this.announce('弹幕风暴!', skill.color, 1000);
-          this.cameras.main.flash(80, 255, 80, 80, true);
+          this.hero.barrageEndTime = this.combatTime + stats.duration;
+          this.announce(`${skill.name}！`, skill.color, 1000);
+          this.feedbackFlash(80, 255, 80, 80, true);
           break;
         }
         case 'timerift': {
@@ -1300,8 +1298,8 @@ export class ArenaScene extends Phaser.Scene {
       this.time.delayedCall(450, () => { emitter.destroy(); this.activeParticleCount--; });
     }
 
-    this.cameras.main.shake(200, 0.015);
-    this.cameras.main.flash(100, 255, 200, 50, true);
+    this.feedbackShake(200, 0.015);
+    this.feedbackFlash(100, 255, 200, 50, true);
 
     const dmg = Math.max(1, Math.round(damage));
     let hitCount = 0;
@@ -1319,7 +1317,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private doSkillTimeRift(x: number, y: number, damage: number, radius: number, duration: number, color: number): void {
-    this.hero.timeRiftEndTime = this.time.now + duration;
+    this.hero.timeRiftEndTime = this.combatTime + duration;
     this.riftCenter = { x, y };
     this.riftRadius = radius;
 
@@ -1357,8 +1355,8 @@ export class ArenaScene extends Phaser.Scene {
       duration: duration * 0.8, onComplete: () => distort.destroy(),
     });
 
-    this.cameras.main.flash(80, 100, 100, 255, true);
-    this.announce('时空裂隙!', color, 1000);
+    this.feedbackFlash(80, 100, 100, 255, true);
+    this.announce('慢悠悠茶会，开席！', color, 1000);
 
     [...this.enemies.getChildren()].forEach(c => {
       const e = c as Enemy;
@@ -1383,7 +1381,7 @@ export class ArenaScene extends Phaser.Scene {
         if (this.dead || !base.active) return;
         let nearest: Enemy | null = null;
         let nearestDistance = radius;
-        for (const child of this.enemies.getChildren()) {
+        for (const child of [...this.enemies.getChildren()]) {
           const enemy = child as Enemy;
           if (!enemy.active) continue;
           const distance = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
@@ -1418,8 +1416,8 @@ export class ArenaScene extends Phaser.Scene {
   private onHeroHit(ev: { x: number; y: number; damage: number }): void {
     try {
       this.runRecorder.recordDamage(ev.damage);
-      this.cameras.main.shake(80, 0.005);
-      this.cameras.main.flash(60, 255, 0, 0, true);
+      this.feedbackShake(80, 0.005);
+      this.feedbackFlash(60, 255, 0, 0, true);
       this.showDmgNum(ev.x, ev.y - 20, ev.damage, true);
       this.hitParticles(ev.x, ev.y, 0xef4444);
 
@@ -1439,54 +1437,56 @@ export class ArenaScene extends Phaser.Scene {
 
   private onHeroDodge(ev: { x: number; y: number }): void {
     const t = this.add.text(ev.x, ev.y - 30, '闪避!', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#60a5fa',
-      fontStyle: 'bold', stroke: '#000', strokeThickness: 2,
+      fontSize: '14px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#60a5fa',
+      fontStyle: 'bold', stroke: '#fff8e7', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(60);
     this.tweens.add({ targets: t, y: ev.y - 55, alpha: 0, duration: 500, onComplete: () => t.destroy() });
   }
 
   private onHeroDeath(): void {
-    this.finishDefeat('先锋阵亡');
+    this.finishDefeat('先歇一小会儿');
   }
 
   private onDefenseDestroyed(): void {
-    this.finishDefeat('防线失守');
+    this.finishDefeat('暖灯需要休息了');
   }
 
   private finishDefeat(reason: string): void {
     if (this.dead) return;
+    RunCheckpointManager.clear();
     this.dead = true;
     this.hitlagUntil = 0;
     this.physics.pause();
     this.snd.heroDeath();
-    this.cameras.main.shake(400, 0.015);
-    this.cameras.main.flash(300, 255, 0, 0, true);
-    const focusX = reason === '防线失守' ? this.defenseCore.x : this.hero.x;
-    const focusY = reason === '防线失守' ? this.defenseCore.y : this.hero.y;
+    this.feedbackShake(400, 0.015);
+    this.feedbackFlash(300, 255, 0, 0, true);
+    const focusX = reason === '暖灯需要休息了' ? this.defenseCore.x : this.hero.x;
+    const focusY = reason === '暖灯需要休息了' ? this.defenseCore.y : this.hero.y;
     this.deathParticles(focusX, focusY);
     this.tutorial.destroy();
 
     // Death message overlay
     const deathText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.38, reason, {
-      fontSize: '48px', fontFamily: 'monospace', fontStyle: 'bold',
-      color: '#ef4444', stroke: '#000', strokeThickness: 6,
+      fontSize: '48px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold',
+      color: '#ef4444', stroke: '#fff8e7', strokeThickness: 6,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
     this.tweens.add({ targets: deathText, alpha: 1, y: deathText.y - 15, duration: 600, ease: 'Quad.easeOut' });
 
-    const subText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.48, `击杀 ${this.kills}  |  分数 ${this.score}`, {
-      fontSize: '18px', fontFamily: 'monospace', color: '#94a3b8',
-      stroke: '#000', strokeThickness: 3,
+    const subText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.48, `击退 ${this.kills}  |  分数 ${this.score}`, {
+      fontSize: '18px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#65705c',
+      stroke: '#fff8e7', strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
     this.tweens.add({ targets: subText, alpha: 1, duration: 800, delay: 400 });
 
     // Camera slow zoom
-    this.cameras.main.zoomTo(1.2, 1500, 'Sine.easeIn');
+    if (!SettingsManager.get().reducedMotion) this.cameras.main.zoomTo(1.06, 900, 'Sine.easeIn');
 
     const build = this.upgradeMgr.getBuildPath();
     const durationSec = Math.round((this.elapsedBeforeChapterMs + this.activeRunMs) / 1000);
     const newHighScore = ScoreManager.isNewHighScore(this.score);
     const profile = this.runRecorder.finish(build, this.hero.maxHp);
     const reward = MetaProgressionManager.recordRun({
+      startLevel: this.registry.get('runStartLevel') ?? this.currentLevel,
       wave: this.waveMgr.wave, level: this.currentLevel, kills: this.kills,
       durationSec, victory: false, endless: this.endless, build, profile,
     });
@@ -1494,7 +1494,8 @@ export class ArenaScene extends Phaser.Scene {
       score: this.score, kills: this.kills,
       wave: this.waveMgr.wave, level: this.currentLevel,
       endless: this.endless, durationSec, build, newHighScore, profile, reward,
-      defeatReason: reason, operativeId: this.operativeId,
+      defeatReason: reason, operativeId: this.operativeId, shadowTrial: this.shadowTrial,
+      startLevel: this.registry.get('runStartLevel') ?? this.currentLevel,
     };
     ScoreManager.saveScore({
       score: this.score, kills: this.kills,
@@ -1502,15 +1503,15 @@ export class ArenaScene extends Phaser.Scene {
       endless: this.endless, durationSec, build,
     });
     const sceneRef = this.scene;
-    window.setTimeout(() => {
+    this.time.delayedCall(2200, () => {
       try { sceneRef.start('GameOverScene', data); } catch (_) { /* scene already destroyed */ }
-    }, 2200);
+    });
   }
 
   private slowMoFinish(victory: boolean): void {
     const cam = this.cameras.main;
-    if (victory) {
-      cam.zoomTo(1.15, 1200, 'Sine.easeInOut');
+    if (victory && !SettingsManager.get().reducedMotion) {
+      cam.zoomTo(1.06, 1200, 'Sine.easeInOut');
     }
   }
 
@@ -1537,8 +1538,8 @@ export class ArenaScene extends Phaser.Scene {
       this.deathParticles(ev.x, ev.y, ev.color);
 
       if (ev.isBoss) {
-        this.cameras.main.shake(200, 0.009);
-        this.cameras.main.flash(150, 255, 200, 0, true);
+        this.feedbackShake(200, 0.009);
+        this.feedbackFlash(150, 255, 200, 0, true);
         this.hitlag(80);
       } else {
         this.throttledShake(50, 0.003);
@@ -1592,12 +1593,27 @@ export class ArenaScene extends Phaser.Scene {
     this.snd.hit();
   }
 
-  private onWaveStart(ev: { wave: number; total: number; isBoss?: boolean; name: string; hint: string }): void {
+  private onWaveStart(ev: { wave: number; total: number; isBoss?: boolean; name: string; hint: string; lanes?: Array<{x: number;y: number;label: string}> }): void {
     this.waveEnemyTotal = this.waveMgr.aliveCount;
     this.currentWaveName = ev.name;
+    this.waveStartedAt = this.activeRunMs;
+    for (const lane of ev.lanes ?? this.chapter.spawnPoints) {
+      const marker = this.add.circle(lane.x, lane.y, 26, 0xd49c58, .2).setStrokeStyle(3, 0x976237).setDepth(4);
+      this.tweens.add({ targets: marker, radius: 48, alpha: 0, duration: 2000, onComplete: () => marker.destroy() });
+    }
+    if (this.shadowTrial && ev.wave === 3 && !this.shadowTrialSpawned) {
+      this.shadowTrialSpawned = true;
+      const lane = this.chapter.spawnPoints[0];
+      const rival = new ShadowRival(this, lane.x, lane.y,
+        MetaProgressionManager.getState().lastProfile, this.chapter.id,
+        () => ({ x: this.hero.x, y: this.hero.y }));
+      this.enemies.add(rival);
+      this.waveEnemyTotal++;
+      this.showActionHint('镜像切磋开始：观察蓄力线，轻跃躲开昨日的自己');
+    }
     if (ev.isBoss) {
       this.announce(`⚠ ${ev.name}\n${ev.hint}`, 0xef4444, 2400);
-      this.cameras.main.shake(300, 0.004);
+      this.feedbackShake(300, 0.004);
       this.snd.bossAlert();
     } else {
       this.announce(`${ev.wave}/${ev.total} · ${ev.name}\n${ev.hint}`, 0xfbbf24, 1500);
@@ -1606,11 +1622,19 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private onWaveComplete(ev: { wave: number; total: number }): void {
+    if (this.dead) return;
+    if (!this.endless && new URLSearchParams(window.location.search).get('qa') !== '1') SessionMetricsManager.record({
+      chapter: this.chapter.id, wave: ev.wave, activeMs: this.activeRunMs - this.waveStartedAt,
+      operativeId: this.operativeId, shadowTrial: this.shadowTrial,
+      coreRatio: this.defenseHp / this.defenseMaxHp,
+    });
+    this.journey.finishWave(this.defenseHp / this.defenseMaxHp);
+    this.grantJourneyRewards();
     if (this.defenseHp > 0 && this.defenseHp < this.defenseMaxHp) {
       this.repairDefense(0.08);
     }
     if (ev.wave >= ev.total) {
-      this.waveMgr.scheduleNextWave(this.time.now);
+      this.waveMgr.scheduleNextWave(this.combatTime);
       return;
     }
     this.showUpgradeUI('wave');
@@ -1634,42 +1658,49 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     if (!this.endless) {
+      RunCheckpointManager.clear();
       this.dead = true;
+      this.physics.pause();
       this.tutorial.destroy();
       this.snd.victory();
       MetaProgressionManager.recordChapterClear(ev.level);
-      this.announce('🏆 四大战区已守住 · 军团母巢摧毁', 0x22c55e, 3000);
+      const fullCampaign = (this.registry.get('runStartLevel') ?? this.currentLevel) === 1;
+      this.announce(fullCampaign ? '四季营地已守住 · 灯会顺利开张' : '这段旅途完成 · 灯会顺利开张', 0x598862, 3000);
       this.slowMoFinish(true);
       const build = this.upgradeMgr.getBuildPath();
       const durationSec = Math.round((this.elapsedBeforeChapterMs + this.activeRunMs) / 1000);
       const newHighScore = ScoreManager.isNewHighScore(this.score);
       const profile = this.runRecorder.finish(build, this.hero.maxHp);
       const reward = MetaProgressionManager.recordRun({
+        startLevel: this.registry.get('runStartLevel') ?? this.currentLevel,
         wave: this.waveMgr.totalWaves, level: ev.level, kills: this.kills,
         durationSec, victory: true, endless: false, build, profile,
       });
       const data = {
         score: this.score, kills: this.kills, wave: this.waveMgr.totalWaves, level: ev.level,
         victory: true, endless: false, durationSec, build, newHighScore, profile, reward,
-        operativeId: this.operativeId,
+        operativeId: this.operativeId, shadowTrial: this.shadowTrial,
+        startLevel: this.registry.get('runStartLevel') ?? this.currentLevel,
       };
       ScoreManager.saveScore({
         score: this.score, kills: this.kills, level: ev.level,
         wave: this.waveMgr.totalWaves, endless: false, durationSec, build,
       });
       const sceneRef = this.scene;
-      window.setTimeout(() => {
+      this.time.delayedCall(3000, () => {
         try { sceneRef.start('GameOverScene', data); } catch (_) { /* noop */ }
-      }, 3000);
+      });
       return;
     }
+    this.paused = true;
+    this.physics.pause();
     this.hero.heal(this.hero.maxHp);
-    this.announce(`无尽 ${ev.level} 通过！下一战区威胁提升`, 0xfbbf24, 2000);
+    this.announce(`漫游第 ${ev.level} 站完成 · 下一站更热闹`, 0xb47b45, 2000);
     const showUpgrade = () => {
       if (this.dead) return;
       this.showUpgradeUI('level');
     };
-    window.setTimeout(() => { try { showUpgrade(); } catch (_) { /* noop */ } }, 2500);
+    this.time.delayedCall(2500, () => { if (this.sys.isActive()) showUpgrade(); });
   }
 
   private showChapterClear(unlock: ChapterUnlockResult): void {
@@ -1679,7 +1710,7 @@ export class ArenaScene extends Phaser.Scene {
     if (!unlock.firstClear) lines.push('重复通关：战术资料已回收');
     this.announce(lines.join('\n'), this.chapter.colors.accent, 2100);
     this.snd.victory();
-    this.cameras.main.flash(160, 100, 255, 160, true);
+    this.feedbackFlash(160, 100, 255, 160, true);
   }
 
   /* ────────────────── XP Gems ────────────────── */
@@ -1693,7 +1724,7 @@ export class ArenaScene extends Phaser.Scene {
 
     const gem = this.physics.add.sprite(x, y, 'xp_gem');
     gem.setDepth(2); gem.setData('xp', xp);
-    gem.setData('spawnTime', this.time.now);
+    gem.setData('spawnTime', this.combatTime);
     (gem.body as Phaser.Physics.Arcade.Body).setCircle(5, 3, 3);
     this.xpGems.add(gem);
 
@@ -1702,7 +1733,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private magnetXpGems(): void {
-    const now = this.time.now;
+    const now = this.combatTime;
     [...this.xpGems.getChildren()].forEach(c => {
       const gem = c as Phaser.Physics.Arcade.Sprite;
       if (!gem.active) return;
@@ -1725,7 +1756,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private showDmgNum(x: number, y: number, dmg: number, isHero = false, isCrit = false): void {
     if (!isHero && !isCrit) {
-      const now = this.time.now;
+      const now = this.combatTime;
       if (now - this.lastDmgNumTime < 60) return;
       this.lastDmgNumTime = now;
     }
@@ -1733,9 +1764,9 @@ export class ArenaScene extends Phaser.Scene {
     const isBig = rounded >= 50;
     const label = isCrit ? `${rounded}!` : `${rounded}`;
     const size = isCrit ? '24px' : isBig ? '18px' : (isHero ? '18px' : '14px');
-    const color = isCrit ? '#fbbf24' : isBig ? '#ff9f43' : (isHero ? '#ff6b6b' : '#ffffff');
+    const color = isCrit ? '#94612d' : isBig ? '#ff9f43' : (isHero ? '#ff6b6b' : '#ffffff');
     const t = this.add.text(x + Phaser.Math.Between(-10, 10), y, label, {
-      fontSize: size, fontFamily: 'monospace', fontStyle: 'bold',
+      fontSize: size, fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold',
       color, stroke: '#000000', strokeThickness: isCrit ? 4 : (isBig ? 3 : 2),
     }).setOrigin(0.5).setDepth(60);
     const dur = isCrit ? 800 : (isBig ? 650 : 500);
@@ -1854,16 +1885,32 @@ export class ArenaScene extends Phaser.Scene {
     this.time.delayedCall(550, () => { emitter.destroy(); this.activeParticleCount--; });
   }
 
-  private hitlag(ms: number): void {
-    const until = performance.now() + ms;
-    if (until > this.hitlagUntil) this.hitlagUntil = until;
+  private hitlag(_ms: number): void {
+    // Keep movement responsive. Local squash and sparks provide impact feedback.
   }
 
   private throttledShake(dur: number, intensity: number): void {
-    const now = this.time.now;
+    const now = this.combatTime;
     if (now - this.lastShakeTime < 100) return;
     this.lastShakeTime = now;
-    this.cameras.main.shake(dur, intensity);
+    this.feedbackShake(dur, intensity);
+  }
+
+  private feedbackShake(duration: number, intensity: number): void {
+    if (!SettingsManager.get().reducedMotion) this.cameras.main.shake(Math.min(140, duration), Math.min(.004, intensity));
+  }
+
+  private feedbackFlash(_duration: number, _red: number, _green: number, _blue: number, _force = true): void {
+    // Local sparks and readable hit numbers carry feedback without full-screen flashes.
+  }
+
+  private grantJourneyRewards(): void {
+    const count = this.journey.claimRewards();
+    if (!count) return;
+    this.repairDefense(.05 * count);
+    this.hero.addCharge(15 * count);
+    this.showActionHint(`旅途印章 +${count}  ·  暖灯修复 ${5 * count}%  ·  灵感 +${15 * count}`);
+    this.snd.upgrade();
   }
 
   private collectParticles(x: number, y: number): void {
@@ -1882,7 +1929,7 @@ export class ArenaScene extends Phaser.Scene {
   private showUpgradeUI(pool: 'wave' | 'level'): void {
     if (this.dead || this.upgrading) return;
 
-    const choices = this.upgradeMgr.pickThree(pool, this.hero);
+    const choices = this.upgradeMgr.pickThree(pool, this.hero, this.defenseHp / this.defenseMaxHp);
     if (choices.length === 0) {
       if (pool === 'level') {
         this.paused = true;
@@ -1899,25 +1946,28 @@ export class ArenaScene extends Phaser.Scene {
           try { sceneRef.start('ArenaScene', { level: nextLvl, score: sc, kills, endless, operativeId, elapsedMs }); } catch (_) { /* noop */ }
         });
       } else {
-        this.waveMgr.scheduleNextWave(this.time.now);
+        this.waveMgr.scheduleNextWave(this.combatTime);
       }
       return;
     }
 
     this.upgrading = true;
+    this.input.keyboard?.resetKeys();
     this.physics.pause();
-    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7)
+    this.time.paused = true;
+    this.tweens.pauseAll();
+    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x647256, 0.65)
       .setScrollFactor(0).setDepth(300);
     this.upgradeUI.push(overlay);
 
     const buildPath = this.upgradeMgr.getBuildPath();
     const title = pool === 'level'
-      ? (this.endless ? '无尽强化' : '章节战利品')
+      ? (this.endless ? '无尽强化' : '旅途纪念品')
       : buildPath
-        ? `${BUILD_INFO[buildPath].name} · 选择改装`
-        : '选择战地改装';
+        ? `${BUILD_INFO[buildPath].name} · 选择灵感`
+        : '营地小憩 · 选一份灵感';
     const titleText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.18, title, {
-      fontSize: '24px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
+      fontSize: '24px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold', color: '#35483e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
     this.upgradeUI.push(titleText);
 
@@ -1925,13 +1975,13 @@ export class ArenaScene extends Phaser.Scene {
       GAME_WIDTH / 2,
       GAME_HEIGHT * 0.18 + 32,
       buildPath
-        ? `${BUILD_INFO[buildPath].promise} · ${this.upgradeMgr.isEvolved() ? '已超限进化' : `进化 ${Math.min(3, this.upgradeMgr.getPathUpgradeCount())}/3`}`
+        ? `${BUILD_INFO[buildPath].promise} · ${this.upgradeMgr.isEvolved() ? '已绽放进阶' : `进化 ${Math.min(3, this.upgradeMgr.getPathUpgradeCount())}/3`}`
         : '本局后续升级将围绕所选流派出现',
-      { fontSize: '12px', fontFamily: 'monospace', color: '#64748b' },
+      { fontSize: '12px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#68745f' },
     ).setOrigin(0.5).setScrollFactor(0).setDepth(301);
     this.upgradeUI.push(subtitle);
 
-    const cardW = 250, cardH = 140, gap = 18;
+    const cardW = 276, cardH = 196, gap = 18;
     const n = choices.length;
     const totalW = cardW * n + gap * (n - 1);
     const startX = (GAME_WIDTH - totalW) / 2 + cardW / 2;
@@ -1951,20 +2001,20 @@ export class ArenaScene extends Phaser.Scene {
       this.upgradeUI.push(dot);
 
       const nt = this.add.text(cx - cardW / 2 + 32, cy - 40, upg.name, {
-        fontSize: '16px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
+        fontSize: '16px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold', color: '#35483e',
       }).setOrigin(0, 0).setScrollFactor(0).setDepth(302);
       this.upgradeUI.push(nt);
 
       const keyText = this.add.text(cx - cardW / 2 + 12, cy - cardH / 2 + 10, `[${i + 1}]`, {
-        fontSize: '11px', fontFamily: 'monospace', fontStyle: 'bold', color: '#64748b',
+        fontSize: '11px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold', color: '#68745f',
       }).setOrigin(0, 0).setScrollFactor(0).setDepth(302);
       this.upgradeUI.push(keyText);
 
       const rarityLabel = upg.rarity === 'epic' ? '稀有' : upg.rarity === 'rare' ? '精良' : '';
       if (rarityLabel) {
-        const rarityColor = upg.rarity === 'epic' ? '#fbbf24' : '#818cf8';
-        const rt = this.add.text(cx + cardW / 2 - 14, cy - 40, rarityLabel, {
-          fontSize: '12px', fontFamily: 'monospace', color: rarityColor,
+        const rarityColor = upg.rarity === 'epic' ? '#94612d' : '#818cf8';
+        const rt = this.add.text(cx + cardW / 2 - 14, cy - cardH / 2 + 10, rarityLabel, {
+          fontSize: '12px', fontFamily: 'Microsoft YaHei, sans-serif', color: rarityColor,
         }).setOrigin(1, 0).setScrollFactor(0).setDepth(302);
         this.upgradeUI.push(rt);
       }
@@ -1972,14 +2022,14 @@ export class ArenaScene extends Phaser.Scene {
       if (upg.maxStacks > 1 && upg.maxStacks < 99) {
         const stack = this.upgradeMgr.getStacks(upg.id) + 1;
         const st = this.add.text(cx + cardW / 2 - 14, cy + cardH / 2 - 16, `${stack}/${upg.maxStacks}`, {
-          fontSize: '11px', fontFamily: 'monospace', color: '#475569',
+          fontSize: '11px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#68745f',
         }).setOrigin(1, 1).setScrollFactor(0).setDepth(302);
         this.upgradeUI.push(st);
       }
 
       const dt = this.add.text(cx, cy + 6, upg.desc, {
-        fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
-        wordWrap: { width: cardW - 32 }, align: 'center',
+        fontSize: '13px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#65705c',
+        wordWrap: { width: cardW - 32, useAdvancedWrap: true }, align: 'center',
       }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(302);
       this.upgradeUI.push(dt);
 
@@ -2003,9 +2053,9 @@ export class ArenaScene extends Phaser.Scene {
 
   private drawCard(g: Phaser.GameObjects.Graphics, cx: number, cy: number, w: number, h: number, catColor: number, hover: boolean): void {
     g.clear();
-    g.fillStyle(hover ? 0x1e293b : 0x0f172a);
+    g.fillStyle(hover ? 0xf0e6cb : 0xfffbef);
     g.fillRoundedRect(cx - w / 2, cy - h / 2, w, h, 8);
-    g.lineStyle(1.5, hover ? catColor : 0x1e3a5f, hover ? 0.8 : 0.5);
+    g.lineStyle(1.5, hover ? catColor : 0xa8bba3, hover ? 0.8 : 0.5);
     g.strokeRoundedRect(cx - w / 2, cy - h / 2, w, h, 8);
     if (hover) {
       g.fillStyle(catColor, 0.06);
@@ -2021,9 +2071,9 @@ export class ArenaScene extends Phaser.Scene {
     this.clearUpgradeUI();
     if (evolvedPath) {
       const evolution = EVOLUTION_INFO[evolvedPath];
-      this.announce(`⚡ 超限进化 · ${evolution.name}\n${evolution.desc}`, BUILD_INFO[evolvedPath].color, 1900);
-      this.cameras.main.flash(180, 255, 220, 100, true);
-      this.cameras.main.shake(220, 0.006);
+      this.announce(`⚡ 绽放进阶 · ${evolution.name}\n${evolution.desc}`, BUILD_INFO[evolvedPath].color, 1900);
+      this.feedbackFlash(180, 255, 220, 100, true);
+      this.feedbackShake(220, 0.006);
     } else {
       this.announce(`获得: ${upg.name}`, CATEGORY_COLORS[upg.category] || 0xffffff, 1000);
     }
@@ -2038,7 +2088,7 @@ export class ArenaScene extends Phaser.Scene {
     const previewUI: Phaser.GameObjects.GameObject[] = [];
     const previewTweens: Phaser.Tweens.Tween[] = [];
 
-    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.75)
+    const overlay = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x647256, 0.655)
       .setScrollFactor(0).setDepth(400);
     previewUI.push(overlay);
 
@@ -2046,7 +2096,7 @@ export class ArenaScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
 
     const bg = this.add.graphics().setScrollFactor(0).setDepth(401);
-    bg.fillStyle(0x0f172a, 0.95);
+    bg.fillStyle(0xfffbef, 0.95);
     bg.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
     bg.lineStyle(2, skill.color, 0.8);
     bg.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
@@ -2054,12 +2104,12 @@ export class ArenaScene extends Phaser.Scene {
 
     const hex = '#' + skill.color.toString(16).padStart(6, '0');
     const title = this.add.text(cx, cy - cardH / 2 + 30, `技能解锁: ${skill.name}`, {
-      fontSize: '22px', fontFamily: 'monospace', fontStyle: 'bold', color: hex,
+      fontSize: '22px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold', color: hex,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
     previewUI.push(title);
 
     const desc = this.add.text(cx, cy - cardH / 2 + 60, skill.desc, {
-      fontSize: '14px', fontFamily: 'monospace', color: '#94a3b8',
+      fontSize: '14px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#65705c',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
     previewUI.push(desc);
 
@@ -2084,17 +2134,17 @@ export class ArenaScene extends Phaser.Scene {
     const displayLevels = Math.min(3, skill.levels.length);
     for (let i = 0; i < displayLevels; i++) {
       const lvlText = this.add.text(cx, levelsY + i * 20, skill.levels[i].desc, {
-        fontSize: '11px', fontFamily: 'monospace', color: i === 0 ? '#e2e8f0' : '#64748b',
+        fontSize: '11px', fontFamily: 'Microsoft YaHei, sans-serif', color: i === 0 ? '#35483e' : '#68745f',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
       previewUI.push(lvlText);
     }
     const growthText = this.add.text(cx, levelsY + displayLevels * 20 + 4, `∞ ${skill.growthDesc}`, {
-      fontSize: '11px', fontFamily: 'monospace', color: '#fbbf24',
+      fontSize: '11px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#94612d',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
     previewUI.push(growthText);
 
     const hint = this.add.text(cx, cy + cardH / 2 - 65, '充能满后按 [ SPACE ] 释放  |  [ Q ] 切换技能', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#60a5fa',
+      fontSize: '11px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#60a5fa',
       backgroundColor: '#1e293b', padding: { x: 8, y: 3 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(402);
     previewUI.push(hint);
@@ -2108,7 +2158,7 @@ export class ArenaScene extends Phaser.Scene {
     previewUI.push(btnBg);
 
     const btnText = this.add.text(cx, btnY, '确 认', {
-      fontSize: '16px', fontFamily: 'monospace', fontStyle: 'bold', color: '#fff',
+      fontSize: '16px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold', color: '#fff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(403);
     previewUI.push(btnText);
 
@@ -2131,6 +2181,9 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private finishUpgrade(pool: 'wave' | 'level'): void {
+    this.input.keyboard?.resetKeys();
+    this.time.paused = false;
+    this.tweens.resumeAll();
     this.upgrading = false;
     this.hitlagUntil = 0;
 
@@ -2153,7 +2206,7 @@ export class ArenaScene extends Phaser.Scene {
       });
     } else {
       this.physics.resume();
-      this.waveMgr.scheduleNextWave(this.time.now);
+      this.waveMgr.scheduleNextWave(this.combatTime);
     }
   }
 
@@ -2172,40 +2225,50 @@ export class ArenaScene extends Phaser.Scene {
 
   private togglePause(): void {
     if (this.dead || this.upgrading || this.tutorial.isActive) return;
+    if (this.paused && this.pauseUI.length === 0) return;
+    this.input.keyboard?.resetKeys();
     this.paused = !this.paused;
     if (!this.paused) {
       this.clearPauseUI();
+      this.time.paused = false;
+      this.tweens.resumeAll();
       this.physics.resume();
       return;
     }
 
     this.physics.pause();
+    this.time.paused = true;
+    this.tweens.pauseAll();
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
-    const overlay = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x02050a, 0.76)
+    const overlay = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x647256, 0.65)
       .setScrollFactor(0).setDepth(500);
     const panel = this.add.graphics().setScrollFactor(0).setDepth(501);
-    panel.fillStyle(0x0f172a, 0.98);
-    panel.fillRoundedRect(cx - 180, cy - 115, 360, 230, 12);
+    panel.fillStyle(0xfffbef, 0.98);
+    panel.fillRoundedRect(cx - 250, cy - 145, 500, 290, 16);
     panel.lineStyle(1.5, 0x3b82f6, 0.65);
-    panel.strokeRoundedRect(cx - 180, cy - 115, 360, 230, 12);
-    const title = this.add.text(cx, cy - 66, '行动暂停', {
-      fontSize: '28px', fontFamily: 'monospace', fontStyle: 'bold', color: '#e2e8f0',
+    panel.strokeRoundedRect(cx - 250, cy - 145, 500, 290, 16);
+    const title = this.add.text(cx, cy - 66, '喝口茶，歇一歇', {
+      fontSize: '28px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold', color: '#35483e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502);
     const build = this.upgradeMgr.getBuildPath();
     const status = this.add.text(cx, cy - 18, `${this.chapter.name}  ·  ${this.waveMgr.wave}/${this.waveMgr.totalWaves} 波  ·  ${build ? BUILD_INFO[build].name : '基础武装'}`, {
-      fontSize: '13px', fontFamily: 'monospace', color: '#94a3b8',
+      fontSize: '13px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#65705c',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502);
-    const hint = this.add.text(cx, cy + 34, 'ESC 继续   ·   M 返回主菜单', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#fbbf24',
+    const hint = this.add.text(cx, cy + 34, 'ESC 继续  ·  M 回营地（从本章起点续玩）', {
+      fontSize: '14px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#94612d',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(502);
     const resume = this.add.rectangle(cx, cy + 78, 170, 38, 0x1d4ed8)
       .setScrollFactor(0).setDepth(502).setInteractive({ useHandCursor: true });
-    const resumeText = this.add.text(cx, cy + 78, '继续行动', {
-      fontSize: '15px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff',
+    const resumeText = this.add.text(cx, cy + 78, '继续同行', {
+      fontSize: '15px', fontFamily: 'Microsoft YaHei, sans-serif', fontStyle: 'bold', color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(503);
     resume.on('pointerdown', () => this.togglePause());
-    this.pauseUI.push(overlay, panel, title, status, hint, resume, resumeText);
+    const settings = this.add.text(cx, cy + 117, '旅途设置 · 音量 / 自动开火 / 减少动态效果', {
+      fontSize: '12px', fontFamily: 'Microsoft YaHei, sans-serif', color: '#526c46',
+    }).setOrigin(.5).setScrollFactor(0).setDepth(503).setInteractive({ useHandCursor: true });
+    settings.on('pointerdown', () => openSettings(this));
+    this.pauseUI.push(overlay, panel, title, status, hint, resume, resumeText, settings);
 
     this.pauseMenuHandler = () => {
       this.paused = false;
@@ -2248,32 +2311,41 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     // UI and visuals ALWAYS update — even during death / upgrade / tutorial
-    this.updateUI(time);
-    this.updateBgParticles(time);
-    this.updateMapHazards(time);
+    this.updateUI(this.combatTime);
+    if (!this.paused && !this.upgrading && !this.tutorial.isActive) this.updateBgParticles(this.combatTime);
+    this.updateMapHazards(this.combatTime);
 
     if (this.dead || this.upgrading || this.paused) return;
 
     // Game logic — only when alive, not upgrading, and not in tutorial
     if (!this.tutorial.isActive) {
+      _delta = Math.min(50, Math.max(0, _delta));
       this.activeRunMs += _delta;
+      this.combatTime += _delta;
+      this.data.set('battleTime', this.combatTime);
+      time = this.combatTime;
+      const slowZone = this.chapter.hazards.some(zone => pointInRect(this.hero.x, this.hero.y, zone) && this.isHazardZoneActive(zone, time));
+      this.hero.terrainSpeedMult = slowZone ? this.chapter.hazardKind === 'sand' ? .76 : this.chapter.hazardKind === 'tide' ? .72 : 1 : 1;
       this.hero.tick(time, _delta);
       const heroBody = this.hero.body as Phaser.Physics.Arcade.Body;
-      this.applyEnvironmentVelocity(this.hero.x, this.hero.y, heroBody, time, true);
       const pointer = this.input.activePointer;
       this.runRecorder.recordFrame(
         _delta,
         heroBody.velocity.length() > 20,
-        pointer.isDown && !pointer.rightButtonDown(),
+        (pointer.isDown && !pointer.rightButtonDown()) || SettingsManager.get().autoFire,
       );
+      this.shadow.update(time, _delta, this.hero, this.enemies.getChildren() as Enemy[]);
       this.updateEnemies(time, _delta);
+      if (this.dead) return;
+      this.grantJourneyRewards();
       this.applyPulseDamage(time);
+      if (this.dead) return;
       this.updateBullets(time);
       this.magnetXpGems();
       this.waveMgr.update(time, _delta);
 
       if (this.hero.isInvincible && !this.hero.isDashing) {
-        this.hero.setAlpha(Math.sin(time * 0.02) * 0.3 + 0.7);
+        this.hero.setAlpha(SettingsManager.get().reducedMotion ? .65 : Math.sin(time * 0.012) * .2 + .8);
       } else if (!this.hero.isDashing && this.hero.alpha !== 1) {
         this.hero.setAlpha(1);
       }
@@ -2293,6 +2365,7 @@ export class ArenaScene extends Phaser.Scene {
         targetHero ? this.hero.x : this.defenseCore.x,
         targetHero ? this.hero.y : this.defenseCore.y,
       );
+      if (!e.active || !e.body) return;
       this.applyEnvironmentVelocity(e.x, e.y, e.body as Phaser.Physics.Arcade.Body, time, false);
 
       // Elite dodge: evade incoming player bullets
