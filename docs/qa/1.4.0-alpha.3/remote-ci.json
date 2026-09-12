@@ -1,0 +1,86 @@
+{
+  "version": "1.4.0-alpha.3",
+  "headSha": "1a127d5eba314108b90a382187be4717feaf6a67",
+  "runId": 34706678415,
+  "status": "completed",
+  "conclusion": "success",
+  "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34706678415",
+  "createdAt": "2026-09-12T16:55:21Z",
+  "updatedAt": "2026-09-12T16:55:52Z",
+  "jobs": [
+    {
+      "id": 103587875756,
+      "name": "Tests, web build and pacing model",
+      "status": "completed",
+      "conclusion": "success",
+      "steps": [
+        {
+          "number": 1,
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 2,
+          "name": "Check out source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 3,
+          "name": "Set up Node.js 24",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 4,
+          "name": "Install locked dependencies without lifecycle scripts",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 5,
+          "name": "Run tests, TypeScript, Vite and distribution checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 6,
+          "name": "Recompute theoretical campaign pacing",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 7,
+          "name": "Archive checked web build",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 8,
+          "name": "Archive theoretical pacing report",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 15,
+          "name": "Post Set up Node.js 24",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 16,
+          "name": "Post Check out source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "number": 17,
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "version": "1.4.0-alpha.3",
+  "releaseDirectory": "release/shadow-legion-web-1.4.0-alpha.3-2026-09-12T16-53-31-873Z",
+  "archive": "release/Sunlit-Echoes-1.4.0-alpha.3-web.zip",
+  "archiveBytes": 10055964,
+  "archiveSha256": "6ac32f004961907b28a8de35f068b174722f6a4f3fd87a43fde93728c110f1a0",
+  "verifiedManifestFiles": 11,
+  "zipEntries": 12,
+  "runtimeFiles": 8,
+  "runtimeBytes": 11561419,
+  "verification": "Independent Python zipfile/hashlib readback; every entry and runtime file matches the release directory."
+}

@@ -1,0 +1,64 @@
+{
+  "version": "1.4.0-alpha.3",
+  "date": "2026-09-13",
+  "timezone": "Asia/Shanghai",
+  "method": "Connected Microsoft Edge via CUA screenshots, accessibility tree, ordinary clicks and key presses; Browser SDK read-only DOM and captured warn/error logs",
+  "origin": "http://localhost:4173/",
+  "storageScope": "Existing QA origin retains genuine forest and lake delivery receipts. No page scripts injected progress, positions, saves or relay state.",
+  "screenshotEvidence": "Screenshots inspected in the tool conversation; no PNG archive or video export.",
+  "intermediateBuild": {
+    "script": "assets/index-CUa5r551.js",
+    "scope": "Production build before final instruction/postcard art refinements. Main relay and walking rules match the final 3y2znDdW build.",
+    "flow": [
+      "Menu retains prior practice 2 stars / 3 warm crystals and directs the next letter to Cloudstep Mountain.",
+      "Three-card journey map shows forest/lake received and mountain available; desert and snow remain unavailable.",
+      "Enter mountain at the trailhead. Walk on the broad path to the lesson instruction point.",
+      "F reads the visual pattern; world text and HUD show echo leaf, echo sun, player bell.",
+      "E at the command point sends the echo to its actual bell pad. Walk separately to the player bell row.",
+      "Both echo notes become checked in the HUD; echo remains at its pad while the game waits for player bell.",
+      "F at the wrong leaf bell reports the required bell symbol and retains the two checked echo notes.",
+      "Walk to the bell symbol and press F. The first relay completes, saved confirmation appears and optional flag path opens.",
+      "E recalls the companion. Continuously walk the complete broad ascent without using the optional wind path or reloading to a checkpoint.",
+      "F reads the second pattern at the mountain pass: echo bell, player leaf, echo sun. E dispatches the echo on its independent route while the player starts up the main approach.",
+      "The echo reaches its independent pad and rings bell; the HUD checks that note and waits for player leaf. Walk to the actual leaf bell and press F.",
+      "The echo supplies the last sun note. The scene reports the second phrase saved, marks the station complete and visibly removes the pass gate. E recalls the companion and the player walks through the opening.",
+      "Walk past the former gate position to the goat's two-bell home and press F in range. The HUD and notice confirm Lanzjiao received the letter and a new reply is available.",
+      "Escape opens the mountain pause overlay; a second Escape returns to the map, which now shows the mountain reply and revisit button.",
+      "Open the reply album: the mountain reply is unlocked while desert, snow and ending remain locked. Read both mountain pages with Right, use R to return to page one and Escape to close."
+    ],
+    "capturedWarnErrorLogs": [],
+    "status": "observed mountain main route and reply complete",
+    "ready": true
+  },
+  "finalBuildSmoke": {
+    "script": "assets/index-3y2znDdW.js",
+    "status": "observed recovery, revisit, pause, postcard and selected wind/refuge behavior",
+    "flow": [
+      "Reload the same origin and inspect its script URL: ./assets/index-3y2znDdW.js. Loading screen resolves to the main menu; existing practice currency remains 2 stars / 3 warm crystals.",
+      "Open the journey map: all three genuine region replies persist, with mountain revisit available and the two planned regions still unavailable.",
+      "Re-enter mountain: cat and companion resume at the safe mailbox checkpoint after the gate, the gate remains open and the HUD remembers Lanzjiao's received letter. Final instruction marker and command circle are visible.",
+      "Walk from the recovered checkpoint to Lanzjiao and press F; this now produces revisit chat while the delivered HUD state stays unchanged.",
+      "Escape opens the mountain-specific pause overlay; Return resumes the same scene. Begin walking back toward the optional route.",
+      "Walk continuously back from Lanzjiao through the open pass and down the main approach, then through the upper optional flag route to the green circular refuge.",
+      "The postcard icon and F prompt are readable at the refuge. F collects it, changes its world label to both spaces reserved and displays its companion-themed message; the delivered main quest remains unchanged.",
+      "Leave the refuge and stand on the lower wind path. Yellow flags and the warning hint appear. Without further movement input, the next windy state shows the cat returned to the already visited postcard flag, with the safe-return notice; the main delivery and postcard label remain intact. Intermediate displacement was not recorded frame by frame.",
+      "In the following screenshot the flags remain in the windy state and the cat stays on the green refuge. DOM data-game-ready is true and captured warn/error logs are empty. Pause the scene at this safe point."
+    ],
+    "ready": true,
+    "capturedWarnErrorLogs": []
+  },
+  "notCovered": [
+    "Final-build fresh-save continuous forest-to-lake-to-mountain journey",
+    "Final-build continuous mountain relays from the trailhead; this run completes those on the explicitly identified intermediate build",
+    "Complete optional wind route, dash feel and all recovery boundaries; postcard persistence after a later reload through ordinary browser input",
+    "Full sixteen-page story reached through ordinary unlock progression",
+    "Human pace, held-key feel, listening and reduced-motion art review",
+    "Ten-domain native backup round trip and native storage fault injection",
+    "Minimum hardware performance, multi-DPI/fullscreen/multimonitor and cross-browser acceptance",
+    "Electron desktop, durable file saves and migration, gamepad and remapping",
+    "Two remaining regions and the connected three-hour game",
+    "NPC horns near the north world edge partially meet the fixed HUD; final character framing and story illustration variety require a later visual pass"
+  ],
+  "fullReleaseAcceptance": false,
+  "browserAcceptance": "Intermediate CUa5r551: ordinary-input continuous mountain main route, both relays, wrong-note recovery, delivery and two-page reply observed. Final 3y2znDdW: reload preserves all three receipts and open pass; mailbox recovery, revisit chat, pause/resume, postcard collection, selected wind return and refuge observed. Captured warn/error logs empty. Final-build fresh-save complete journey, remaining wind/input boundaries and full-release acceptance are not established."
+}

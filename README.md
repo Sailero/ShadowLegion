@@ -2,35 +2,27 @@
 
 拟人布偶猫棉棉带着一袋回信，与记住她脚步的影伴小暖，把远方的朋友重新联系起来。新定位是温暖、需要操作与分工的 Steam PC 送信冒险，首次完整体验的制作目标约三小时。
 
-当前开发版 **1.4.0-alpha.2** 已接入**风铃森林与圆镜湖两段可玩原型**。森林确认交信后，新的邮路图才开放圆镜湖；旧练习星章不会替代实际投递来解锁送信区域。云阶山、晒被沙原、晴雪湾仍未制作完成，三小时成品与 Steam 发行仍是目标。
+当前开发版 **1.4.0-alpha.3** 已接入**风铃森林、圆镜湖与云阶山三地区可玩原型**。小暖从留守扶桥、稳舟运信，成长到沿独立路线传递铃声、等待棉棉回应。地区按真实投递依次开放，旧练习星章不替代主线交信。晒被沙原、晴雪湾和完整三小时作品仍未完成，尚未达到 Steam 发布就绪状态。
 
-圆镜湖围绕“叶舟运信、猫走岸路、小暖稳住码头”展开：近距离调整两片导流叶，确认湖心与收信码头两次到站后分别保存，最后向泡芙交信并开放回信与返程近路；岸边野餐垫是可选发现。小暖按棉棉走过的安全脚印沿岸跟随，召回不会直接抄近路穿水。暂停冻结操作与航行；重新进入从最近确认的码头恢复，不保存航行中的位置。
+云阶山有两段参与顺序不同的接力：先由小暖响两声、棉棉收尾，再由棉棉补中间一声，让小暖继续。错铃会提示下一声并保留正确前缀；奶油山路、蜜桃山壁和云海之间，还有可选侧风路线与避风平台。详见 [山地实现记录](docs/mountain-implementation.md)；该片 **8–12 分钟只是制作预算，尚无首次游玩时长实测**。
 
-多地区投递、湖区到站和可选发现纳入**十项本机数据备份**，与旧成长、挑战记录和森林兼容存档并存；旧备份缺少新增旅程域时保留该域当前记录。数据仍只保存在当前浏览器本机，不是云存档。
+多地区投递、安全续玩点与可选发现纳入**十项本机数据备份**。主旅程内容升级为 v3，兼容迁移旧 v2；成功确认的节点才推进路线，不保存半段铃序或角色坐标。数据保存在当前浏览器本机，不是云存档。
 
-**最终 `release:web` 已通过 326/326 自动检查、TypeScript、Vite、静态检查与依赖审计，0 已知依赖漏洞。** 本轮修复森林与湖区键盘事件被重复处理的问题，新增 14 项使用真实 Phaser 键盘队列的回归，覆盖单次暂停、继续、按住重复事件与失焦恢复；这些检查不代替浏览器操作验收。[alpha.2 本机试玩 ZIP](release/Sunlit-Echoes-1.4.0-alpha.2-web.zip) 已打包并独立读回核对，10,044,316 字节；SHA-256：`494930700fc200f913feaf6bcfe219f22d0c44b6fca244142b58b7e7fbcaf512`。[包校验记录](docs/qa/1.4.0-alpha.2/package-verification.json) 与 [发布清单](docs/release-manifest-1.4.0-alpha.2.json) 保留文件证据。
+**最终 `release:web` 退出 0，389/389 自动检查、TypeScript、Vite、静态检查与依赖审计全部通过，0 已知依赖漏洞。** [alpha.3 本机试玩 ZIP](release/Sunlit-Echoes-1.4.0-alpha.3-web.zip) 已独立逐项读回核对；精确字节、哈希和文件范围见 [包校验记录](docs/qa/1.4.0-alpha.3/package-verification.json)、[发布清单](docs/release-manifest-1.4.0-alpha.3.json) 与 [发行准备](docs/release-readiness.md)。
 
-Edge 中间版已通过起点稳舟、装信、启航到湖心真实到站保存；后续中间版 `index-CmW6i9W8.js` 以普通点击、F / E 完成双导流叶调整、野餐垫发现保存与第二航段出发，看到叶舟到达第三叶码头并显示已保存，也观察到召回影伴沿栈桥折向岸边。随后主动刷新到最终 `index-CK6S0itx.js`，确认从第三叶码头恢复；F 向泡芙实际交信后，HUD / 地图显示已收信、近路开放，泡芙两页回信及 Right 翻页、R 重读、Esc 合上均已检查。最终包的快速 Escape / Return 恢复后仍留在湖区，单次 Esc 暂停、另一次 Esc 返回地图也已实测。
+Edge 中间构建 `index-CUa5r551.js` 已用普通输入完成两段接力、连续宽路上山、穿门、F 交信与岚角两页回信，未用风路或刷新跳过山路。最终 `index-3y2znDdW.js` 已验证投递与开门状态恢复、回访、暂停继续、明信片收取，以及一处风口的预告、安全退回和避风圆内停稳。准确构建与观察范围见 [Edge 记录](docs/qa/1.4.0-alpha.3/edge-observations.json) 和 [验证摘要](docs/validation-1.4.0-alpha.3.json)，完整发布验收仍为 `false`。
 
-交信后的第二次刷新也已验证：最终包菜单恢复，邮路图仍显示泡芙已收信、新回信与湖心近路已开放；本轮未注入存档或坐标。本轮未连续走完北岸与东岸至收件人，也未完整走回程桥，这些分段证据不代表两段最终完整流程或真人时长达标。[Edge 观察记录](docs/qa/1.4.0-alpha.2/edge-observations.json) 与 [验证摘要](docs/validation-1.4.0-alpha.2.json) 保留构建、流程和未测范围。下列 alpha.1 包仅供历史追溯，详见 [发行准备](docs/release-readiness.md)。
+最终新档连续三地区、完整风路与轻跃边界、明信片再次刷新后的保留仍待验收；北边界羊角与固定 HUD 的局部重叠、绘本复用猫立绘也留待后续美术改进。详细边界见 [发行准备](docs/release-readiness.md)。
 
-代码提交 `e9c7d17fb8117f1c9c6dd92cf0b16a79ffd95106` 已推送，已核对本地与远端提交完全一致。[CI 34704561741](https://github.com/Sailero/ShadowLegion/actions/runs/34704561741) 及任务 `103582158358` 的全部步骤成功；[远端证据](docs/qa/1.4.0-alpha.2/remote-ci.json) 已保存。CI 覆盖代码检查和产物归档，不代表图形或 Steam 发行验收。
+代码提交 `1a127d5eba314108b90a382187be4717feaf6a67` 已推送，已核对本地与远端提交完全一致。[CI 34706678415](https://github.com/Sailero/ShadowLegion/actions/runs/34706678415) 与任务 `103587875756` 的全部步骤成功；[远端证据](docs/qa/1.4.0-alpha.3/remote-ci.json) 已保存。CI 不替代图形、真人体验或 Steam 发行验收。
+
+## 1.4.0-alpha.2 历史基线
+
+alpha.2 的森林与湖区原型通过 326/326 自动检查。[历史 ZIP](release/Sunlit-Echoes-1.4.0-alpha.2-web.zip) 为 10,044,316 字节，SHA-256：`494930700fc200f913feaf6bcfe219f22d0c44b6fca244142b58b7e7fbcaf512`；[包记录](docs/qa/1.4.0-alpha.2/package-verification.json)、[发布清单](docs/release-manifest-1.4.0-alpha.2.json)、[Edge 观察](docs/qa/1.4.0-alpha.2/edge-observations.json) 与 [验证摘要](docs/validation-1.4.0-alpha.2.json) 保留分段运输、最终交信及刷新恢复的准确范围。代码 `e9c7d17fb8117f1c9c6dd92cf0b16a79ffd95106` 的 [CI 34704561741](https://github.com/Sailero/ShadowLegion/actions/runs/34704561741) 成功，见 [远端记录](docs/qa/1.4.0-alpha.2/remote-ci.json)；这些历史结果不作为 alpha.3 的通过证据。
 
 ## 1.4.0-alpha.1 历史基线
 
-以下至“浏览器试玩”前的版本、包和检查描述保留 alpha.1 当时状态；“当前”不指 alpha.2。
-
-当前 **1.4.0-alpha.1** 是“第一封信”可玩 alpha：森林寻址、影伴扶桥、亲手交信与返程捷径；小猫分层待机/跑动/轻跃/庆祝动作；十六页可跳过、回看的序章与回信册。它尚不是三小时成品；完整五地区、真人时长、Steam 桌面发行与手柄支持仍需制作和验收。准确检查与待测项见 [发行准备](docs/release-readiness.md)。
-
-当前包已完成 **248/248 自动测试**，`release:web` 的 TypeScript、生产构建、静态检查与依赖审计通过，审计为 **0 已知漏洞**。[本机试玩 ZIP](release/Sunlit-Echoes-1.4.0-alpha.1-web.zip) 已生成。Edge 已走通中间生产版的森林投递与返营；最终包通过刷新保留进度、森林画面、暂停继续及栗笺回信检查。具体构建与未测范围见 [实测记录](docs/qa/1.4.0-alpha.1/edge-observations.json) 和 [验证摘要](docs/validation-1.4.0-alpha.1.json)，不等于完整发行验收。
-
-从“今天，寄往风铃森林”进入新邮路。三片地址和投递结果单独保存，并纳入九项旅途备份；旧备份缺少邮路时保留当前邮路。四个旧角色 ID 作为棉棉的四套邮装保留；旧五十段挑战、无尽与影子切磋是可选练习，不代替新的送信主线。影子基于本机行为统计与规则决策，不是训练模型、在线玩家或精确录像回放。
-
-[故事与旅程初稿](docs/story-and-journey.md) 说明五位收信人、小暖的成长和结局；[五地区实施方案](docs/region-implementation-plan.md) 明确森林、湖泊、山地、暖沙、晴雪各自的操作、交付条件与存档计划；[三小时内容与 Steam 计划](docs/steam-three-hour-plan.md) 保存官方作品参考与制作预算。这些规划不等于后四区已经实现。[小猫完整美术提示词](docs/mailcat-art-manifest.json) 记录内置 image_gen 生成和透明度修正。新头像、部件与封面在 `src/public/art/`，动作由 `src/utils/CatSpriteFactory.ts` 分层合成。
-
-森林邮路：WASD / 方向键或点地行走，Shift / 右键轻跃，E 安排小暖同行或留守，F 近场互动与交信，Esc 暂停。绘本使用左右键翻页、R / Home 重看、Esc 合上、Tab + Enter 选择。森林没有生命扣除，落水返回安全处并保留已保存线索。
-
-下文保留既有挑战系统的运行方法与历史验证。标为 rc.1 / rc.2 / rc.3 的包、159 项旧测试和图形证据均属于 **1.3 历史基线**，不能当作当前 Alpha、三小时冒险或 Steam 发行认证。
+alpha.1 的首封森林投递原型通过 248/248 自动检查。[历史 ZIP](release/Sunlit-Echoes-1.4.0-alpha.1-web.zip) 为 10,030,567 字节，SHA-256：`283078391483b7252c8f3cc30b4ce299144c8d713212bfea156e9455e3799f5f`；[包记录](docs/qa/1.4.0-alpha.1/package-verification.json)、[发布清单](docs/release-manifest-1.4.0-alpha.1.json)、[Edge 观察](docs/qa/1.4.0-alpha.1/edge-observations.json)、[验证摘要](docs/validation-1.4.0-alpha.1.json) 与 [远端 CI](docs/qa/1.4.0-alpha.1/remote-ci.json) 保留当时的森林交付、返营与最终包恢复检查范围，不作为当前 alpha.3 的验收证据。
 
 ## 浏览器试玩
 
@@ -50,9 +42,15 @@ npm run preview -- --host 127.0.0.1
 
 不要直接双击 `dist/index.html`；浏览器版需要 HTTP(S)。进度和设置保存在当前浏览器本机；不同域名、协议和端口不会共享存档。
 
-在营地打开“旅途设置”，选择“备份旅途”下载 JSON；迁移设备或站点时，先选“恢复旅途”查看通关、星章和暖晶，再确认恢复。文件不上传；战斗中不能恢复。读取、验证或写入失败会给出明确提示，写入中断会尝试还原原记录。
+邮路使用 WASD / 方向键或左键点地行走，Shift / 右键轻跃，E 分工或召回小暖，F 近场互动与交信，Esc 暂停。点地行走需沿可通行路径分段选择，遇到阻挡会停下。绘本使用左右键翻页、R / Home 重看、Esc 合上，菜单可用 Tab + Enter 选择。
+
+在营地打开“旅途设置”，选择“备份旅途”下载 JSON；迁移设备或站点时，先选“恢复旅途”查看已投递地区、安全续玩点与练习记录，再确认恢复。文件不上传；先离开正在运行的邮路或练习再恢复。读取、验证或写入失败会给出明确提示，写入中断会尝试还原原记录。
+
+[故事与旅程](docs/story-and-journey.md) 说明五位收信人、小暖的成长和结局；[五地区实施方案](docs/region-implementation-plan.md) 与 [三小时内容和 Steam 计划](docs/steam-three-hour-plan.md) 保留操作设计、官方作品参考及制作预算，沙原和雪湾仍待实现。[小猫美术记录](docs/mailcat-art-manifest.json) 保存生成提示词与透明度修正；头像、部件和封面位于 [美术资源](src/public/art/)，连贯动作由 [CatSpriteFactory](src/utils/CatSpriteFactory.ts) 分层合成。
 
 ## 保留的挑战内容（1.3 历史基础）
+
+四个旧角色 ID 作为棉棉的四套邮装保留。五十段挑战、无尽与影子切磋是可选练习，不代替送信主线；战斗影子采用本机行为统计与规则决策，不是在线玩家或精确录像回放。下方 rc.1 / rc.2 / rc.3 的包和图形记录均为历史证据。
 
 - 五章各十关，共五十个独立关卡：独立名称、地图几何、来路组合、敌人编排与三星目标；包含暖风草地、杏沙小镇、薄荷港湾、花灯集市、晴空花园。
 - 战役逐关解锁与重玩；无尽巡游逐站加压；影子切磋五阶各三轮，包含单影到双影的不同节奏。
@@ -91,12 +89,12 @@ npm run release:web
 Windows 可在发布目录检查完成后使用标准 ZIP 脚本；将参数换成实际生成的目录：
 
 ```powershell
-.\scripts\package-web-release.ps1 -ReleaseDirectory ".\release\shadow-legion-web-1.4.0-alpha.2-<timestamp>"
+.\scripts\package-web-release.ps1 -ReleaseDirectory ".\release\shadow-legion-web-1.4.0-alpha.3-<timestamp>"
 ```
 
 脚本输出同一 `release/` 父目录中的版本 ZIP，使用正斜杠条目，并校验源文件与 ZIP 内部 SHA-256；拒绝额外文件、路径穿越、链接、清单不符和覆盖已有包，不改动发布源目录。
 
-历史 alpha.1 的[本机静态目录](release/shadow-legion-web-1.4.0-alpha.1-2026-09-12T15-16-53-547Z/)和 [Sunlit-Echoes-1.4.0-alpha.1-web.zip](release/Sunlit-Echoes-1.4.0-alpha.1-web.zip) 已准备好，ZIP 为 **10,030,567 字节**。运行内容为 8 个文件、11,482,178 字节，脚本 `index-D5VG81Rx.js` 的 Vite gzip 估算为 453.58kB。11 个清单文件加清单本身共 12 个 ZIP 条目已校验；完整 SHA-256 见[包校验记录](docs/qa/1.4.0-alpha.1/package-verification.json)及[发布清单](docs/release-manifest-1.4.0-alpha.1.json)。这些是本机静态产物，不是 Steam 上架包；体积检查不能证明加载速度或帧率。
+这些产物是本机静态网页包；Steam 桌面发行仍需单独完成，体积检查也不代表加载速度或帧率验收。当前与历史包的精确记录见 [发行准备](docs/release-readiness.md)。
 
 `analyze:pacing` 是理论敌人负载模型，不是实测局长。真实试玩会在本机保留最近 120 条已完成波次的有效战斗用时；`SessionMetricsManager.summary()` 返回各章样本数、单波中位数和 p90。数据不上传，小样本也不代表整体平衡或整章时长。
 

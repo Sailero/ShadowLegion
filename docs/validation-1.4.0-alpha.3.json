@@ -1,0 +1,115 @@
+{
+  "version": "1.4.0-alpha.3",
+  "createdAt": "2026-09-12T17:21:48Z",
+  "releaseCommand": "npm run release:web",
+  "exitCode": 0,
+  "exitCodeEvidence": "qa/1.4.0-alpha.3/release-execution.json",
+  "tests": {
+    "status": "passed",
+    "total": 389,
+    "passed": 389,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "scope": "Node tests from this version's saved full release log; not graphical acceptance"
+  },
+  "checks": [
+    {
+      "name": "TypeScript and Vite build",
+      "status": "completion-markers-recorded"
+    },
+    {
+      "name": "Distribution check",
+      "status": "completion-markers-recorded"
+    },
+    {
+      "name": "Dependency audit",
+      "status": "completion-markers-recorded"
+    },
+    {
+      "name": "Static release preparation",
+      "status": "completion-markers-recorded"
+    }
+  ],
+  "artifact": {
+    "status": "verified",
+    "directory": "release/shadow-legion-web-1.4.0-alpha.3-2026-09-12T16-53-31-873Z",
+    "archive": "release/Sunlit-Echoes-1.4.0-alpha.3-web.zip",
+    "archiveBytes": 10055964,
+    "archiveSha256": "6ac32f004961907b28a8de35f068b174722f6a4f3fd87a43fde93728c110f1a0",
+    "manifestFiles": 11,
+    "zipEntries": 12,
+    "runtimeFiles": 8,
+    "runtimeBytes": 11561419,
+    "javascript": [
+      {
+        "path": "assets/index-3y2znDdW.js",
+        "bytes": 1886095,
+        "sha256": "501b098eb3c08654094d4c24977876cb022659c20fba507598f26aa1bad03a02",
+        "gzipBytes": 479373,
+        "gzipMethod": "Node v24.16.0 zlib.gzipSync defaults"
+      }
+    ],
+    "verification": "Current Python zipfile/hashlib readback of every entry against disk and manifest; no cached success flag"
+  },
+  "zipVerifiedIndependently": true,
+  "browserObservationFile": "qa/1.4.0-alpha.3/edge-observations.json",
+  "browserAcceptance": "Intermediate CUa5r551: ordinary-input continuous mountain main route, both relays, wrong-note recovery, delivery and two-page reply observed. Final 3y2znDdW: reload preserves all three receipts and open pass; mailbox recovery, revisit chat, pause/resume, postcard collection, selected wind return and refuge observed. Captured warn/error logs empty. Final-build fresh-save complete journey, remaining wind/input boundaries and full-release acceptance are not established.",
+  "remoteCi": {
+    "evidenceStatus": "recorded",
+    "status": "completed",
+    "conclusion": "success",
+    "headSha": "1a127d5eba314108b90a382187be4717feaf6a67",
+    "runId": 34706678415,
+    "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34706678415",
+    "matchesExpectedHead": true,
+    "evidence": "qa/1.4.0-alpha.3/remote-ci.json"
+  },
+  "fullReleaseAcceptance": false,
+  "remainingGates": [
+    "Two further playable regions and a connected, human-measured three-hour journey",
+    "Final-build continuous fresh-save playthrough and complete story progression",
+    "Human first-play pacing, held-key feel, visual accessibility and audio listening",
+    "Minimum-spec sustained performance and target browser/OS acceptance",
+    "Desktop durable file saves and legacy browser-save migration",
+    "Gamepad, remapping, window/fullscreen/DPI and language coverage",
+    "Steam runtime/license review, release materials and platform submission review",
+    "Final-build fresh-save continuous forest-to-lake-to-mountain journey",
+    "Final-build continuous mountain relays from the trailhead; this run completes those on the explicitly identified intermediate build",
+    "Complete optional wind route, dash feel and all recovery boundaries; postcard persistence after a later reload through ordinary browser input",
+    "Full sixteen-page story reached through ordinary unlock progression",
+    "Human pace, held-key feel, listening and reduced-motion art review",
+    "Ten-domain native backup round trip and native storage fault injection",
+    "Minimum hardware performance, multi-DPI/fullscreen/multimonitor and cross-browser acceptance",
+    "Electron desktop, durable file saves and migration, gamepad and remapping",
+    "Two remaining regions and the connected three-hour game",
+    "NPC horns near the north world edge partially meet the fixed HUD; final character framing and story illustration variety require a later visual pass"
+  ],
+  "evidence": [
+    {
+      "path": "qa/1.4.0-alpha.3/release-checks.log",
+      "sha256": "aa77d86cdf92c06054f242b86783153be91295fe44611021df8ffff8ebcdc743"
+    },
+    {
+      "path": "qa/1.4.0-alpha.3/package-verification.json",
+      "sha256": "9463375b3bb1146977c46cbe1d1dbcd70449ac3daf99d0df0130b55c9722ec5e"
+    },
+    {
+      "path": "release-manifest-1.4.0-alpha.3.json",
+      "sha256": "4056aa26b3d26111da364b54b52e3f00c379d514367e998f3158ef2ccab7ffe9"
+    },
+    {
+      "path": "qa/1.4.0-alpha.3/edge-observations.json",
+      "sha256": "5d8cec9337d7e5776e68a9a0df588a8bae92cc1ea2554c6b9320169a8d840a7d"
+    },
+    {
+      "path": "qa/1.4.0-alpha.3/remote-ci.json",
+      "sha256": "cac22cfa54af8ddd606b90040118bc9ce7285ec3c79e8a842b0ab515ad0fed5b"
+    },
+    {
+      "path": "qa/1.4.0-alpha.3/release-execution.json",
+      "sha256": "d87abe3844638c0505818feab31a104bda60741ec987b763ce832c5b7ee17c1a"
+    }
+  ]
+}
