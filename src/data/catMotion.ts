@@ -1,5 +1,5 @@
-export type CatMotionName = 'idle' | 'run' | 'dash' | 'celebrate';
-export const CAT_FRAME_COUNTS: Record<CatMotionName, number> = { idle: 4, run: 8, dash: 4, celebrate: 6 };
+export type CatMotionName = 'idle' | 'run' | 'dash' | 'celebrate' | 'hold' | 'carry';
+export const CAT_FRAME_COUNTS: Record<CatMotionName, number> = { idle: 4, run: 8, dash: 4, celebrate: 6, hold: 4, carry: 8 };
 export const CAT_IDLE_DURATIONS = [1600, 350, 100, 250];
 export const CAT_FRAME_SIZE = 56;
 
@@ -15,6 +15,12 @@ export function getCatPose(motion: CatMotionName, frame: number): CatPose {
   const pose: CatPose = { bodyY: 0, bodyAngle: 0, headAngle: 0, headY: 0,
     leftArm: .04, rightArm: -.04, leftLeg: .04, rightLeg: -.04,
     leftFootY: 0, rightFootY: 0, tail: 0, bag: 0, blink: false };
+  if (motion === 'hold' || motion === 'carry') {
+    const base = getCatPose(motion === 'hold' ? 'idle' : 'run', index);
+    // Keep both paws around the cloth corner while the feet, tail and bag continue walking.
+    return { ...base, bodyAngle: -.035, headAngle: .025 + base.headAngle * .4,
+      leftArm: -.8 + base.bodyY * .035, rightArm: -.95 + base.bodyY * .025 };
+  }
   if (motion === 'idle') {
     const breath = [0, .35, .15, -.15][index];
     return { ...pose, bodyY: breath, headY: -breath * .5,
@@ -47,7 +53,7 @@ export function getCatPose(motion: CatMotionName, frame: number): CatPose {
     bag: Math.sin(index * 1.1 - .5) * .1, blink: index === 3 };
 }
 
-export interface CatMotionInput { speed: number; paused?: boolean; reducedMotion?: boolean }
+export interface CatMotionInput { speed: number; paused?: boolean; reducedMotion?: boolean; holding?: boolean }
 export interface CatMotionFrame { motion: CatMotionName; frame: number }
 
 /** Simulation-clock state machine: paused scenes cannot advance an actor's limbs. */
@@ -71,30 +77,31 @@ export class CatMotionClock {
     if (!input.paused) {
       const speed = Number.isFinite(input.speed) ? Math.max(0, input.speed) : 0;
       this.moving = speed > (this.moving ? 8 : 18);
+      const locomotion = input.holding ? (this.moving ? 'carry' : 'hold') : (this.moving ? 'run' : 'idle');
       // Player movement has priority over a cosmetic reward gesture.
       if (this.motion === 'celebrate' && this.moving) {
-        this.motion = 'run'; this.elapsed = 0; this.duration = 0;
+        this.motion = locomotion; this.elapsed = 0; this.duration = 0;
       }
       if (this.motion === 'dash' || this.motion === 'celebrate') {
         this.elapsed += delta;
-        if (this.elapsed >= this.duration) { this.motion = this.moving ? 'run' : 'idle'; this.elapsed = 0; }
+        if (this.elapsed >= this.duration) { this.motion = locomotion; this.elapsed = 0; }
       } else {
-        const next = this.moving ? 'run' : 'idle';
+        const next = locomotion;
         if (next !== this.motion) { this.motion = next; this.elapsed = 0; }
-        const pace = this.motion === 'run' ? Math.max(.65, Math.min(1.65, speed / 170)) : 1;
+        const pace = this.motion === 'run' || this.motion === 'carry' ? Math.max(.65, Math.min(1.65, speed / 170)) : 1;
         this.elapsed += delta * pace;
       }
     }
-    if (this.motion === 'idle') {
-      if (input.reducedMotion) return { motion: 'idle', frame: 0 };
+    if (this.motion === 'idle' || this.motion === 'hold') {
+      if (input.reducedMotion) return { motion: this.motion, frame: 0 };
       let remaining = this.elapsed % CAT_IDLE_DURATIONS.reduce((a, b) => a + b, 0);
       for (let frame = 0; frame < CAT_IDLE_DURATIONS.length; frame++) {
-        if (remaining < CAT_IDLE_DURATIONS[frame]) return { motion: 'idle', frame };
+        if (remaining < CAT_IDLE_DURATIONS[frame]) return { motion: this.motion, frame };
         remaining -= CAT_IDLE_DURATIONS[frame];
       }
     }
     const count = CAT_FRAME_COUNTS[this.motion];
-    return { motion: this.motion, frame: this.motion === 'run'
+    return { motion: this.motion, frame: this.motion === 'run' || this.motion === 'carry'
       ? Math.floor(this.elapsed / 85) % count
       : Math.min(count - 1, Math.floor(this.elapsed / this.duration * count)) };
   }

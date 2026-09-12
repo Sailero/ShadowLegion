@@ -122,7 +122,8 @@ export class CatSpriteFactory {
   private static bake(scene: Phaser.Scene, parts: Parts, appearance: CatAppearance, role: OperativeId, size: number, avatar: boolean): void {
     const key = catAtlasKey(appearance, avatar);
     if (scene.textures.exists(key)) scene.textures.remove(key);
-    const texture = scene.textures.createCanvas(key, size * 8, size * 3);
+    const rows = Math.ceil(Object.values(CAT_FRAME_COUNTS).reduce((sum, count) => sum + count, 0) / 8);
+    const texture = scene.textures.createCanvas(key, size * 8, size * rows);
     if (!texture) return;
     const scratch = canvas(224, 224), c = scratch.getContext('2d')!;
     let offset = 0;
@@ -140,7 +141,7 @@ export class CatSpriteFactory {
         texture.context.drawImage(scratch, x, y, size, size);
         const name = `${motion}-${frame}`;
         texture.add(name, 0, x, y, size, size);
-        frames.push({ key, frame: name, ...(motion === 'idle' ? { duration: CAT_IDLE_DURATIONS[frame] - 100 } : {}) });
+        frames.push({ key, frame: name, ...(motion === 'idle' || motion === 'hold' ? { duration: CAT_IDLE_DURATIONS[frame] - 100 } : {}) });
         if (offset === 0 && !avatar) {
           const legacy = appearance === 'echo' ? 'shadow_fox' : appearance === 'mirror' ? 'shadow_cat_rival' : OPERATIVE_VISUALS[role].heroTexture;
           copyTexture(scene, legacy, scratch, CAT_FRAME_SIZE, CAT_FRAME_SIZE);
@@ -149,8 +150,8 @@ export class CatSpriteFactory {
       }
       const animation = catAnimationKey(appearance, motion, avatar);
       if (scene.anims.exists(animation)) scene.anims.remove(animation);
-      scene.anims.create({ key: animation, frames, frameRate: motion === 'idle' ? 10 : motion === 'run' ? 1000 / 85 : motion === 'dash' ? 4 / .18 : 6,
-        repeat: motion === 'idle' || motion === 'run' ? -1 : 0 });
+      scene.anims.create({ key: animation, frames, frameRate: motion === 'idle' || motion === 'hold' ? 10 : motion === 'run' || motion === 'carry' ? 1000 / 85 : motion === 'dash' ? 4 / .18 : 6,
+        repeat: motion === 'idle' || motion === 'run' || motion === 'hold' || motion === 'carry' ? -1 : 0 });
     }
     texture.refresh();
   }

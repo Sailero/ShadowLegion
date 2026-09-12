@@ -1,7 +1,7 @@
 import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { JourneyProgressManager as Journey, JOURNEY_STORAGE_KEY as KEY, MAX_JOURNEY_BYTES, sanitizeJourneyState } from '../systems/JourneyProgressManager.ts';
-import { createJourneyState, deriveLakeCheckpoint, deriveMountainCheckpoint, JOURNEY_REGION_IDS } from '../data/journey.ts';
+import { createJourneyState, deriveLakeCheckpoint, deriveMountainCheckpoint, deriveDesertCheckpoint, JOURNEY_REGION_IDS } from '../data/journey.ts';
 import { PostalJourneyManager as Forest, POSTAL_JOURNEY_STORAGE_KEY as OLD, POSTAL_ADDRESS_IDS } from '../systems/PostalJourneyManager.ts';
 
 let entries, reads, writes, store;
@@ -18,6 +18,13 @@ function lake() {
   assert.equal(Journey.completeNode('lake', 'lake.midDocked').saved, true);
   assert.equal(Journey.completeNode('lake', 'lake.mailDocked').saved, true);
   assert.equal(Journey.deliver('lake', 'real-lake-receipt').saved, true);
+  return Journey.getState();
+}
+function mountain() {
+  lake();
+  assert.equal(Journey.completeNode('mountain', 'mountain.signalLearned').saved, true);
+  assert.equal(Journey.completeNode('mountain', 'mountain.passOpened').saved, true);
+  assert.equal(Journey.deliver('mountain', 'real-mountain-receipt').saved, true);
   return Journey.getState();
 }
 
@@ -153,7 +160,7 @@ test('a committed value with failed readback is safely confirmed after refresh w
 
 test('future, malformed and oversized current domains are preserved instead of falling back over them', () => {
   legacy();
-  for (const raw of ['{"version":4,"future":"keep"}', '{broken', JSON.stringify({ ...createJourneyState(), regions: {} }), ' '.repeat(MAX_JOURNEY_BYTES + 1)]) {
+  for (const raw of ['{"version":5,"future":"keep"}', '{broken', JSON.stringify({ ...createJourneyState(), regions: {} }), ' '.repeat(MAX_JOURNEY_BYTES + 1)]) {
     entries.set(KEY, raw);
     assert.ok(Journey.getWriteProtection());
     assert.equal(Journey.completeNode('lake', 'lake.midDocked').saved, false);
@@ -187,7 +194,7 @@ test('write-before-read comparison detects a changing legacy proof or a newly ar
 
 test('journey sanitizer rejects forged dependencies and planned content, while dropping transient or executable extras', () => {
   const valid = lake();
-  for (const change of [state => { state.version = 4; }, state => { delete state.deliveries.forest; },
+  for (const change of [state => { state.version = 5; }, state => { delete state.deliveries.forest; },
     state => { state.regions.lake.completedNodeIds = ['lake.mailDocked']; },
     state => { state.regions.forest.completedNodeIds = []; }, state => { state.regions.mountain.completedNodeIds = ['fake']; },
     state => { state.deliveries.mountain = { completionId: 'planned' }; },
@@ -203,13 +210,13 @@ test('journey sanitizer rejects forged dependencies and planned content, while d
   assert.equal(Journey.getState().deliveries.lake.completionId, 'real-lake-receipt');
 });
 
-test('valid v2 reads migrate only in memory until the first successful v3 mountain write', () => {
+test('valid v2 reads migrate only in memory until the first successful current mountain write', () => {
   const state = lake(); const oldForest = entries.get(OLD);
   const rawV2 = JSON.stringify({ ...state, version: 2 }, null, 2); entries.set(KEY, rawV2);
   // A durable v2 forest receipt needs no further access to the original forest key.
   entries.set(OLD, '{broken-after-v2-migration'); writes.length = 0; reads.length = 0;
   assert.deepEqual(Journey.getState(), state);
-  assert.equal(Journey.getState().version, 3);
+  assert.equal(Journey.getState().version, 4);
   assert.equal(Journey.isRegionUnlocked('mountain'), true);
   assert.equal(Journey.getMountainCheckpoint(), 'trailhead');
   assert.equal(entries.get(KEY), rawV2); assert.deepEqual(writes, []);
@@ -221,7 +228,7 @@ test('valid v2 reads migrate only in memory until the first successful v3 mounta
   }
   globalThis.localStorage = store; entries.set(OLD, oldForest);
   assert.equal(Journey.completeNode('mountain', 'mountain.signalLearned').saved, true);
-  assert.equal(JSON.parse(entries.get(KEY)).version, 3);
+  assert.equal(JSON.parse(entries.get(KEY)).version, 4);
   assert.equal(Journey.getMountainCheckpoint(), 'relayCamp');
   assert.equal(entries.get(OLD), oldForest); assert.deepEqual(writes, [KEY]);
 });
@@ -234,12 +241,12 @@ test('an explicit duplicate v2 action migrates once without replacing its delive
   globalThis.localStorage = store;
   const result = Journey.deliver('lake', 'new-scene-receipt');
   assert.equal(result.saved, true); assert.equal(result.duplicate, true);
-  assert.equal(result.state.version, 3); assert.equal(result.state.deliveries.lake.completionId, 'real-lake-receipt');
+  assert.equal(result.state.version, 4); assert.equal(result.state.deliveries.lake.completionId, 'real-lake-receipt');
   assert.equal(Journey.deliver('lake', 'yet-another-receipt').duplicate, true);
   assert.deepEqual(writes, [KEY]);
 });
 
-test('only a real lake delivery opens ordered mountain milestones, and later regions remain locked', () => {
+test('only a real lake delivery opens ordered mountain milestones and only its actual handover opens desert', () => {
   legacy();
   assert.equal(Journey.completeNode('lake', 'lake.midDocked').saved, true);
   assert.equal(Journey.completeNode('lake', 'lake.mailDocked').saved, true);
@@ -263,8 +270,8 @@ test('only a real lake delivery opens ordered mountain milestones, and later reg
   }
   assert.equal(Journey.deliver('mountain', 'mountain-receipt').saved, true);
   assert.deepEqual(Journey.getState().optionalDiscoveries, []);
-  assert.deepEqual(JOURNEY_REGION_IDS.map(id => Journey.isRegionUnlocked(id)), [true, true, true, false, false]);
-  assert.equal(Journey.deliver('desert', 'cannot-open-next-region').error, 'region-locked');
+  assert.deepEqual(JOURNEY_REGION_IDS.map(id => Journey.isRegionUnlocked(id)), [true, true, true, true, false]);
+  assert.equal(Journey.deliver('desert', 'cannot-bypass-next-region').error, 'missing-prerequisite');
   assert.equal(Journey.deliver('snow', 'cannot-skip-region').error, 'region-locked');
 });
 
@@ -307,9 +314,9 @@ test('failed mountain receipt readback does not claim success and a refreshed re
   assert.deepEqual(writes, [KEY]);
 });
 
-test('concurrent v2 and v3 writes are preserved and retried against the latest journey', () => {
+test('concurrent v2, v3 and v4 writes are preserved and retried against the latest journey', () => {
   const state = lake();
-  for (const version of [2, 3]) {
+  for (const version of [2, 3, 4]) {
     const old = { ...structuredClone(state), version }; entries.set(KEY, JSON.stringify(old));
     const incoming = structuredClone(old); incoming.optionalDiscoveries = ['lake.picnicCloth'];
     const incomingRaw = JSON.stringify(incoming, null, 2); let keyReads = 0; writes.length = 0;
@@ -327,9 +334,9 @@ test('concurrent v2 and v3 writes are preserved and retried against the latest j
   }
 });
 
-test('the v2 allowlist cannot smuggle later mountain progress into the v3 migration', () => {
+test('the v2 allowlist cannot smuggle later mountain progress into the current migration', () => {
   const old = { ...lake(), version: 2 };
-  assert.equal(sanitizeJourneyState(old).version, 3);
+  assert.equal(sanitizeJourneyState(old).version, 4);
   for (const mutate of [state => { state.regions.mountain.completedNodeIds = ['mountain.signalLearned']; },
     state => { state.deliveries.mountain = { completionId: 'forged-v2' }; },
     state => { state.optionalDiscoveries = ['mountain.sharedChime']; },
@@ -341,7 +348,7 @@ test('the v2 allowlist cannot smuggle later mountain progress into the v3 migrat
   }
 });
 
-test('v3 rejects mountain dependency, order and receipt forgeries while retaining only stable state', () => {
+test('current sanitizer rejects mountain dependency, order and receipt forgeries while retaining only stable state', () => {
   lake(); Journey.completeNode('mountain', 'mountain.signalLearned'); Journey.completeNode('mountain', 'mountain.passOpened');
   Journey.deliver('mountain', 'valid-mountain'); Journey.discover('mountain.sharedChime');
   const valid = Journey.getState();
@@ -371,4 +378,140 @@ test('a mountain postcard without the saved first relay is impossible even when 
   assert.equal(Journey.getWriteProtection(), 'invalid-save');
   assert.equal(Journey.discover('mountain.sharedChime').saved, false);
   assert.equal(entries.get(KEY), raw); assert.deepEqual(writes, []);
+});
+
+test('valid v3 mountain progress remains byte-identical until a confirmed v4 desert save', () => {
+  const state = mountain(); Journey.discover('mountain.sharedChime');
+  const current = Journey.getState(), forestRaw = entries.get(OLD);
+  const oldRaw = JSON.stringify({ ...current, version: 3 }, null, 2); entries.set(KEY, oldRaw); writes.length = 0;
+  for (const legacyRaw of [null, '{broken', '{"version":99}']) {
+    if (legacyRaw === null) entries.delete(OLD); else entries.set(OLD, legacyRaw);
+    reads.length = 0;
+    assert.equal(Journey.getWriteProtection(), null); assert.deepEqual(Journey.getState(), current);
+    assert.equal(Journey.getState().version, 4); assert.equal(Journey.isRegionUnlocked('desert'), true);
+    assert.ok(reads.every(key => key === KEY)); assert.equal(entries.get(KEY), oldRaw); assert.deepEqual(writes, []);
+  }
+  entries.set(OLD, forestRaw);
+  for (const throwing of [true, false]) {
+    globalThis.localStorage = { ...store, setItem() { if (throwing) throw Error('quota'); } };
+    assert.equal(Journey.completeNode('desert', 'desert.coverLearned').error, 'write-failed');
+    assert.equal(entries.get(KEY), oldRaw); assert.equal(Journey.getDesertCheckpoint(), 'trailhead');
+  }
+  globalThis.localStorage = store;
+  assert.equal(Journey.completeNode('desert', 'desert.coverLearned').saved, true);
+  assert.equal(JSON.parse(entries.get(KEY)).version, 4); assert.equal(entries.get(OLD), forestRaw);
+  assert.deepEqual(Journey.getState().deliveries, state.deliveries); assert.deepEqual(writes, [KEY]);
+});
+
+test('an explicit v3 duplicate confirms migration once without replacing mountain or forest receipts', () => {
+  const state = mountain(); const raw = JSON.stringify({ ...state, version: 3 }); entries.set(KEY, raw); writes.length = 0;
+  const result = Journey.deliver('mountain', 'new-session-id');
+  assert.equal(result.saved, true); assert.equal(result.duplicate, true); assert.equal(result.state.version, 4);
+  assert.deepEqual(result.state.deliveries, state.deliveries);
+  assert.equal(Journey.completeNode('mountain', 'mountain.passOpened').duplicate, true); assert.deepEqual(writes, [KEY]);
+});
+
+test('desert needs the actual mountain receipt, then three ordered nodes derive four safe checkpoints', () => {
+  lake(); Journey.completeNode('mountain', 'mountain.signalLearned'); Journey.completeNode('mountain', 'mountain.passOpened');
+  entries.set('shadowlegion_campaign_v1', JSON.stringify({ version: 1, highestUnlockedStage: 50 }));
+  assert.equal(Journey.isRegionUnlocked('desert'), false);
+  assert.equal(Journey.completeNode('desert', 'desert.coverLearned').error, 'region-locked');
+  assert.equal(Journey.discover('desert.sixthCushion').error, 'region-locked');
+  Journey.deliver('mountain', 'real-mountain-receipt');
+  assert.equal(Journey.isRegionUnlocked('desert'), true); assert.equal(Journey.getDesertCheckpoint(), 'trailhead');
+  for (const node of ['desert.courtyardAligned', 'desert.addressRead']) assert.equal(Journey.completeNode('desert', node).error, 'missing-prerequisite');
+  for (const [node, checkpoint] of [['desert.coverLearned', 'stoneCamp'], ['desert.courtyardAligned', 'courtyard'], ['desert.addressRead', 'mailbox']]) {
+    assert.equal(Journey.deliver('desert', 'real-desert-receipt').error, 'missing-prerequisite');
+    assert.equal(Journey.discover('desert.sixthCushion').error, 'missing-prerequisite');
+    assert.equal(Journey.completeNode('desert', node).saved, true);
+    assert.equal(Journey.getDesertCheckpoint(), checkpoint); assert.equal(deriveDesertCheckpoint(Journey.getState()), checkpoint);
+  }
+  for (const receipt of ['real-forest-receipt', 'real-lake-receipt', 'real-mountain-receipt']) {
+    assert.equal(Journey.deliver('desert', receipt).error, 'invalid-completion');
+  }
+  assert.deepEqual(Journey.getState().optionalDiscoveries, []);
+  assert.equal(Journey.deliver('desert', 'real-desert-receipt').saved, true);
+  assert.equal(Journey.discover('desert.sixthCushion').saved, true);
+  assert.deepEqual(JOURNEY_REGION_IDS.map(id => Journey.isRegionUnlocked(id)), [true, true, true, true, false]);
+  assert.equal(Journey.deliver('snow', 'not-yet-playable').error, 'region-locked');
+});
+
+test('every desert milestone, optional find and delivery retries refused writes and preserves its first receipt', () => {
+  mountain();
+  const actions = [() => Journey.completeNode('desert', 'desert.coverLearned'), () => Journey.completeNode('desert', 'desert.courtyardAligned'),
+    () => Journey.completeNode('desert', 'desert.addressRead'), () => Journey.discover('desert.sixthCushion'), () => Journey.deliver('desert', 'desert-retry')];
+  for (const action of actions) {
+    const before = Journey.getState(), raw = entries.get(KEY);
+    for (const throwing of [true, false]) {
+      globalThis.localStorage = { ...store, setItem() { if (throwing) throw Error('quota'); } };
+      const result = action(); assert.equal(result.saved, false); assert.equal(result.error, 'write-failed');
+      assert.deepEqual(result.state, before); assert.equal(entries.get(KEY), raw);
+    }
+    globalThis.localStorage = store; assert.equal(action().saved, true);
+  }
+  const raw = entries.get(KEY); writes.length = 0;
+  for (const action of actions) { const result = action(); assert.equal(result.saved, true); assert.equal(result.duplicate, true); }
+  assert.equal(Journey.deliver('desert', 'different-session-receipt').duplicate, true);
+  assert.equal(Journey.getState().deliveries.desert.completionId, 'desert-retry'); assert.equal(entries.get(KEY), raw); assert.deepEqual(writes, []);
+});
+
+test('lost readback on the final address or handover can confirm the actual durable desert result without a second write', () => {
+  mountain(); Journey.completeNode('desert', 'desert.coverLearned'); Journey.completeNode('desert', 'desert.courtyardAligned');
+  for (const action of [() => Journey.completeNode('desert', 'desert.addressRead'), () => Journey.deliver('desert', 'desert-lost-ack')]) {
+    const before = Journey.getState(); writes.length = 0; let committed = false;
+    globalThis.localStorage = { ...store, getItem(key) { if (committed) throw Error('lost ack'); return store.getItem(key); },
+      setItem(key, value) { store.setItem(key, value); committed = true; } };
+    const result = action(); assert.equal(result.saved, false); assert.deepEqual(result.state, before);
+    globalThis.localStorage = store;
+    const retry = action(); assert.equal(retry.saved, true); assert.equal(retry.duplicate, true); assert.deepEqual(writes, [KEY]);
+  }
+  assert.equal(Journey.getDesertCheckpoint(), 'mailbox'); assert.equal(Journey.getState().deliveries.desert.completionId, 'desert-lost-ack');
+});
+
+test('strict v2 and v3 historical allowlists reject later desert data instead of silently upgrading it', () => {
+  const oldLake = lake(), oldMountain = mountain();
+  for (const [version, prior] of [[2, oldLake], [3, oldMountain]]) {
+    for (const change of [state => { state.regions.desert.completedNodeIds = ['desert.coverLearned']; },
+      state => { state.deliveries.desert = { completionId: 'forged-old-receipt' }; },
+      state => { state.optionalDiscoveries = ['desert.sixthCushion']; }]) {
+      const invalid = { ...structuredClone(prior), version }; change(invalid);
+      const raw = JSON.stringify(invalid); entries.set(KEY, raw); writes.length = 0;
+      assert.equal(sanitizeJourneyState(invalid), null); assert.equal(Journey.getWriteProtection(), 'invalid-save');
+      assert.equal(Journey.completeNode('desert', 'desert.coverLearned').saved, false);
+      assert.equal(entries.get(KEY), raw); assert.deepEqual(writes, []);
+    }
+  }
+});
+
+test('v4 rejects impossible desert dependencies and transient state cannot become a saved position', () => {
+  mountain(); Journey.completeNode('desert', 'desert.coverLearned'); Journey.completeNode('desert', 'desert.courtyardAligned');
+  Journey.completeNode('desert', 'desert.addressRead'); Journey.deliver('desert', 'valid-desert'); Journey.discover('desert.sixthCushion');
+  const valid = Journey.getState();
+  for (const change of [state => { delete state.deliveries.mountain; }, state => { delete state.deliveries.lake; },
+    state => { state.regions.desert.completedNodeIds = ['desert.courtyardAligned', 'desert.addressRead']; },
+    state => { state.regions.desert.completedNodeIds = ['desert.coverLearned', 'desert.addressRead']; },
+    state => { state.regions.desert.completedNodeIds = ['desert.coverLearned', 'desert.courtyardAligned']; delete state.deliveries.desert; },
+    state => { state.regions.desert.completedNodeIds.push('desert.addressRead'); },
+    state => { state.regions.desert.completedNodeIds = ['mountain.passOpened']; },
+    state => { state.deliveries.desert.completionId = state.deliveries.mountain.completionId; },
+    state => { state.deliveries.desert.completionId = 'unsafe receipt'; },
+    state => { state.deliveries.snow = { completionId: 'unimplemented' }; },
+    state => { state.version = 5; }]) {
+    const invalid = structuredClone(valid); change(invalid); assert.equal(sanitizeJourneyState(invalid), null);
+  }
+  assert.deepEqual(sanitizeJourneyState({ ...valid, canopyAngle: 90, player: { x: 9, y: 8 }, heldCorner: 'left' }), valid);
+});
+
+test('desert writes detect a concurrent v3 or v4 update and keep its newly saved optional discovery on retry', () => {
+  const valid = mountain();
+  for (const version of [3, 4]) {
+    const old = { ...structuredClone(valid), version }; entries.set(KEY, JSON.stringify(old));
+    const incoming = structuredClone(old); incoming.optionalDiscoveries = ['mountain.sharedChime'];
+    const raw = JSON.stringify(incoming, null, 2); let count = 0; writes.length = 0;
+    globalThis.localStorage = { ...store, getItem(key) { if (key === KEY && ++count === 2) entries.set(KEY, raw); return store.getItem(key); } };
+    assert.equal(Journey.completeNode('desert', 'desert.coverLearned').error, 'save-changed');
+    assert.equal(entries.get(KEY), raw); assert.deepEqual(writes, []);
+    globalThis.localStorage = store; assert.equal(Journey.completeNode('desert', 'desert.coverLearned').saved, true);
+    assert.deepEqual(Journey.getState().optionalDiscoveries, ['mountain.sharedChime']);
+  }
 });

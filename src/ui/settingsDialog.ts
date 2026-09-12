@@ -10,7 +10,7 @@ const SAFE_RESTORE_SCENES = new Set(['MenuScene', 'WorkshopScene', 'CampaignScen
 
 export function canRestoreJourney(scene: Phaser.Scene): boolean {
   return SAFE_RESTORE_SCENES.has(scene.sys.settings.key) && !scene.game.scene.getScenes(false).some(item =>
-    ['ArenaScene', 'DeliveryScene', 'LakeScene', 'MountainScene'].includes(item.sys.settings.key) && (item.scene.isActive() || item.scene.isPaused() || item.scene.isSleeping()));
+    ['ArenaScene', 'DeliveryScene', 'LakeScene', 'MountainScene', 'DesertScene'].includes(item.sys.settings.key) && (item.scene.isActive() || item.scene.isPaused() || item.scene.isSleeping()));
 }
 
 /** Keep keyboard navigation inside this native modal, including newly shown preview controls. */
@@ -41,7 +41,7 @@ export function openSettingsDialog(scene: Phaser.Scene, presentDialog: PresentDi
     <h2 id="settings-title">旅途设置</h2><p>随时调整，本设备会记住你的选择。</p>
     <label class="setting-volume" for="sound-volume">声音音量 <output id="sound-value"></output></label>
     <input id="sound-volume" type="range" min="0" max="100" step="5" aria-label="声音音量" autofocus>
-    <label class="setting-toggle"><span><strong>自动开火</strong><small>持续射击，仍由鼠标控制瞄准方向。</small></span><input id="auto-fire" type="checkbox"></label>
+    <label class="setting-toggle"><span><strong>练习中的自动开火</strong><small>邮路练习中持续发射暖光，由鼠标控制方向。</small></span><input id="auto-fire" type="checkbox"></label>
     <label class="setting-toggle"><span><strong>减少动态效果</strong><small>减轻镜头晃动、闪光和界面动效。</small></span><input id="reduce-motion" type="checkbox"></label>
     <section class="backup-section" aria-labelledby="backup-title">
       <h3 id="backup-title">把旅途收好</h3>
@@ -59,7 +59,7 @@ export function openSettingsDialog(scene: Phaser.Scene, presentDialog: PresentDi
         <div class="backup-actions"><button type="button" id="backup-confirm">确认恢复并回营地</button><button type="button" id="backup-cancel">取消恢复</button></div>
       </section>
     </section>
-    <div class="settings-note">WASD 移动 · 鼠标瞄准 · SHIFT 闪避<br>SPACE 技能 · Q 切换技能 · E 安排影伴 · ESC 暂停</div>
+    <div class="settings-note">WASD / 方向键 / 点地行走 · SHIFT 轻跃<br>E 与小暖分工 · F 互动 · ESC 暂停<br>邮路练习：鼠标瞄准 · SPACE 技能 · Q 切换技能</div>
     <button class="settings-done">完成设置</button></form>`;
   const get = <T extends HTMLElement>(selector: string): T => dialog.querySelector<T>(selector)!;
   const volume = get<HTMLInputElement>('#sound-volume');
@@ -101,7 +101,7 @@ export function openSettingsDialog(scene: Phaser.Scene, presentDialog: PresentDi
     get<HTMLElement>('#backup-clears').textContent = `${info.clearedStages} / 50`;
     get<HTMLElement>('#backup-stars').textContent = `${info.stars} / 150`;
     get<HTMLElement>('#backup-cores').textContent = info.shadowCores.toLocaleString('zh-CN');
-    get<HTMLElement>('#backup-details').textContent = `${info.operativeCount} 套已学会邮装。${info.hasCheckpoint ? '包含起点续玩。' : ''}${info.postal ? `森林邮路：${info.postal.delivered ? '已投递并收到回信' : `${info.postal.addressPieces}/3 地址线索`}。` : ''}${info.journey ? `主旅程已投递：${info.journey.deliveredRegions.map(id => JOURNEY_REGION_NAMES[id]).join('、') || '暂无'}；圆镜湖续程：${{ start: '出发码头', mid: '湖心码头', mail: '收信码头' }[info.journey.lakeCheckpoint]}；云阶山续程：${{ trailhead: '山脚邮亭', relayCamp: '山腰休息点', mailbox: '山口信箱' }[info.journey.mountainCheckpoint]}；可选发现 ${info.journey.optionalCount} 处。` : ''}${info.routeRebuilt ? '练习路线将按备份中的成长记录重建。' : ''}`;
+    get<HTMLElement>('#backup-details').textContent = `${info.operativeCount} 套已学会邮装。${info.hasCheckpoint ? '包含起点续玩。' : ''}${info.postal ? `森林邮路：${info.postal.delivered ? '已投递并收到回信' : `${info.postal.addressPieces}/3 地址线索`}。` : ''}${info.journey ? `主旅程已投递：${info.journey.deliveredRegions.map(id => JOURNEY_REGION_NAMES[id]).join('、') || '暂无'}；圆镜湖续程：${{ start: '出发码头', mid: '湖心码头', mail: '收信码头' }[info.journey.lakeCheckpoint]}；云阶山续程：${{ trailhead: '山脚邮亭', relayCamp: '山腰休息点', mailbox: '山口信箱' }[info.journey.mountainCheckpoint]}；晒被沙原续程：${{ trailhead: '沙原邮亭', stoneCamp: '晾石小院', courtyard: '团刺家门前', mailbox: '团刺的信箱' }[info.journey.desertCheckpoint]}；可选发现 ${info.journey.optionalCount} 处。` : ''}${info.routeRebuilt ? '练习路线将按备份中的成长记录重建。' : ''}`;
     get<HTMLElement>('#backup-preserved').textContent = info.preserved.length ? `文件未包含，保留本机：${info.preserved.join('、')}。` : '备份包含全部数据项目。';
     get<HTMLElement>('#backup-cleared').textContent = info.cleared.length ? `备份中为空，将清空本机对应记录：${info.cleared.join('、')}。` : '';
     preview.hidden = false;

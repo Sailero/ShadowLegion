@@ -1,6 +1,6 @@
 {
   "name": "shadow-legion",
-  "version": "1.4.0-alpha.3",
+  "version": "1.4.0-alpha.4",
   "description": "布偶小猫与影伴的温暖送信冒险 · Steam PC 方向原型",
   "main": "electron/main.cjs",
   "type": "module",

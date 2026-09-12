@@ -175,6 +175,29 @@ test('a mountain reply requires consecutive real receipts and its safe return di
   assert.equal(JSON.stringify(postal), before);
 });
 
+test('a real fourth receipt unlocks the two-page desert reply and a DesertScene return cannot forge completion', () => {
+  const postal = { deliveries: { forest: { completionId: 'forest-real' }, lake: { completionId: 'lake-real' },
+    mountain: { completionId: 'mountain-real' }, desert: { completionId: 'desert-real' } } };
+  const before = JSON.stringify(postal);
+  assert.equal(isStoryUnlocked('letter-desert', progress(0), postal), true);
+  assert.equal(getStory('letter-desert').pages.length, 2);
+  assert.equal(getStoryLibrary(progress(0), postal).find(story => story.id === 'letter-desert').unlocked, true);
+  for (const region of ['forest', 'lake', 'mountain', 'desert']) {
+    const missing = structuredClone(postal); delete missing.deliveries[region];
+    assert.equal(isStoryUnlocked('letter-desert', progress(0), missing), false);
+  }
+  assert.equal(isStoryUnlocked('letter-snow', progress(0), postal), false);
+  assert.equal(isStoryUnlocked('epilogue', progress(0), postal), false);
+  const request = resolveStoryRequest({ storyId: 'letter-desert', returnTo: { scene: 'DesertScene',
+    data: { completionId: 'do-not-deliver', checkpoint: 'mailbox', addressRead: true, optionalDiscoveries: ['desert.sixthCushion'] } } }, progress(0), postal);
+  assert.equal(request.storyId, 'letter-desert'); assert.equal(request.fallback, null);
+  assert.deepEqual(request.returnTo, { scene: 'DesertScene', data: {} });
+  assert.deepEqual(sanitizeStoryReturnRoute({ scene: 'DesertScene', data: { deliveries: postal.deliveries, score: 999 } }),
+    { scene: 'DesertScene', data: {} });
+  assert.equal(isStoryUnlocked('letter-desert', progress(40)), true, 'legacy practice reading remains compatible');
+  assert.equal(JSON.stringify(postal), before);
+});
+
 test('real StoryScene controller exits once on final next or skip and resets on re-entry without recording progress', () => {
   const originalGetState = CampaignProgressionManager.getState;
   CampaignProgressionManager.getState = () => progress(50);

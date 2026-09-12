@@ -5,8 +5,8 @@ import { OPERATIVES } from '../data/operatives';
 import { MAX_ENDLESS_LEVEL, MAX_ENDLESS_WAVE } from '../config/gameConfig';
 import { POSTAL_JOURNEY_STORAGE_KEY, sanitizePostalJourney } from './PostalJourneyManager';
 import { JOURNEY_STORAGE_KEY, MAX_JOURNEY_BYTES, sanitizeJourneyState } from './JourneyProgressManager';
-import { deriveLakeCheckpoint, deriveMountainCheckpoint, JOURNEY_REGION_IDS, JOURNEY_VERSION,
-  type JourneyRegionId, type LakeCheckpoint, type MountainCheckpoint } from '../data/journey';
+import { deriveLakeCheckpoint, deriveMountainCheckpoint, deriveDesertCheckpoint, JOURNEY_REGION_IDS, JOURNEY_VERSION,
+  type JourneyRegionId, type LakeCheckpoint, type MountainCheckpoint, type DesertCheckpoint } from '../data/journey';
 
 export const SAVE_BACKUP_FORMAT = 'sunlit-echoes-journey-backup';
 export const SAVE_BACKUP_VERSION = 1;
@@ -37,7 +37,7 @@ export interface BackupPreview {
   operativeCount: number;
   hasCheckpoint: boolean;
   postal: { delivered: boolean; addressPieces: number } | null;
-  journey: { deliveredRegions: JourneyRegionId[]; lakeCheckpoint: LakeCheckpoint; mountainCheckpoint: MountainCheckpoint; optionalCount: number } | null;
+  journey: { deliveredRegions: JourneyRegionId[]; lakeCheckpoint: LakeCheckpoint; mountainCheckpoint: MountainCheckpoint; desertCheckpoint: DesertCheckpoint; optionalCount: number } | null;
   included: string[];
   preserved: string[];
   cleared: string[];
@@ -179,7 +179,8 @@ function prepare(text: string): PreparedBackup | BackupFailure {
     postal: data.postal ? (() => { const route = sanitizePostalJourney(data.postal)!; return { delivered: route.deliveryCompleted, addressPieces: route.foundAddressIds.length }; })() : null,
     journey: data.journey ? (() => { const route = sanitizeJourneyState(data.journey)!; return {
       deliveredRegions: JOURNEY_REGION_IDS.filter(id => route.deliveries[id]),
-      lakeCheckpoint: deriveLakeCheckpoint(route), mountainCheckpoint: deriveMountainCheckpoint(route), optionalCount: route.optionalDiscoveries.length,
+      lakeCheckpoint: deriveLakeCheckpoint(route), mountainCheckpoint: deriveMountainCheckpoint(route),
+      desertCheckpoint: deriveDesertCheckpoint(route), optionalCount: route.optionalDiscoveries.length,
     }; })() : null,
   } };
 }

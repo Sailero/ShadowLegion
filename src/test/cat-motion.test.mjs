@@ -22,7 +22,7 @@ function spriteBoundary() {
 }
 
 test('walking uses alternating limbs and delayed tail/bag poses, not a whole-sprite wobble', () => {
-  assert.deepEqual(CAT_FRAME_COUNTS, { idle: 4, run: 8, dash: 4, celebrate: 6 });
+  assert.deepEqual(CAT_FRAME_COUNTS, { idle: 4, run: 8, dash: 4, celebrate: 6, hold: 4, carry: 8 });
   const leftContact = getCatPose('run', 2), rightContact = getCatPose('run', 6);
   assert.ok(leftContact.leftLeg > 0 && leftContact.rightLeg < 0);
   assert.ok(rightContact.leftLeg < 0 && rightContact.rightLeg > 0);
@@ -49,6 +49,24 @@ test('locomotion switches without threshold jitter and freezes its frame while p
   const held = clock.update(0, { speed: 12 });
   for (let i = 0; i < 30; i++) assert.deepEqual(clock.update(100, { speed: 0, paused: true }), held);
   assert.deepEqual(clock.update(16, { speed: 0 }), { motion: 'idle', frame: 0 });
+});
+
+test('holding a cloth keeps the paws steady while walking legs alternate, with pause and release preserving control', () => {
+  const left = getCatPose('carry', 2), right = getCatPose('carry', 6);
+  assert.ok(left.leftLeg > 0 && right.leftLeg < 0);
+  assert.ok(Math.abs(left.leftArm - right.leftArm) < .05);
+  assert.ok(left.leftArm < -.7 && left.rightArm < -.8);
+  const sprite = spriteBoundary(), animator = new CatAnimator(sprite);
+  animator.setHolding(true);
+  animator.update(0, { speed: 0 }); assert.equal(sprite.frame.name, 'hold-0');
+  animator.update(85, { speed: 170 }); assert.equal(sprite.frame.name, 'carry-1');
+  const held = sprite.frame.name;
+  for (let i = 0; i < 5; i++) animator.update(100, { speed: 0, paused: true });
+  assert.equal(sprite.frame.name, held);
+  animator.update(16, { speed: 0, reducedMotion: true }); assert.equal(sprite.frame.name, 'hold-0');
+  animator.setHolding(false);
+  animator.update(85, { speed: 170 }); assert.equal(sprite.frame.name, 'run-1');
+  animator.update(16, { speed: 0 }); assert.equal(sprite.frame.name, 'idle-0');
 });
 
 test('dash and celebration finish once before returning to the appropriate locomotion state', () => {
