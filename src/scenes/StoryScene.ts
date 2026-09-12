@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig';
 import { getStory, resolveStoryRequest, turnStoryPage, type StoryDef, type StoryMotif, type StoryRequest } from '../data/story';
 import { CampaignProgressionManager } from '../systems/CampaignProgressionManager';
-import { PostalJourneyManager } from '../systems/PostalJourneyManager';
+import { JourneyProgressManager } from '../systems/JourneyProgressManager';
 import { button, heading, label, paperCard, shortcut, UI } from '../ui/theme';
 import { wrapProse } from '../ui/wrapProse';
 
@@ -27,7 +27,7 @@ export class StoryScene extends Phaser.Scene {
   constructor() { super('StoryScene'); }
 
   init(input: unknown = {}): void {
-    this.request = resolveStoryRequest(input, CampaignProgressionManager.getState(), PostalJourneyManager.getState().deliveryCompleted);
+    this.request = resolveStoryRequest(input, CampaignProgressionManager.getState(), JourneyProgressManager.getState());
     this.story = getStory(this.request.storyId)!;
     this.pageIndex = 0;
     this.leaving = false;

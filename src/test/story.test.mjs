@@ -143,6 +143,20 @@ test('page navigation clamps previous, restarts freely, and finishes only on the
   assert.deepEqual(turnStoryPage(3, NaN, 'previous'), { index: 0, finished: false });
 });
 
+test('real postal receipts unlock consecutive replies without combat stars or story reward writes', () => {
+  const postal = { deliveries: { forest: { completionId: 'forest-real' }, lake: { completionId: 'lake-real' } } };
+  const before = JSON.stringify(postal);
+  assert.equal(isStoryUnlocked('letter-lake', progress(0), postal), true);
+  assert.equal(isStoryUnlocked('letter-mountain', progress(0), postal), false);
+  assert.equal(isStoryUnlocked('epilogue', progress(0), postal), false);
+  assert.equal(isStoryUnlocked('letter-lake', progress(0), { deliveries: { lake: { completionId: 'out-of-order' } } }), false);
+  assert.equal(isStoryUnlocked('letter-lake', progress(0), { deliveries: { ...postal.deliveries, lake: { completionId: '' } } }), false);
+  assert.equal(getStoryLibrary(progress(0), postal).find(story => story.id === 'letter-lake').unlocked, true);
+  assert.equal(resolveStoryRequest({ storyId: 'letter-lake', returnTo: { scene: 'LakeScene', data: { completed: true } } }, progress(0), postal).returnTo.scene, 'LakeScene');
+  assert.deepEqual(sanitizeStoryReturnRoute({ scene: 'LakeScene', data: { completionId: 'cannot-reward', checkpoint: 'mail' } }), { scene: 'LakeScene', data: {} });
+  assert.equal(JSON.stringify(postal), before);
+});
+
 test('real StoryScene controller exits once on final next or skip and resets on re-entry without recording progress', () => {
   const originalGetState = CampaignProgressionManager.getState;
   CampaignProgressionManager.getState = () => progress(50);

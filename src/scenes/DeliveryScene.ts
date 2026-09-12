@@ -203,7 +203,13 @@ export class DeliveryScene extends Phaser.Scene {
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as Record<string, Phaser.Input.Keyboard.Key>;
     const bind = (name: string, callback: () => void) => {
       const key = kb.addKey(name, false);
-      const handler = (_key: Phaser.Input.Keyboard.Key, event: KeyboardEvent) => { if (!event.repeat) callback(); };
+      // resetKeys during pause must not replay an earlier DOM keydown when
+      // Phaser scans its still-pending event queue again before POST_STEP.
+      const handled = new WeakSet<KeyboardEvent>();
+      const handler = (_key: Phaser.Input.Keyboard.Key, event: KeyboardEvent) => {
+        if (this.closed || event.repeat || handled.has(event)) return;
+        handled.add(event); callback();
+      };
       key.on('down', handler); this.keyBindings.push({ key, handler });
     };
     for (const [name, action] of [['SHIFT', 'dash'], ['E', 'command'], ['F', 'interact']] as const) {

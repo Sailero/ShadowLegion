@@ -3,13 +3,14 @@ import packageInfo from '../../package.json' with { type: 'json' };
 import { SettingsManager } from '../systems/SettingsManager';
 import { SoundManager } from '../systems/SoundManager';
 import { SaveBackupManager, MAX_BACKUP_BYTES, type BackupPreview } from '../systems/SaveBackupManager';
+import { JOURNEY_REGION_NAMES } from '../data/journey';
 
 type PresentDialog = (scene: Phaser.Scene, dialog: HTMLDialogElement) => void;
 const SAFE_RESTORE_SCENES = new Set(['MenuScene', 'WorkshopScene', 'CampaignScene', 'LoadoutScene', 'GameOverScene']);
 
 export function canRestoreJourney(scene: Phaser.Scene): boolean {
   return SAFE_RESTORE_SCENES.has(scene.sys.settings.key) && !scene.game.scene.getScenes(false).some(item =>
-    ['ArenaScene', 'DeliveryScene'].includes(item.sys.settings.key) && (item.scene.isActive() || item.scene.isPaused() || item.scene.isSleeping()));
+    ['ArenaScene', 'DeliveryScene', 'LakeScene'].includes(item.sys.settings.key) && (item.scene.isActive() || item.scene.isPaused() || item.scene.isSleeping()));
 }
 
 /** Keep keyboard navigation inside this native modal, including newly shown preview controls. */
@@ -100,7 +101,7 @@ export function openSettingsDialog(scene: Phaser.Scene, presentDialog: PresentDi
     get<HTMLElement>('#backup-clears').textContent = `${info.clearedStages} / 50`;
     get<HTMLElement>('#backup-stars').textContent = `${info.stars} / 150`;
     get<HTMLElement>('#backup-cores').textContent = info.shadowCores.toLocaleString('zh-CN');
-    get<HTMLElement>('#backup-details').textContent = `${info.operativeCount} 套已学会邮装。${info.hasCheckpoint ? '包含起点续玩。' : ''}${info.postal ? `森林邮路：${info.postal.delivered ? '已投递并收到回信' : `${info.postal.addressPieces}/3 地址线索`}。` : ''}${info.routeRebuilt ? '练习路线将按备份中的成长记录重建。' : ''}`;
+    get<HTMLElement>('#backup-details').textContent = `${info.operativeCount} 套已学会邮装。${info.hasCheckpoint ? '包含起点续玩。' : ''}${info.postal ? `森林邮路：${info.postal.delivered ? '已投递并收到回信' : `${info.postal.addressPieces}/3 地址线索`}。` : ''}${info.journey ? `主旅程已投递：${info.journey.deliveredRegions.map(id => JOURNEY_REGION_NAMES[id]).join('、') || '暂无'}；圆镜湖续程：${{ start: '出发码头', mid: '湖心码头', mail: '收信码头' }[info.journey.lakeCheckpoint]}；可选发现 ${info.journey.optionalCount} 处。` : ''}${info.routeRebuilt ? '练习路线将按备份中的成长记录重建。' : ''}`;
     get<HTMLElement>('#backup-preserved').textContent = info.preserved.length ? `文件未包含，保留本机：${info.preserved.join('、')}。` : '备份包含全部数据项目。';
     get<HTMLElement>('#backup-cleared').textContent = info.cleared.length ? `备份中为空，将清空本机对应记录：${info.cleared.join('、')}。` : '';
     preview.hidden = false;

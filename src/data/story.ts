@@ -1,4 +1,5 @@
 import type { CampaignState } from '../systems/CampaignProgressionManager';
+import { JOURNEY_REGION_IDS, type JourneyState } from './journey';
 
 export type StoryId = 'prologue' | 'letter-forest' | 'letter-lake' | 'letter-mountain'
   | 'letter-desert' | 'letter-snow' | 'epilogue';
@@ -153,17 +154,29 @@ export function getStoryProgressStage(campaign: StoryProgress): number {
   return completed;
 }
 
-export function isStoryUnlocked(id: unknown, campaign: StoryProgress, postalDelivered = false): boolean {
-  const story = getStory(id);
-  return Boolean(story && (story.unlockAfterStage <= getStoryProgressStage(campaign)
-    || (story.id === 'letter-forest' && postalDelivered === true)));
+export type PostalStoryContext = boolean | Pick<JourneyState, 'deliveries'>;
+
+function postalStoryUnlocked(id: StoryId, postal: PostalStoryContext): boolean {
+  if (typeof postal === 'boolean') return id === 'letter-forest' && postal;
+  const index = id === 'epilogue' ? JOURNEY_REGION_IDS.length - 1 : JOURNEY_REGION_IDS.findIndex(region => id === `letter-${region}`);
+  if (index < 0 || !postal?.deliveries) return false;
+  return JOURNEY_REGION_IDS.slice(0, index + 1).every(region => {
+    const receipt = postal.deliveries[region];
+    return receipt && typeof receipt.completionId === 'string' && /^[A-Za-z0-9:_-]{1,120}$/.test(receipt.completionId);
+  });
 }
 
-export function getStoryLibrary(campaign: StoryProgress, postalDelivered = false): StoryLibraryEntry[] {
+export function isStoryUnlocked(id: unknown, campaign: StoryProgress, postalDelivered: PostalStoryContext = false): boolean {
+  const story = getStory(id);
+  return Boolean(story && (story.unlockAfterStage <= getStoryProgressStage(campaign)
+    || postalStoryUnlocked(story.id, postalDelivered)));
+}
+
+export function getStoryLibrary(campaign: StoryProgress, postalDelivered: PostalStoryContext = false): StoryLibraryEntry[] {
   const completed = getStoryProgressStage(campaign);
   return STORIES.map(story => ({ id: story.id, title: story.title, chapter: story.chapter,
     unlockAfterStage: story.unlockAfterStage, pageCount: story.pages.length,
-    unlocked: story.unlockAfterStage <= completed || (story.id === 'letter-forest' && postalDelivered === true), recipient: story.recipient }));
+    unlocked: story.unlockAfterStage <= completed || postalStoryUnlocked(story.id, postalDelivered), recipient: story.recipient }));
 }
 
 export function getStoryForChapter(chapter: number): StoryDef | undefined {
@@ -175,7 +188,7 @@ export function getStoriesForCompletedStage(stageId: number): StoryDef[] {
   return STORIES.filter(story => story.unlockAfterStage > 0 && story.unlockAfterStage === stageId);
 }
 
-export type StoryReturnScene = 'MenuScene' | 'CampaignScene' | 'LoadoutScene' | 'WorkshopScene' | 'LetterBookScene' | 'DeliveryScene';
+export type StoryReturnScene = 'MenuScene' | 'CampaignScene' | 'LoadoutScene' | 'WorkshopScene' | 'LetterBookScene' | 'DeliveryScene' | 'JourneyMapScene' | 'LakeScene';
 export interface StoryReturnRoute {
   scene: StoryReturnScene;
   data: Record<string, string | number>;
@@ -194,7 +207,7 @@ const integer = (value: unknown, min: number, max: number): value is number =>
 /** No combat/result routes: revisiting a book must not award a run or resume an unsafe snapshot. */
 export function sanitizeStoryReturnRoute(input: unknown): StoryReturnRoute {
   const raw = object(input);
-  if (!raw || typeof raw.scene !== 'string' || !['MenuScene', 'CampaignScene', 'LoadoutScene', 'WorkshopScene', 'LetterBookScene', 'DeliveryScene'].includes(raw.scene)) {
+  if (!raw || typeof raw.scene !== 'string' || !['MenuScene', 'CampaignScene', 'LoadoutScene', 'WorkshopScene', 'LetterBookScene', 'DeliveryScene', 'JourneyMapScene', 'LakeScene'].includes(raw.scene)) {
     return { scene: 'MenuScene', data: {} };
   }
   const scene = raw.scene as StoryReturnScene;
@@ -213,7 +226,7 @@ export function sanitizeStoryReturnRoute(input: unknown): StoryReturnRoute {
   return { scene, data };
 }
 
-export function resolveStoryRequest(input: unknown, campaign: StoryProgress, postalDelivered = false): StoryRequest {
+export function resolveStoryRequest(input: unknown, campaign: StoryProgress, postalDelivered: PostalStoryContext = false): StoryRequest {
   const raw = object(input);
   const story = getStory(raw?.storyId);
   const unlocked = story && isStoryUnlocked(story.id, campaign, postalDelivered);
