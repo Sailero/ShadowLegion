@@ -43,7 +43,12 @@
                            "Steam release materials, runtime/license review and platform review"
                        ],
     "remoteCi":  {
-                     "status":  "pending-code-commit"
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "headSha":  "776e5b5c8089953ab32e5b6df80e5de9d78212f0",
+                     "runId":  34702321241,
+                     "url":  "https://github.com/Sailero/ShadowLegion/actions/runs/34702321241",
+                     "evidence":  "qa/1.4.0-alpha.1/remote-ci.json"
                  },
     "evidence":  [
                      {
@@ -57,6 +62,10 @@
                      {
                          "path":  "qa/1.4.0-alpha.1/edge-observations.json",
                          "sha256":  "288aa17b1c6f24280231a6b4b66d7eb385995d969f9ddd13325ebecfc47263ff"
+                     },
+                     {
+                         "path":  "qa/1.4.0-alpha.1/remote-ci.json",
+                         "sha256":  "29d29c16ddfdfbbdcc17173729c4e8e0ddfd150dc7fc6f6379fc00794ec6c174"
                      }
                  ]
 }

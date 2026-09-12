@@ -1,0 +1,77 @@
+{
+  "headSha": "776e5b5c8089953ab32e5b6df80e5de9d78212f0",
+  "status": "completed",
+  "conclusion": "success",
+  "runId": 34702321241,
+  "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34702321241",
+  "createdAt": "2026-09-12T15:28:09Z",
+  "updatedAt": "2026-09-12T15:28:43Z",
+  "jobs": [
+    {
+      "id": 103576151988,
+      "name": "Tests, web build and pacing model",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-09-12T15:28:12Z",
+      "completedAt": "2026-09-12T15:28:43Z",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node.js 24",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install locked dependencies without lifecycle scripts",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run tests, TypeScript, Vite and distribution checks",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Recompute theoretical campaign pacing",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Archive checked web build",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Archive theoretical pacing report",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node.js 24",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out source",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "scope": "Remote Ubuntu web checks and artifact archive. Does not perform graphical, human or Steam desktop acceptance."
+}
