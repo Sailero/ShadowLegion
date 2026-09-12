@@ -12,6 +12,7 @@ import { LetterBookScene } from './scenes/LetterBookScene';
 import { DeliveryScene } from './scenes/DeliveryScene';
 import { JourneyMapScene } from './scenes/JourneyMapScene';
 import { LakeScene } from './scenes/LakeScene';
+import { MountainScene } from './scenes/MountainScene';
 import { syncInitialBrowserFocus } from './systems/BrowserFocus';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -32,7 +33,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, CampaignScene, LoadoutScene, ArenaScene, GameOverScene, WorkshopScene, StoryScene, LetterBookScene, DeliveryScene, JourneyMapScene, LakeScene],
+  scene: [BootScene, MenuScene, CampaignScene, LoadoutScene, ArenaScene, GameOverScene, WorkshopScene, StoryScene, LetterBookScene, DeliveryScene, JourneyMapScene, LakeScene, MountainScene],
 };
 
 const game = new Phaser.Game(config);

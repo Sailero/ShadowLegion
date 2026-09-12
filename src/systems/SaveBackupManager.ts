@@ -5,7 +5,8 @@ import { OPERATIVES } from '../data/operatives';
 import { MAX_ENDLESS_LEVEL, MAX_ENDLESS_WAVE } from '../config/gameConfig';
 import { POSTAL_JOURNEY_STORAGE_KEY, sanitizePostalJourney } from './PostalJourneyManager';
 import { JOURNEY_STORAGE_KEY, MAX_JOURNEY_BYTES, sanitizeJourneyState } from './JourneyProgressManager';
-import { deriveLakeCheckpoint, JOURNEY_REGION_IDS, type JourneyRegionId, type LakeCheckpoint } from '../data/journey';
+import { deriveLakeCheckpoint, deriveMountainCheckpoint, JOURNEY_REGION_IDS, JOURNEY_VERSION,
+  type JourneyRegionId, type LakeCheckpoint, type MountainCheckpoint } from '../data/journey';
 
 export const SAVE_BACKUP_FORMAT = 'sunlit-echoes-journey-backup';
 export const SAVE_BACKUP_VERSION = 1;
@@ -36,7 +37,7 @@ export interface BackupPreview {
   operativeCount: number;
   hasCheckpoint: boolean;
   postal: { delivered: boolean; addressPieces: number } | null;
-  journey: { deliveredRegions: JourneyRegionId[]; lakeCheckpoint: LakeCheckpoint; optionalCount: number } | null;
+  journey: { deliveredRegions: JourneyRegionId[]; lakeCheckpoint: LakeCheckpoint; mountainCheckpoint: MountainCheckpoint; optionalCount: number } | null;
   included: string[];
   preserved: string[];
   cleared: string[];
@@ -52,7 +53,7 @@ const NAMES: Record<BackupSection, string> = {
   meta: '暖晶与伙伴成长', campaign: '路线与星章', checkpoint: '起点续玩', settings: '声音与操作设置',
   scores: '本机成绩', shadowTrials: '影子切磋纪录', tutorial: '初次旅行教学', waveSamples: '试玩用时记录',
   postal: '森林邮路与回信',
-  journey: '主旅程与圆镜湖进度',
+  journey: '主旅程与地区进度',
 };
 const LIMITS: Record<BackupSection, number> = {
   meta: 512 * 1024, campaign: 100000, checkpoint: 65536, settings: 2048,
@@ -60,7 +61,7 @@ const LIMITS: Record<BackupSection, number> = {
   postal: 4096,
   journey: MAX_JOURNEY_BYTES,
 };
-const VERSIONED: Partial<Record<BackupSection, number>> = { meta: 3, campaign: 1, checkpoint: 1, settings: 1, postal: 1, journey: 2 };
+const VERSIONED: Partial<Record<BackupSection, number>> = { meta: 3, campaign: 1, checkpoint: 1, settings: 1, postal: 1, journey: JOURNEY_VERSION };
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isDate = (value: unknown): value is string => typeof value === 'string' && value.length <= 40 && Number.isFinite(Date.parse(value));
 const finite = (value: unknown, min: number, max: number, integer = false): value is number =>
@@ -178,7 +179,7 @@ function prepare(text: string): PreparedBackup | BackupFailure {
     postal: data.postal ? (() => { const route = sanitizePostalJourney(data.postal)!; return { delivered: route.deliveryCompleted, addressPieces: route.foundAddressIds.length }; })() : null,
     journey: data.journey ? (() => { const route = sanitizeJourneyState(data.journey)!; return {
       deliveredRegions: JOURNEY_REGION_IDS.filter(id => route.deliveries[id]),
-      lakeCheckpoint: deriveLakeCheckpoint(route), optionalCount: route.optionalDiscoveries.length,
+      lakeCheckpoint: deriveLakeCheckpoint(route), mountainCheckpoint: deriveMountainCheckpoint(route), optionalCount: route.optionalDiscoveries.length,
     }; })() : null,
   } };
 }

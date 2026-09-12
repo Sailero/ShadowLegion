@@ -1,6 +1,6 @@
 import { SettingsManager } from './SettingsManager';
 type OscType = OscillatorType;
-export type PostalCueKind = 'address' | 'delivery' | 'command' | 'dash';
+export type PostalCueKind = 'address' | 'delivery' | 'command' | 'dash' | 'bell-leaf' | 'bell-sun' | 'bell-bell';
 
 export class SoundManager {
   private static instance: SoundManager;
@@ -139,6 +139,7 @@ export class SoundManager {
     try {
       const notes: Record<PostalCueKind, readonly number[]> = {
         address: [523.25, 659.25], delivery: [392, 523.25, 659.25], command: [440], dash: [349.23],
+        'bell-leaf': [523.25], 'bell-sun': [659.25], 'bell-bell': [783.99],
       };
       if (!Object.prototype.hasOwnProperty.call(notes, kind) || SettingsManager.get().volume <= 0) return false;
       const now = performance.now();
@@ -146,7 +147,7 @@ export class SoundManager {
       const ctx = this.ensureCtx();
       if (ctx.state !== 'running') return false;
       this.lastPostalAt = now;
-      const gentle = kind === 'address' || kind === 'delivery';
+      const gentle = kind === 'address' || kind === 'delivery' || kind.startsWith('bell-');
       for (const [index, freq] of notes[kind].entries()) {
         const osc = ctx.createOscillator();
         const node: { osc: OscillatorNode; gain?: GainNode } = { osc }; nodes.push(node);

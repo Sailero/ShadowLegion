@@ -83,7 +83,7 @@ test('the tenth domain preserves lake nodes, delivery receipt, optional discover
   assert.equal(BACKUP_KEYS.journey, JOURNEY_STORAGE_KEY);
   const result = Backup.exportBackup(store);
   assert.equal(result.ok, true);
-  assert.deepEqual(result.preview.journey, { deliveredRegions: ['forest', 'lake'], lakeCheckpoint: 'mail', optionalCount: 1 });
+  assert.deepEqual(result.preview.journey, { deliveredRegions: ['forest', 'lake'], lakeCheckpoint: 'mail', mountainCheckpoint: 'trailhead', optionalCount: 1 });
   entries.clear(); entries.set('another-application', 'keep');
   assert.equal(Backup.restoreBackup(result.text, store).ok, true);
   assert.deepEqual(Journey.getState(), route);
@@ -94,27 +94,27 @@ test('the tenth domain preserves lake nodes, delivery receipt, optional discover
   assert.deepEqual(snapshot(), before);
 });
 
-test('an old nine-domain backup preserves exact v2 bytes instead of inferring or erasing newer lake progress', () => {
+test('an old nine-domain backup preserves exact current journey bytes instead of erasing newer progress', () => {
   savedLakeJourney();
   const current = JSON.stringify(Journey.getState(), null, 2); entries.set(BACKUP_KEYS.journey, current);
   const oldBackup = JSON.parse(Backup.exportBackup(store).text); delete oldBackup.data.journey;
   assert.equal(Object.keys(oldBackup.data).length, 9);
   const text = JSON.stringify(oldBackup);
-  assert.ok(Backup.previewBackup(text).preview.preserved.includes('主旅程与圆镜湖进度'));
+  assert.ok(Backup.previewBackup(text).preview.preserved.includes('主旅程与地区进度'));
   assert.equal(Backup.restoreBackup(text, store).ok, true);
   assert.equal(entries.get(BACKUP_KEYS.journey), current);
 });
 
-test('v2 backup sanitization rejects impossible lake delivery, unknown nodes and future versions before writing', () => {
+test('journey backup sanitization rejects impossible lake delivery, unknown nodes and future versions before writing', () => {
   const valid = savedLakeJourney(); const before = snapshot();
-  for (const mutate of [state => { state.version = 3; }, state => { delete state.deliveries.forest; },
+  for (const mutate of [state => { state.version = 4; }, state => { delete state.deliveries.forest; },
     state => { state.regions.lake.completedNodeIds = ['lake.midDocked']; },
     state => { state.optionalDiscoveries = ['lake.secret-code']; }]) {
     const bad = structuredClone(valid); mutate(bad);
     assert.equal(Backup.restoreBackup(envelope({ meta: meta(), journey: bad }), store).ok, false);
     assert.deepEqual(snapshot(), before);
   }
-  entries.set(BACKUP_KEYS.journey, '{"version":3,"futureLake":"keep"}');
+  entries.set(BACKUP_KEYS.journey, '{"version":4,"futureRegion":"keep"}');
   const future = snapshot();
   assert.equal(Backup.exportBackup(store).ok, false);
   assert.equal(Backup.restoreBackup(envelope({ meta: meta(), journey: valid }), store).code, 'newer-current-save');
@@ -140,7 +140,7 @@ test('a refused tenth-domain write rolls earlier imported data back including or
 
 test('restoring an empty valid v2 does not prevent real later forest completion from opening the lake', () => {
   const original = { version: 1, foundAddressIds: ['recipient'], deliveryCompleted: false, completionId: null };
-  assert.equal(Backup.restoreBackup(envelope({ meta: meta(), postal: original, journey: createJourneyState() }), store).ok, true);
+  assert.equal(Backup.restoreBackup(envelope({ meta: meta(), postal: original, journey: { ...createJourneyState(), version: 2 } }), store).ok, true);
   assert.equal(Journey.isRegionUnlocked('lake'), false);
   const v2 = entries.get(BACKUP_KEYS.journey);
   write(BACKUP_KEYS.postal, deliveredPostal());
@@ -149,15 +149,94 @@ test('restoring an empty valid v2 does not prevent real later forest completion 
   assert.equal(Journey.getLakeCheckpoint(), 'mid');
 });
 
-test('lake scenes forbid restoring even from another open safe menu while active, paused or sleeping', () => {
-  let state = 'inactive';
-  const lake = { sys: { settings: { key: 'LakeScene' } }, scene: {
-    isActive: () => state === 'active', isPaused: () => state === 'paused', isSleeping: () => state === 'sleeping',
+test('v2 backup preview and export are read-only, and explicit restore writes its valid v3 migration', () => {
+  const current = savedLakeJourney(); const legacy = { ...current, version: 2 };
+  const rawV2 = JSON.stringify(legacy, null, 2); entries.set(BACKUP_KEYS.journey, rawV2);
+  const originalForest = entries.get(BACKUP_KEYS.postal); const before = snapshot();
+  const text = envelope({ meta: meta(), journey: legacy });
+  const preview = Backup.previewBackup(text);
+  assert.equal(preview.ok, true); assert.equal(preview.preview.journey.mountainCheckpoint, 'trailhead');
+  const exported = Backup.exportBackup(store);
+  assert.equal(exported.ok, true); assert.equal(JSON.parse(exported.text).data.journey.version, 3);
+  assert.deepEqual(snapshot(), before); assert.equal(entries.get(BACKUP_KEYS.journey), rawV2);
+  assert.equal(Backup.restoreBackup(text, store).ok, true);
+  assert.equal(JSON.parse(entries.get(BACKUP_KEYS.journey)).version, 3);
+  assert.deepEqual(Journey.getState(), current); assert.equal(entries.get(BACKUP_KEYS.postal), originalForest);
+});
+
+test('v2 backups cannot claim mountain nodes, receipts or discoveries from the later schema', () => {
+  const old = { ...savedLakeJourney(), version: 2 }; const before = snapshot();
+  for (const mutate of [state => { state.regions.mountain.completedNodeIds = ['mountain.signalLearned']; },
+    state => { state.deliveries.mountain = { completionId: 'cannot-invent-v2' }; },
+    state => { state.optionalDiscoveries = ['mountain.sharedChime']; }]) {
+    const invalid = structuredClone(old); mutate(invalid);
+    const text = envelope({ meta: meta(), journey: invalid });
+    assert.equal(Backup.previewBackup(text).code, 'invalid-journey');
+    assert.equal(Backup.restoreBackup(text, store).ok, false); assert.deepEqual(snapshot(), before);
+  }
+});
+
+test('a v3 postcard backup without the first confirmed mountain relay is rejected before any write', () => {
+  const route = savedLakeJourney(); route.optionalDiscoveries.push('mountain.sharedChime');
+  const before = snapshot(); const text = envelope({ meta: meta(), journey: route });
+  assert.equal(Backup.previewBackup(text).code, 'invalid-journey');
+  assert.equal(Backup.restoreBackup(text, store).ok, false);
+  assert.deepEqual(snapshot(), before);
+});
+
+test('the same tenth domain round-trips mountain receipt, checkpoints and discoveries without opening planned regions', () => {
+  savedLakeJourney();
+  assert.equal(Journey.completeNode('mountain', 'mountain.signalLearned').saved, true);
+  assert.equal(Backup.exportBackup(store).preview.journey.mountainCheckpoint, 'relayCamp');
+  assert.equal(Journey.completeNode('mountain', 'mountain.passOpened').saved, true);
+  assert.equal(Journey.deliver('mountain', 'mountain-backup-receipt').saved, true);
+  assert.equal(Journey.discover('mountain.sharedChime').saved, true);
+  const route = Journey.getState(); const exported = Backup.exportBackup(store);
+  assert.equal(exported.ok, true); assert.equal(Object.keys(JSON.parse(exported.text).data).length, 10);
+  assert.deepEqual(exported.preview.journey, { deliveredRegions: ['forest', 'lake', 'mountain'],
+    lakeCheckpoint: 'mail', mountainCheckpoint: 'mailbox', optionalCount: 2 });
+  entries.clear(); entries.set('other-game', 'preserve');
+  assert.equal(Backup.restoreBackup(exported.text, store).ok, true);
+  assert.deepEqual(Journey.getState(), route); assert.equal(entries.get('other-game'), 'preserve');
+  assert.equal(Journey.isRegionUnlocked('desert'), false); assert.equal(Journey.isRegionUnlocked('snow'), false);
+  const before = snapshot(); assert.equal(Journey.deliver('mountain', 'later-scene-receipt').duplicate, true);
+  assert.deepEqual(snapshot(), before);
+  // Importing an actual old nine-domain backup cannot erase the new mountain proof.
+  const old = JSON.parse(exported.text); delete old.data.journey;
+  const rawV3 = entries.get(BACKUP_KEYS.journey);
+  assert.equal(Backup.restoreBackup(JSON.stringify(old), store).ok, true);
+  assert.equal(entries.get(BACKUP_KEYS.journey), rawV3);
+});
+
+test('a migration readback failure rolls back the exact v2 and v1 bytes and can be retried', () => {
+  const route = savedLakeJourney();
+  const rawV2 = JSON.stringify({ ...route, version: 2 }, null, 2); entries.set(BACKUP_KEYS.journey, rawV2);
+  const before = snapshot(); let denyNextRead = false; let denied = false;
+  const flaky = { ...store, setItem(key, value) {
+    store.setItem(key, value);
+    if (key === BACKUP_KEYS.journey && !denied) { denyNextRead = true; denied = true; }
+  }, getItem(key) {
+    if (key === BACKUP_KEYS.journey && denyNextRead) { denyNextRead = false; throw Error('readback unavailable'); }
+    return store.getItem(key);
   } };
-  const menu = { sys: { settings: { key: 'MenuScene' } }, game: { scene: { getScenes: () => [lake] } } };
-  assert.equal(canRestoreJourney(menu), true);
-  for (state of ['active', 'paused', 'sleeping']) assert.equal(canRestoreJourney(menu), false);
-  assert.equal(canRestoreJourney({ ...menu, sys: lake.sys }), false);
+  const text = envelope({ meta: meta({ shadowCores: 91 }), journey: { ...route, version: 2 } });
+  const result = Backup.restoreBackup(text, flaky);
+  assert.equal(result.ok, false); assert.equal(result.rollback, 'complete'); assert.deepEqual(snapshot(), before);
+  assert.equal(Backup.restoreBackup(text, store).ok, true);
+  assert.equal(JSON.parse(entries.get(BACKUP_KEYS.journey)).version, 3);
+});
+
+test('lake and mountain scenes forbid restoring from another open menu while active, paused or sleeping', () => {
+  for (const key of ['LakeScene', 'MountainScene']) {
+    let state = 'inactive';
+    const region = { sys: { settings: { key } }, scene: {
+      isActive: () => state === 'active', isPaused: () => state === 'paused', isSleeping: () => state === 'sleeping',
+    } };
+    const menu = { sys: { settings: { key: 'MenuScene' } }, game: { scene: { getScenes: () => [region] } } };
+    assert.equal(canRestoreJourney(menu), true);
+    for (state of ['active', 'paused', 'sleeping']) assert.equal(canRestoreJourney(menu), false, `${key} ${state}`);
+    assert.equal(canRestoreJourney({ ...menu, sys: region.sys }), false);
+  }
 });
 
 test('a future shadow reward ledger is rejected on export, preview and restore without erasing it', () => {

@@ -41,6 +41,14 @@ export abstract class PostalWalkScene extends Phaser.Scene {
   // Actual player footsteps guide the follower around the same shoreline. No water shortcut.
   private trail: WalkPoint[] = [];
   private echoApproach: WalkPoint[] = [];
+  private echoDispatch: { toLaunch: number; walked: WalkPoint[] } | null = null;
+  protected get walkCopy() { return {
+    pause: '到站时保存进度。重来会从最近确认的码头出发。',
+    blocked: '这边走不通。沿奶黄色岸路或木栈道绕一绕。',
+    returned: '爪尖沾了点水，回到刚才的岸边。信件和已保存的进度都好好的。',
+    idle: '信走水路，你走岸路。小暖会沿着你的脚印跟来；它留守时，你可以去远处调流。',
+    recall: '小暖：来啦！我沿着你刚走过的岸路跟上。',
+  }; }
 
   protected beginWalk(title: string, start: WalkPoint, world: { width: number; height: number }): void {
     this.worldSize = world; this.safePoint = { ...start };
@@ -53,7 +61,7 @@ export abstract class PostalWalkScene extends Phaser.Scene {
     this.cat.setCollideWorldBounds(true);
     (this.cat.body as Phaser.Physics.Arcade.Body).setCircle(10, this.cat.width / 2 - 10, this.cat.height / 2 - 10);
     this.echo = this.add.sprite(start.x - 26, start.y, 'shadow_fox').setDepth(29).setScale(1.22).setAlpha(.74).setTint(0xb8dbd0);
-    this.echoTarget = { x: this.echo.x, y: this.echo.y }; this.trail = [{ ...start }]; this.echoApproach = [];
+    this.echoTarget = { x: this.echo.x, y: this.echo.y }; this.trail = [{ ...start }]; this.echoApproach = []; this.echoDispatch = null;
     this.catAnimator = new CatAnimator(this.cat, 'ranger'); this.echoAnimator = new CatAnimator(this.echo, 'echo');
     this.marker = this.add.circle(0, 0, 9, 0xe5bd7b, .25).setStrokeStyle(2, 0xab8759, .8).setDepth(15).setVisible(false);
     this.cameras.main.setBounds(0, 0, world.width, world.height).startFollow(this.cat, true, .12, .12).setDeadzone(180, 120);
@@ -80,8 +88,12 @@ export abstract class PostalWalkScene extends Phaser.Scene {
   protected abstract interact(): void;
   protected abstract command(): void;
   protected abstract tickJourney(delta: number): void;
+  protected adjustWalkVelocity(velocity: WalkPoint, _delta: number): WalkPoint { return velocity; }
+  protected recoveryPoint(): WalkPoint | null { return null; }
+  protected isDashing(): boolean { return this.clock < this.dashUntil; }
 
   protected sendEcho(point: WalkPoint): void {
+    this.echoDispatch = null;
     this.echoStays = true; this.echoTarget = { ...point };
     // Preserve the path up to the player's command position for a distant follower.
     const last = this.trail[this.trail.length - 1];
@@ -90,12 +102,34 @@ export abstract class PostalWalkScene extends Phaser.Scene {
     this.trail = [{ ...point }, { x: this.cat.x, y: this.cat.y }];
     SoundManager.get().postalCue('command');
   }
+  /** A region's known route is walked continuously; recalling reverses only its travelled part. */
+  protected sendEchoRoute(route: readonly WalkPoint[]): boolean {
+    if (!route.length) return false;
+    let from: WalkPoint = this.cat;
+    for (const point of route) {
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || !this.safeSegment(from, point)) return false;
+      from = point;
+    }
+    const launch = { x: this.cat.x, y: this.cat.y };
+    const prefix = [...this.trail.map(point => ({ ...point })), launch];
+    this.echoStays = true; this.echoTarget = { ...route[route.length - 1] };
+    this.echoApproach = [...prefix, ...route.map(point => ({ ...point }))];
+    this.echoDispatch = { toLaunch: prefix.length, walked: [launch] };
+    this.trail = [launch];
+    SoundManager.get().postalCue('command');
+    return true;
+  }
   protected recallEcho(): void {
-    if (this.echoApproach.length) this.trail = [...this.echoApproach, ...this.trail];
+    if (this.echoDispatch) {
+      const path = this.echoDispatch.toLaunch > 0 ? this.echoApproach.slice(0, this.echoDispatch.toLaunch)
+        : [...this.echoDispatch.walked].reverse();
+      this.trail = [...path, ...this.trail];
+    } else if (this.echoApproach.length) this.trail = [...this.echoApproach, ...this.trail];
+    this.echoDispatch = null;
     this.echoApproach = [];
     this.echoStays = false;
     SoundManager.get().postalCue('command');
-    this.say('小暖：来啦！我沿着你刚走过的岸路跟上。');
+    this.say(this.walkCopy.recall);
   }
 
   private bindControls(): void {
@@ -142,7 +176,7 @@ export abstract class PostalWalkScene extends Phaser.Scene {
     const shade = this.add.rectangle(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT, 0x516d58, .55);
     const paper = this.add.rectangle(WIDTH / 2, HEIGHT / 2, 630, 260, 0xfff8e6);
     const title = this.words(WIDTH / 2, HEIGHT / 2 - 83, '把信袋放稳，歇一小会儿', 25).setOrigin(.5);
-    const info = this.words(WIDTH / 2, HEIGHT / 2 - 34, '到站时保存进度。重来会从最近确认的码头出发。', 16).setOrigin(.5);
+    const info = this.words(WIDTH / 2, HEIGHT / 2 - 34, this.walkCopy.pause, 16).setOrigin(.5);
     const resume = this.words(WIDTH / 2, HEIGHT / 2 + 24, 'Enter · 继续送信', 21).setOrigin(.5).setInteractive({ useHandCursor: true });
     const leave = this.words(WIDTH / 2, HEIGHT / 2 + 77, 'Esc · 回到邮路图', 19).setOrigin(.5).setInteractive({ useHandCursor: true });
     resume.on('pointerdown', () => this.resumeWalk()); leave.on('pointerdown', () => this.leaveWalk());
@@ -158,7 +192,7 @@ export abstract class PostalWalkScene extends Phaser.Scene {
     this.bindings = [];
     if (this.pointerHandler) this.input.off('pointerdown', this.pointerHandler);
     if (this.blurHandler) { this.game.events.off(Phaser.Core.Events.BLUR, this.blurHandler); this.game.events.off(Phaser.Core.Events.HIDDEN, this.blurHandler); }
-    this.trail = []; this.echoApproach = []; this.panel = undefined;
+    this.trail = []; this.echoApproach = []; this.echoDispatch = null; this.panel = undefined;
   }
 
   private safeSegment(a: WalkPoint, b: WalkPoint): boolean {
@@ -207,7 +241,7 @@ export abstract class PostalWalkScene extends Phaser.Scene {
       else {
         this.stalledMs = this.lastDistance - distance < .4 && this.clock >= this.dashUntil ? this.stalledMs + delta : 0;
         this.lastDistance = distance;
-        if (this.stalledMs >= 400) { this.clearTarget(); x = y = 0; this.say('这边走不通。沿奶黄色岸路或木栈道绕一绕。'); }
+        if (this.stalledMs >= 400) { this.clearTarget(); x = y = 0; this.say(this.walkCopy.blocked); }
       }
     }
     const length = Math.hypot(x, y); if (length) { x /= length; y /= length; this.facing = { x, y }; }
@@ -216,11 +250,13 @@ export abstract class PostalWalkScene extends Phaser.Scene {
       this.dashVelocity = { x: this.facing.x * 470, y: this.facing.y * 470 };
       this.catAnimator.dash(170); SoundManager.get().postalCue('dash');
     }
-    this.cat.setVelocity(this.clock < this.dashUntil ? this.dashVelocity.x : x * 220, this.clock < this.dashUntil ? this.dashVelocity.y : y * 220);
+    const velocity = this.adjustWalkVelocity(this.isDashing() ? this.dashVelocity : { x: x * 220, y: y * 220 }, delta);
+    this.cat.setVelocity(velocity.x, velocity.y);
     if (Math.abs(this.cat.body!.velocity.x) > 1) this.cat.setFlipX(this.cat.body!.velocity.x < 0);
     if (!this.isSafe(this.cat)) {
-      this.clearControls(); (this.cat.body as Phaser.Physics.Arcade.Body).reset(this.safePoint.x, this.safePoint.y);
-      this.say('爪尖沾了点水，回到刚才的岸边。信件和已保存的进度都好好的。');
+      const recovery = this.recoveryPoint() ?? this.safePoint;
+      this.clearControls(); (this.cat.body as Phaser.Physics.Arcade.Body).reset(recovery.x, recovery.y);
+      this.say(this.walkCopy.returned);
     } else this.safePoint = { x: this.cat.x, y: this.cat.y };
     this.recordFootstep({ x: this.cat.x, y: this.cat.y });
     const target = this.echoStays ? this.echoApproach[0] ?? this.echoTarget : this.trail[0] ?? this.cat;
@@ -228,12 +264,18 @@ export abstract class PostalWalkScene extends Phaser.Scene {
     const travel = Math.min(Math.max(0, distance - (this.echoStays || this.trail.length > 1 ? 0 : 38)), delta * .31);
     if (distance > .1 && travel > 0) this.echo.setPosition(this.echo.x + ex / distance * travel, this.echo.y + ey / distance * travel);
     if (!this.echoStays && distance < 8 && this.trail.length > 1) this.trail.shift();
-    if (this.echoStays && distance < 8 && this.echoApproach.length) this.echoApproach.shift();
+    if (this.echoStays && distance < 8 && this.echoApproach.length) {
+      const reached = this.echoApproach.shift()!;
+      if (this.echoDispatch) {
+        if (this.echoDispatch.toLaunch > 0) this.echoDispatch.toLaunch--;
+        else this.echoDispatch.walked.push({ ...reached });
+      }
+    }
     if (Math.abs(ex) > 1) this.echo.setFlipX(ex < 0);
     const reducedMotion = SettingsManager.get().reducedMotion;
     this.catAnimator.update(delta, { speed: this.cat.body!.velocity.length(), reducedMotion });
     this.echoAnimator.update(delta, { speed: delta > 0 ? travel * 1000 / delta : 0, reducedMotion });
-    if (this.clock > this.noticeUntil) this.notice.setText('信走水路，你走岸路。小暖会沿着你的脚印跟来；它留守时，你可以去远处调流。');
+    if (this.clock > this.noticeUntil) this.notice.setText(this.walkCopy.idle);
     this.tickJourney(delta);
   }
 }

@@ -20,7 +20,7 @@ export class MenuScene extends Phaser.Scene {
     label(this, 67, 88, 'SUNLIT ECHOES', 13, UI.green, true).setLetterSpacing(5);
     heading(this, 62, 121, '暖影同行', 61, UI.green).setLetterSpacing(4).setStroke('#fff1d5', 1);
     label(this, 70, 208, '小猫棉棉，今天也把心意送往远方。\n和记住你脚步的小暖，一起走过下一段路。', 16, UI.ink).setLineSpacing(8).setStroke('#fff2d8', 2);
-    menuEntry(this, 69, 302, '01', journey.deliveries.lake ? '带着回信，再去远方' : postal.deliveryCompleted ? '下一封，寄往圆镜湖' : '今天，寄往风铃森林', '打开邮路图 · 棉棉走岸路，小暖帮信走得更远', () => this.scene.start('JourneyMapScene'), true);
+    menuEntry(this, 69, 302, '01', journey.deliveries.mountain ? '带着回信，再去远方' : journey.deliveries.lake ? '下一封，寄往云阶山' : journey.deliveries.forest || postal.deliveryCompleted ? '下一封，寄往圆镜湖' : '今天，寄往风铃森林', '打开邮路图 · 读懂地址，选一条路，和小暖亲手送达', () => this.scene.start('JourneyMapScene'), true);
     menuEntry(this, 69, 391, '02', '邮路上的小练习', '地形、邮装与营地 · 练一练默契和身手', () => this.scene.start('CampaignScene'));
     menuEntry(this, 69, 480, '03', '和昨天的自己切磋', '影子试炼 · 五种挑战，读懂自己的习惯', () => this.scene.start('LoadoutScene', { mode: 'shadow', trialTier: 1 }));
     button(this, 161, 578, 208, '棉棉的行囊与工坊', () => this.scene.start('WorkshopScene'), { secondary: true, height: 36, size: 14 });

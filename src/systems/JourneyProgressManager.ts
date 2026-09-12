@@ -1,46 +1,61 @@
 import {
-  createJourneyState, deriveLakeCheckpoint, isJourneyRegion, isJourneyRegionUnlocked,
-  JOURNEY_DISCOVERY_IDS, JOURNEY_NODE_IDS, JOURNEY_REGION_IDS,
-  type JourneyDiscoveryId, type JourneyNodeId, type JourneyRegionId, type JourneyState, type LakeCheckpoint,
+  createJourneyState, deriveLakeCheckpoint, deriveMountainCheckpoint, isJourneyRegion, isJourneyRegionUnlocked,
+  JOURNEY_DISCOVERY_IDS, JOURNEY_NODE_IDS, JOURNEY_REGION_IDS, JOURNEY_VERSION,
+  type JourneyDiscoveryId, type JourneyNodeId, type JourneyRegionId, type JourneyState, type LakeCheckpoint, type MountainCheckpoint,
 } from '../data/journey';
 import { POSTAL_ADDRESS_IDS, POSTAL_JOURNEY_STORAGE_KEY, sanitizePostalJourney } from './PostalJourneyManager';
 
 export const JOURNEY_STORAGE_KEY = 'sunlit-postal-journey-v2';
 export const MAX_JOURNEY_BYTES = 16 * 1024;
-export type { JourneyState, JourneyRegionId, JourneyNodeId, JourneyDiscoveryId, LakeCheckpoint } from '../data/journey';
+export type { JourneyState, JourneyRegionId, JourneyNodeId, JourneyDiscoveryId, LakeCheckpoint, MountainCheckpoint } from '../data/journey';
 export type JourneyError = 'future-version' | 'invalid-save' | 'storage-unavailable' | 'write-failed' | 'save-changed'
   | 'invalid-region' | 'region-locked' | 'invalid-node' | 'missing-prerequisite' | 'invalid-completion' | 'invalid-discovery';
 export interface JourneyResult { saved: boolean; duplicate: boolean; state: JourneyState; error?: JourneyError }
 const object = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const validCompletion = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9:_-]{1,120}$/.test(value);
 const bytes = (text: string): number => new TextEncoder().encode(text).byteLength;
+// The older schema must keep its own allowlist: a version 2 file cannot claim later mountain progress.
+const V2_NODE_IDS: Record<JourneyRegionId, readonly string[]> = {
+  forest: ['forest.recipient', 'forest.address', 'forest.landmark'], lake: ['lake.midDocked', 'lake.mailDocked'],
+  mountain: [], desert: [], snow: [],
+};
+const V2_DISCOVERY_IDS = ['lake.picnicCloth'] as const;
 
-/** Reject impossible dependencies instead of inventing completed tasks while importing a backup. */
+/** Strictly validate the source schema; valid v2 data is returned as v3 without writing to storage. */
 export function sanitizeJourneyState(value: unknown): JourneyState | null {
-  if (!object(value) || value.version !== 2 || !object(value.regions) || !object(value.deliveries) ||
-    !Array.isArray(value.optionalDiscoveries) || value.optionalDiscoveries.length > JOURNEY_DISCOVERY_IDS.length ||
+  if (!object(value) || value.version !== 2 && value.version !== JOURNEY_VERSION || !object(value.regions) || !object(value.deliveries) ||
+    !Array.isArray(value.optionalDiscoveries) ||
     Object.keys(value.regions).some(id => !isJourneyRegion(id)) || Object.keys(value.deliveries).some(id => !isJourneyRegion(id))) return null;
+  const nodeIds = value.version === 2 ? V2_NODE_IDS : JOURNEY_NODE_IDS;
+  const discoveryIds: readonly string[] = value.version === 2 ? V2_DISCOVERY_IDS : JOURNEY_DISCOVERY_IDS;
+  if (value.optionalDiscoveries.length > discoveryIds.length) return null;
   const state = createJourneyState();
   for (const id of JOURNEY_REGION_IDS) {
-    const record = value.regions[id], allowed: readonly string[] = JOURNEY_NODE_IDS[id];
+    const record = value.regions[id], allowed: readonly string[] = nodeIds[id];
     if (!object(record) || !Array.isArray(record.completedNodeIds) || record.completedNodeIds.length > allowed.length ||
       record.completedNodeIds.some(node => typeof node !== 'string' || !allowed.includes(node)) ||
       new Set(record.completedNodeIds).size !== record.completedNodeIds.length) return null;
     state.regions[id].completedNodeIds = allowed.filter(node => (record.completedNodeIds as string[]).includes(node)) as JourneyNodeId[];
     if (Object.prototype.hasOwnProperty.call(value.deliveries, id)) {
       const receipt = value.deliveries[id];
-      if (id !== 'forest' && id !== 'lake' || !object(receipt) || !validCompletion(receipt.completionId) ||
+      if (id !== 'forest' && id !== 'lake' && !(value.version === JOURNEY_VERSION && id === 'mountain') ||
+        !object(receipt) || !validCompletion(receipt.completionId) ||
         state.regions[id].completedNodeIds.length !== allowed.length) return null;
       state.deliveries[id] = { completionId: receipt.completionId };
     }
   }
-  if (value.optionalDiscoveries.some(id => !(JOURNEY_DISCOVERY_IDS as readonly unknown[]).includes(id)) ||
+  if (value.optionalDiscoveries.some(id => typeof id !== 'string' || !discoveryIds.includes(id)) ||
     new Set(value.optionalDiscoveries).size !== value.optionalDiscoveries.length) return null;
   state.optionalDiscoveries = JOURNEY_DISCOVERY_IDS.filter(id => (value.optionalDiscoveries as unknown[]).includes(id));
   const lakeNodes = state.regions.lake.completedNodeIds;
-  if (!state.deliveries.forest && (lakeNodes.length > 0 || state.deliveries.lake || state.optionalDiscoveries.length > 0)) return null;
+  const mountainNodes = state.regions.mountain.completedNodeIds;
+  if (!state.deliveries.forest && (lakeNodes.length > 0 || state.deliveries.lake || state.optionalDiscoveries.includes('lake.picnicCloth'))) return null;
   if (lakeNodes.includes('lake.mailDocked') && !lakeNodes.includes('lake.midDocked')) return null;
-  if (state.deliveries.lake?.completionId === state.deliveries.forest?.completionId && state.deliveries.lake) return null;
+  if (!state.deliveries.lake && (mountainNodes.length > 0 || state.deliveries.mountain || state.optionalDiscoveries.includes('mountain.sharedChime'))) return null;
+  if (mountainNodes.includes('mountain.passOpened') && !mountainNodes.includes('mountain.signalLearned')) return null;
+  if (state.optionalDiscoveries.includes('mountain.sharedChime') && !mountainNodes.includes('mountain.signalLearned')) return null;
+  const receipts = Object.values(state.deliveries).map(receipt => receipt.completionId);
+  if (new Set(receipts).size !== receipts.length) return null;
   return state;
 }
 
@@ -52,7 +67,7 @@ interface ReadResult {
   error?: JourneyError;
 }
 
-/** One narrative domain, with monotonic legacy proof until the forest receipt is durable in v2. */
+/** One narrative domain, with monotonic legacy proof until the forest receipt is durable here. */
 export class JourneyProgressManager {
   private static read(): ReadResult {
     const result: ReadResult = { raw: null, state: createJourneyState(), derived: false };
@@ -62,15 +77,16 @@ export class JourneyProgressManager {
         if (bytes(result.raw) > MAX_JOURNEY_BYTES) return { ...result, error: 'invalid-save' };
         let value: unknown;
         try { value = JSON.parse(result.raw); } catch { return { ...result, error: 'invalid-save' }; }
-        if (object(value) && typeof value.version === 'number' && value.version > 2) return { ...result, error: 'future-version' };
+        if (object(value) && typeof value.version === 'number' && value.version > JOURNEY_VERSION) return { ...result, error: 'future-version' };
         const state = sanitizeJourneyState(value);
         if (!state) return { ...result, error: 'invalid-save' };
         result.state = state;
+        result.derived = object(value) && value.version === 2;
         if (state.deliveries.forest) return result;
       } else result.derived = true;
 
-      // A restored empty v2 may precede finishing the original forest scene.
-      // Merge only real saved v1 proof; after a v2 forest receipt exists v1 is no longer read.
+      // A restored empty journey may precede finishing the original forest scene.
+      // Merge only real saved v1 proof; after a durable forest receipt exists v1 is no longer read.
       result.legacyRaw = localStorage.getItem(POSTAL_JOURNEY_STORAGE_KEY);
       if (result.legacyRaw === null) return result;
       if (bytes(result.legacyRaw) > 4096) return { ...result, error: 'invalid-save' };
@@ -95,6 +111,7 @@ export class JourneyProgressManager {
     return !result.error && isJourneyRegionUnlocked(result.state, id);
   }
   static getLakeCheckpoint(state = this.getState()): LakeCheckpoint { return deriveLakeCheckpoint(state); }
+  static getMountainCheckpoint(state = this.getState()): MountainCheckpoint { return deriveMountainCheckpoint(state); }
 
   private static fail(previous: ReadResult, error: JourneyError): JourneyResult {
     return { saved: false, duplicate: false, state: previous.state, error };
@@ -113,7 +130,8 @@ export class JourneyProgressManager {
     if (!previous.state.deliveries.forest) return this.fail(previous, 'missing-prerequisite');
     const nodes = previous.state.regions[region].completedNodeIds;
     if (nodes.includes(nodeId)) return this.confirmDuplicate(previous);
-    if (region === 'forest' || nodeId === 'lake.mailDocked' && !nodes.includes('lake.midDocked')) return this.fail(previous, 'missing-prerequisite');
+    if (region === 'forest' || nodeId === 'lake.mailDocked' && !nodes.includes('lake.midDocked') ||
+      nodeId === 'mountain.passOpened' && !nodes.includes('mountain.signalLearned')) return this.fail(previous, 'missing-prerequisite');
     const state = structuredClone(previous.state);
     state.regions[region].completedNodeIds = JOURNEY_NODE_IDS[region].filter(node => node === nodeId || nodes.includes(node));
     return this.write(previous, state);
@@ -141,7 +159,11 @@ export class JourneyProgressManager {
     const previous = this.read();
     if (previous.error) return this.fail(previous, previous.error);
     if (!(JOURNEY_DISCOVERY_IDS as readonly string[]).includes(id)) return this.fail(previous, 'invalid-discovery');
-    if (!isJourneyRegionUnlocked(previous.state, 'lake')) return this.fail(previous, 'region-locked');
+    const region = id === 'mountain.sharedChime' ? 'mountain' : 'lake';
+    if (!isJourneyRegionUnlocked(previous.state, region)) return this.fail(previous, 'region-locked');
+    if (id === 'mountain.sharedChime' && !previous.state.regions.mountain.completedNodeIds.includes('mountain.signalLearned')) {
+      return this.fail(previous, 'missing-prerequisite');
+    }
     if (previous.state.optionalDiscoveries.includes(id)) return this.confirmDuplicate(previous);
     const state = structuredClone(previous.state); state.optionalDiscoveries.push(id);
     return this.write(previous, state);

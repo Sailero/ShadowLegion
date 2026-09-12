@@ -241,3 +241,44 @@ test('postal normal following after long straight-line compression settles withi
   scene.sendEcho({ x: 620, y: 100 }); advanceEcho(scene, 80);
   assert.ok(Math.hypot(scene.echo.x - 620, scene.echo.y - 100) < 1, 'a command still reaches the real anchor exactly');
 });
+
+test('a dispatched companion walks every bend of a known route and can return without cutting the interior', t => {
+  const { scene } = fixture(t, { cat: { x: 100, y: 100 }, echo: { x: 90, y: 100 }, isSafe: shoreSafe });
+  assert.equal(scene.sendEchoRoute([{ x: 100, y: 300 }, { x: 300, y: 300 }]), true);
+  assert.ok(advanceEcho(scene, 140).every(shoreSafe));
+  assert.ok(Math.hypot(scene.echo.x - 300, scene.echo.y - 300) < 1);
+  scene.recallEcho();
+  assert.ok(advanceEcho(scene, 140).every(shoreSafe));
+  assert.ok(Math.hypot(scene.echo.x - 100, scene.echo.y - 100) <= 38.01);
+});
+
+test('recalling before the launch point discards the unvisited independent route and follows the old approach', t => {
+  const { scene } = fixture(t, { cat: { x: 300, y: 300 }, echo: { x: 100, y: 100 }, isSafe: shoreSafe });
+  scene.trail = [{ x: 100, y: 100 }, { x: 100, y: 300 }, { x: 300, y: 300 }];
+  assert.equal(scene.sendEchoRoute([{ x: 300, y: 500 }, { x: 500, y: 500 }]), true);
+  advanceEcho(scene, 10); scene.recallEcho();
+  const points = advanceEcho(scene, 150);
+  assert.ok(points.every(p => shoreSafe(p) && p.y <= 300 && p.x <= 300));
+  assert.ok(Math.hypot(scene.echo.x - 300, scene.echo.y - 300) <= 38.01);
+});
+
+test('recalling partway through an independent route turns back along travelled corners without visiting its destination', t => {
+  const { scene } = fixture(t, { cat: { x: 100, y: 100 }, echo: { x: 100, y: 100 }, isSafe: shoreSafe });
+  assert.equal(scene.sendEchoRoute([{ x: 100, y: 300 }, { x: 300, y: 300 }]), true);
+  advanceEcho(scene, 62);
+  assert.ok(scene.echo.x > 120 && scene.echo.x < 250);
+  const furthestX = scene.echo.x;
+  scene.recallEcho();
+  const points = advanceEcho(scene, 150);
+  assert.ok(points.every(p => shoreSafe(p) && p.x <= furthestX + 0.01));
+  assert.ok(Math.hypot(scene.echo.x - 100, scene.echo.y - 100) <= 38.01);
+});
+
+test('invalid dispatch routes cannot replace the current safe follower assignment', t => {
+  const { scene } = fixture(t, { isSafe: shoreSafe });
+  for (const route of [[], [{ x: NaN, y: 300 }], [{ x: 300, y: 300 }]]) {
+    assert.equal(scene.sendEchoRoute(route), false);
+    assert.equal(scene.echoStays, false); assert.deepEqual(scene.echoApproach, []);
+    assert.deepEqual(scene.trail, [{ x: 100, y: 100 }]);
+  }
+});

@@ -188,7 +188,7 @@ export function getStoriesForCompletedStage(stageId: number): StoryDef[] {
   return STORIES.filter(story => story.unlockAfterStage > 0 && story.unlockAfterStage === stageId);
 }
 
-export type StoryReturnScene = 'MenuScene' | 'CampaignScene' | 'LoadoutScene' | 'WorkshopScene' | 'LetterBookScene' | 'DeliveryScene' | 'JourneyMapScene' | 'LakeScene';
+export type StoryReturnScene = 'MenuScene' | 'CampaignScene' | 'LoadoutScene' | 'WorkshopScene' | 'LetterBookScene' | 'DeliveryScene' | 'JourneyMapScene' | 'LakeScene' | 'MountainScene';
 export interface StoryReturnRoute {
   scene: StoryReturnScene;
   data: Record<string, string | number>;
@@ -207,7 +207,7 @@ const integer = (value: unknown, min: number, max: number): value is number =>
 /** No combat/result routes: revisiting a book must not award a run or resume an unsafe snapshot. */
 export function sanitizeStoryReturnRoute(input: unknown): StoryReturnRoute {
   const raw = object(input);
-  if (!raw || typeof raw.scene !== 'string' || !['MenuScene', 'CampaignScene', 'LoadoutScene', 'WorkshopScene', 'LetterBookScene', 'DeliveryScene', 'JourneyMapScene', 'LakeScene'].includes(raw.scene)) {
+  if (!raw || typeof raw.scene !== 'string' || !['MenuScene', 'CampaignScene', 'LoadoutScene', 'WorkshopScene', 'LetterBookScene', 'DeliveryScene', 'JourneyMapScene', 'LakeScene', 'MountainScene'].includes(raw.scene)) {
     return { scene: 'MenuScene', data: {} };
   }
   const scene = raw.scene as StoryReturnScene;

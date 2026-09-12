@@ -157,6 +157,24 @@ test('real postal receipts unlock consecutive replies without combat stars or st
   assert.equal(JSON.stringify(postal), before);
 });
 
+test('a mountain reply requires consecutive real receipts and its safe return discards supplied completion payloads', () => {
+  const postal = { deliveries: { forest: { completionId: 'forest-real' }, lake: { completionId: 'lake-real' },
+    mountain: { completionId: 'mountain-real' } } };
+  const before = JSON.stringify(postal);
+  assert.equal(isStoryUnlocked('letter-mountain', progress(0), postal), true);
+  assert.equal(isStoryUnlocked('letter-desert', progress(0), postal), false);
+  assert.equal(isStoryUnlocked('epilogue', progress(0), postal), false);
+  const missingLake = structuredClone(postal); delete missingLake.deliveries.lake;
+  assert.equal(isStoryUnlocked('letter-mountain', progress(0), missingLake), false);
+  const request = resolveStoryRequest({ storyId: 'letter-mountain', returnTo: { scene: 'MountainScene',
+    data: { completionId: 'cannot-deliver-again', checkpoint: 'mailbox', passOpened: true, score: 999 } } }, progress(0), postal);
+  assert.equal(request.storyId, 'letter-mountain'); assert.equal(request.fallback, null);
+  assert.deepEqual(request.returnTo, { scene: 'MountainScene', data: {} });
+  assert.deepEqual(sanitizeStoryReturnRoute({ scene: 'MountainScene', data: { deliveries: postal.deliveries } }),
+    { scene: 'MountainScene', data: {} });
+  assert.equal(JSON.stringify(postal), before);
+});
+
 test('real StoryScene controller exits once on final next or skip and resets on re-entry without recording progress', () => {
   const originalGetState = CampaignProgressionManager.getState;
   CampaignProgressionManager.getState = () => progress(50);
