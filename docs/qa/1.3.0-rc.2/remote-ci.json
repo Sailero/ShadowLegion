@@ -1,0 +1,89 @@
+{
+  "source": "GitHub REST workflow run and latest jobs, fetched 2026-09-12",
+  "run": {
+    "id": 34695424358,
+    "headSha": "0d32172a9e651f50955c8ce790b602dea1e4a7f4",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34695424358",
+    "updatedAt": "2026-09-12T13:05:21Z"
+  },
+  "jobs": [
+    {
+      "id": 103557972382,
+      "name": "Tests, web build and pacing model",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 34695424358,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Check out source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Set up Node.js 24",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install locked dependencies without lifecycle scripts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run tests, TypeScript, Vite and distribution checks",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Recompute theoretical campaign pacing",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Archive checked web build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Archive theoretical pacing report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Post Set up Node.js 24",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Post Check out source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        }
+      ]
+    }
+  ]
+}

@@ -97,13 +97,13 @@ npx electron scripts/soak-smoke.cjs
 | 战斗通知边界 | 隔离渲染连续通知单容器、重要事件优先、到期释放；最长波次正文 / Boss 血条 / 连击 / 操作反馈位置检查通过 |
 | 持续运行 | 营地固定修复前 1207.134 秒、十次重开、四种结束边界、无尽 46–58 站实际战斗；错误为空，隔离环境范围如下 |
 | 静态花园缓存 | 五十关尺寸、单纹理所有权、原 Graphics 销毁、退出释放与碰撞一致全部通过；CPU 对照详见性能报告 |
-| rc.2 远端 CI | 待本轮提交推送后核对，不沿用 rc.1 结果 |
+| rc.2 远端 CI | 代码提交 `0d32172` 的 [运行 34695424358](https://github.com/Sailero/ShadowLegion/actions/runs/34695424358) 与任务 103557972382 均成功；[保存记录](qa/1.3.0-rc.2/remote-ci.json) |
 
 每次相关修复后重新执行必要检查，发布前在同一最终工作树运行一次 `release:web`。自动检查不能证明零漏洞、稳定帧率或真人可玩性。
 
 ## rc.2 生产渲染与诊断证据
 
-环境为隔离 **Electron 44.0.0 / Chromium 152.0.7977.54**，不使用用户浏览器档案。以下文件保存本轮对应构建 / 修复的真实证据，开发注入与普通生产操作分别注明；各报告中的脚本版本不被改写为最后构建。最终发布文件另按清单逐项核对，最终持续运行结果如下；rc.2 远端 CI 将在推送后按实际提交核对。
+环境为隔离 **Electron 44.0.0 / Chromium 152.0.7977.54**，不使用用户浏览器档案。以下文件保存本轮对应构建 / 修复的真实证据，开发注入与普通生产操作分别注明；各报告中的脚本版本不被改写为最后构建。最终发布文件另按清单逐项核对，最终持续运行结果如下；rc.2 远端 CI 已按代码提交 `0d32172` 核对成功。
 
 - [备份 UI 报告](qa/1.3.0-rc.2/backup.json)：原生确认 / 取消 / 下载、真实 DOM File API 文件读取与刷新后 localStorage 读回。15 关、45 星、74 暖晶、护甲 1 级、研究 `tidy_satchel`、专精 `ranger_roamer`、第 16 关续玩和设置恢复一致；坏文件、预览和取消均无写入，下载往返一致，其他测试键保留，战斗中恢复禁用。`errors` 为空；进度是脚本合成，系统文件选择器未自动化。[预览截图](qa/1.3.0-rc.2/backup-preview.png)
 - [设置焦点报告](qa/1.3.0-rc.2/settings-focus.json)：1280×720 生产页使用 `index-DFTAlWUU.js`，没有 `__sunlitQA`；首焦音量，`scrollTop=0`、标题可见，原生 Tab / Shift+Tab 首尾循环、Enter / Esc 关闭及关闭后画布焦点通过。原始截图未经缩放，`errors` 为空。[设置截图](qa/1.3.0-rc.2/settings-focus.png)
@@ -149,7 +149,7 @@ npx electron scripts/soak-smoke.cjs
 | ZIP 副本 | 3,148,721 字节；SHA-256 与上述值一致 |
 | 正式静态包补充渲染 | 无调试入口；原生操作完成教程 / 战斗 / 暂停 / 回营 / 续玩；9 张截图，0 渲染器错误 |
 
-GitHub CI 已配置 Node 24、锁文件安装、`check` 与理论节奏分析，并保留 `dist` 和节奏报告十四天；Actions 引用固定提交 SHA。前版提交 `1b5f61a` 的 [远端运行已成功](https://github.com/Sailero/ShadowLegion/actions/runs/34677761133)，运行 27 秒并生成两份产物。该历史结果不能代表 rc.2；新版须在本轮 push 后核对对应提交的运行结果。
+GitHub CI 已配置 Node 24、锁文件安装、`check` 与理论节奏分析，并保留 `dist` 和节奏报告十四天；Actions 引用固定提交 SHA。前版提交 `1b5f61a` 的 [远端运行已成功](https://github.com/Sailero/ShadowLegion/actions/runs/34677761133)，运行 27 秒并生成两份产物。该历史结果不能代表 rc.2；新版代码提交 `0d32172` 的 [独立运行已成功](https://github.com/Sailero/ShadowLegion/actions/runs/34695424358)。
 
 ## 历史 rc.1 隔离 Electron / Chromium 图形证据
 

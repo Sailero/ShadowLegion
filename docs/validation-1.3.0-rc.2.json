@@ -305,10 +305,21 @@
       "path": "qa/1.3.0-rc.2/viewports.json",
       "bytes": 10166,
       "sha256": "d281827cab7823bc070e3379b14ed96f5e9d55d6ecf4602138d1de5f2d0c291b"
+    },
+    {
+      "path": "qa/1.3.0-rc.2/remote-ci.json",
+      "bytes": 2358,
+      "sha256": "30e27a283ac1557297365415f2f1ea720913a7391d8e81415ed4c5b8df1b394b"
     }
   ],
   "remoteCI": {
-    "status": "pending push; historical rc.1 CI is not evidence for this revision"
+    "status": "success",
+    "codeCommit": "0d32172a9e651f50955c8ce790b602dea1e4a7f4",
+    "runId": 34695424358,
+    "jobId": 103557972382,
+    "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34695424358",
+    "evidence": "qa/1.3.0-rc.2/remote-ci.json",
+    "scope": "Ubuntu 24.04 / Node 24 locked installation, 108 tests, typecheck, Vite, distribution checks and theoretical pacing model; does not run Electron graphics scripts or human/browser acceptance."
   },
   "remainingGates": [
     "Final anchored production UI smoke and 20-minute soak with camp-coordinate assertions; blocked by automatic tool review",

@@ -104,7 +104,7 @@ rc.2 完整 `release:web` 通过 **108 项自动测试**、TypeScript / Vite 构
 
 历史 rc.1 完整 `release:web` 通过 84 项自动测试、TypeScript、生产构建、静态检查与依赖审计（0 已知漏洞）。隔离 Electron 44 / Chromium 152.0.7977.54 取得 12 张画面；原生 D、E、Space 反馈、暂停和第五阶三轮影子结算通过。另一组加速场景检查完成五十关出生 / 伤害 / 卡牌 / 结算 / 存档，并验证无尽第二站保留工程师与七张卡，两组无渲染器错误。
 
-rc.1 正式包也通过独立生产渲染检查：没有 `__sunlitQA`，原生操作完成首页→路线→编队→教程→选卡→战斗→暂停→回营→续玩；九张截图，无渲染器错误。[历史生产报告](qa/1.3.0-rc.1/production.json)、[首页截图](qa/1.3.0-rc.1/production-menu.png)、[战场截图](qa/1.3.0-rc.1/production-battle.png)。该版提交 `1b5f61a` 的 [GitHub CI 已成功](https://github.com/Sailero/ShadowLegion/actions/runs/34677761133)，不能作为 rc.2 的远端结果。
+rc.1 正式包也通过独立生产渲染检查：没有 `__sunlitQA`，原生操作完成首页→路线→编队→教程→选卡→战斗→暂停→回营→续玩；九张截图，无渲染器错误。[历史生产报告](qa/1.3.0-rc.1/production.json)、[首页截图](qa/1.3.0-rc.1/production-menu.png)、[战场截图](qa/1.3.0-rc.1/production-battle.png)。该版提交 `1b5f61a` 的 [GitHub CI 已成功](https://github.com/Sailero/ShadowLegion/actions/runs/34677761133)，不能作为 rc.2 的远端结果。本轮代码提交 `0d32172` 的 [独立 CI 已通过](https://github.com/Sailero/ShadowLegion/actions/runs/34695424358)。
 
 这些检查使用隔离档案，其中全关卡和影子结算使用加速清怪，不读取用户浏览器数据，也不是正常玩家通关或用时测量。Chrome / Edge / Firefox 兼容、参考硬件性能与真人盲测尚未完成。最终证据及发布包集中在 [发行准备](release-readiness.md)，源码保存的 [验证摘要](validation-1.3.0-rc.2.json) 明确标出边界。
 

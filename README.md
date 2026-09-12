@@ -88,7 +88,7 @@ rc.2 的隔离 Electron 44 / Chromium 152.0.7977.54 已验证生产包备份预�
 
 用户浏览器扩展连接仍不可用；Chrome、Edge、Firefox 兼容、参考硬件性能与真人盲测尚未完成。完整证据与未完成项见 [发行准备](docs/release-readiness.md)。
 
-GitHub CI 使用 Node 24 执行检查与理论节奏分析。前一版提交 `1b5f61a` 的 [远端 CI 已成功](https://github.com/Sailero/ShadowLegion/actions/runs/34677761133)；rc.2 的远端结果须在本轮提交推送后单独核对。
+GitHub CI 使用 Node 24 执行检查与理论节奏分析。前一版提交 `1b5f61a` 的 [远端 CI 已成功](https://github.com/Sailero/ShadowLegion/actions/runs/34677761133)；rc.2 代码提交 `0d32172` 的 [独立远端 CI 也已通过](https://github.com/Sailero/ShadowLegion/actions/runs/34695424358)。
 
 营地固定修复前的缓存版完成 **1207.134 秒**实时持续运行，覆盖高密度敌群、无尽第 46–58 站实际战斗、第五阶双影和十次重开，四种结束顺序均只结算一次，错误为空。全段 rAF 帧间隔 median / p95 / p99 为 **16.7 / 16.8 / 16.8ms**，最大 100.0ms。峰值 160 个敌人、200 个活跃玩家弹道；JS heap 峰值 150.2MiB，四阶段强制 GC 后 62.9–63.8MiB。每个采样中的活跃战场恰好一张地面缓存，全部纹理数量范围 55–110；四种战斗监听器均保持一份。测试使用共享开发机的隔离 Electron 44 / Chromium 152、自动控制与生命补充，没有加速战斗时钟；它不能证明普通难度、真人可玩性、目标浏览器或最低配置性能。 [最终持续运行](docs/qa/1.3.0-rc.2/soak-cached.json)、[性能对照](docs/render-performance.md)、[rc.2 验证摘要](docs/validation-1.3.0-rc.2.json)。
 
