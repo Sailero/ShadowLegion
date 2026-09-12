@@ -8,6 +8,7 @@ import { button, heading, label, menuEntry, openSettings, paintedBackground, sho
 export class MenuScene extends Phaser.Scene {
   constructor() { super('MenuScene'); }
   create() {
+    CampaignProgressionManager.reconcilePendingRewards();
     const state = MetaProgressionManager.getState();
     const campaign = CampaignProgressionManager.getState();
     const completed = Object.values(campaign.stageResults).filter(record => record.stars > 0).length;

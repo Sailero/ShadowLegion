@@ -226,13 +226,14 @@ test('shadow and endless milestone rewards use durable records and capped role m
   assert.equal(Meta.getState().masteryXp.ranger, 140);
 });
 
-test('lost mode receipts can be recovered by the next validated milestone without repeated payouts', () => {
+test('a failed shadow reward remains retryable without charging it to another tier', () => {
   const input = { completionId: 'tier-1', mode: 'shadow', operativeId: 'ranger', tier: 1 };
   globalThis.localStorage = { ...storage, setItem() { throw new Error('quota'); } };
   assert.equal(Meta.recordModeProgress(input).earned, 0);
   globalThis.localStorage = storage;
   const recovered = Meta.recordModeProgress({ ...input, completionId: 'tier-2', tier: 2 });
-  assert.equal(recovered.earned, 14);
+  assert.equal(recovered.earned, 8);
+  assert.equal(Meta.recordModeProgress(input).earned, 6);
   assert.equal(Meta.recordModeProgress(input).earned, 0);
 });
 

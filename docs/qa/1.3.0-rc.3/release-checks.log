@@ -1,0 +1,216 @@
+
+> shadow-legion@1.3.0-rc.3 release:web
+> npm run check && npm run check:security && node scripts/prepare-web-release.mjs
+
+
+> shadow-legion@1.3.0-rc.3 check
+> npm run test && npm run build && npm run check:dist
+
+
+> shadow-legion@1.3.0-rc.3 test
+> node --import ./scripts/test-loader.mjs --test src/test/*.test.mjs
+
+✔ an exhausted upgrade pool consumes all opening drafts and starts combat once (1.3808ms)
+✔ an exhausted station reward preserves the endless run instead of opening a fresh draft (0.2804ms)
+✔ a future shadow reward ledger is rejected on export, preview and restore without erasing it (7.3443ms)
+✔ individual shadow rewards survive backup without inventing preceding tier payments (9.3403ms)
+✔ a durable unpaid campaign reward survives backup and is reconciled exactly once (5.9914ms)
+✔ export reads exactly the eight game keys and preview performs no storage access or writes (1.3486ms)
+✔ full backup round-trips growth, route, profile, settings, scores, trials, tutorial, samples and checkpoint (5.5955ms)
+✔ preview rejects broken envelopes, future versions, missing growth and foreign sections without mutation (1.2985ms)
+✔ the size limit counts UTF-8 bytes and rejects oversized individual domains (4.6722ms)
+✔ domain sanitizers remove unrecognized fields and bound counters without importing executable or prototype data (1.0397ms)
+✔ partial backups rebuild the route from imported growth and preserve absent optional game keys (2.0929ms)
+✔ explicit null values preview removal and clear only the corresponding game keys (0.792ms)
+✔ invalid checkpoint cards, inconsistent modes and malformed domain containers are rejected before writing (0.9535ms)
+✔ v2 saves migrate through the same Meta and Campaign sanitizers without granting currency (1.0573ms)
+✔ read failure aborts before any writes and future current saves are never overwritten (0.5724ms)
+✔ a later failed write rolls back earlier changes and preserves the original byte strings (14.5288ms)
+✔ rollback handles a storage adapter that writes then throws and a removed key (0.7529ms)
+✔ silent discarded writes are detected and rollback failure is explicitly distinguished from success (0.6767ms)
+✔ exports do not silently replace corrupt or future saved data with a fresh-looking backup (0.412ms)
+✔ restore revalidates modified preview text rather than trusting a mutable prepared object (0.3421ms)
+✔ safe endless limits survive Meta, leaderboard and checkpoint backup round-trip while rewards stay capped (1.2923ms)
+✔ new campaign starts at 1-1 and rejects locked or invalid stage submissions (3.5284ms)
+✔ clearing a stage stores three stars, unlocks exactly the next stage and uses one wallet (5.5026ms)
+✔ duplicate completion does not add another clear, reward or faster fabricated record (1.6379ms)
+✔ failure records an attempt without unlocking or awarding currency (0.9941ms)
+✔ replays preserve best stars and the Meta reward cap prevents unlimited farming (3.8585ms)
+✔ legacy chapter progress becomes one-star access without retroactive rewards (0.5354ms)
+✔ sanitization reconstructs route access and ignores forged unlock counters (0.3385ms)
+✔ corrupt or inaccessible storage fails safely and reports an unsaved result (0.5121ms)
+✔ a wallet write can be retried with the same receipt without duplicating route progress (3.1909ms)
+✔ a failed route write cannot create a wallet receipt or a duplicate clear on retry (0.8064ms)
+✔ future campaign versions are preserved byte-for-byte on victory and defeat without wallet changes (0.5975ms)
+✔ the save boundary independently rejects a newer route supplied after a supported read (0.4429ms)
+✔ an unreadable route cannot be overwritten even when storage still accepts writes (0.2673ms)
+✔ future-version protection preserves legacy migration and legitimate v1 writes and retries (1.2309ms)
+✔ stage 15 wallet failure survives reload and reconciles the engineer unlock exactly once (10.4109ms)
+✔ following stage 3 with stage 4 also settles the persisted unlock in receipt order (1.4519ms)
+✔ failed or silently discarded queue acknowledgements never pay the same receipt twice (1.2737ms)
+✔ a silently discarded initial route never reaches the wallet and its original receipt can retry (0.4582ms)
+✔ unpaid receipts outlive the recent history and a full queue rejects new victories without dropping data (179.5592ms)
+✔ old rc2 missing wallet progress is queued durably before reconciliation pays it (0.6185ms)
+✔ old paid receipts with expired reward IDs cannot manufacture a new replay reward (0.4299ms)
+✔ old rc2 receipts recover missing higher stars and independent operative mastery (2.0996ms)
+✔ reconciliation cannot pay a recovered legacy receipt before its queue is read back (0.2215ms)
+✔ reconciliation preserves future route versions and never drains their receipts into an older wallet (0.1321ms)
+✔ chapter checkpoint round-trips build choices and progress without live physics (4.6461ms)
+✔ checkpoint keeps starting chapter for reward boundaries and migrates old checkpoints (0.7411ms)
+✔ checkpoint rejects unknown versions, invalid classes and impossible card sequences (0.6625ms)
+✔ corrupt, oversized or inaccessible checkpoint storage fails without crashing (0.4601ms)
+✔ restoring a behavior recorder preserves cumulative chapter measurements (4.7264ms)
+✔ recorder snapshots bound playtime and cannot restore invalid or negative counters (0.4884ms)
+✔ every campaign chapter has complete finite spawn data and a final boss (4.5305ms)
+✔ maps keep lanes, cover and hazards inside the playable arena (0.7469ms)
+✔ chapter boundaries and endless wrap resolve the intended maps (0.4035ms)
+✔ all four operatives have distinct builds and real signature skills (0.4563ms)
+✔ cards have unique IDs and resolvable skill prerequisites (0.561ms)
+✔ skill levels clamp at both ends without producing invalid combat stats (0.7326ms)
+✔ new saves grant the starting class without workshop power (0.558ms)
+✔ chapter completion persists every earned unlock and is idempotent (2.3205ms)
+✔ older partial saves restore unlocks from chapter progress (0.609ms)
+✔ corrupt JSON and unavailable storage recover without throwing (2.6378ms)
+✔ save sanitization caps workshop ranks and filters unknown unlocks (0.4218ms)
+✔ workshop rejects unaffordable purchases and charges exactly once per rank (0.7193ms)
+✔ first-clear build bonus is paid once and fastest completion persists (0.4795ms)
+✔ starting at a late chapter cannot farm progress or claim a full campaign achievement (0.5431ms)
+✔ leaderboard persists every class, including engineer (0.4258ms)
+✔ leaderboard retains the ten highest scores and ignores malformed entries (0.4835ms)
+✔ behavior profiles distinguish moving from stationary play within bounded metrics (0.6163ms)
+✔ entity method: knockback safely ignores an enemy destroyed by the triggering hit (1.4846ms)
+✔ entity method: a live enemy still receives directional knockback (0.3563ms)
+✔ entity method: enemy tick stops after AI destroys itself during an explosion (0.3951ms)
+✔ entity method: zero or invalid damage does not spend shields (0.4237ms)
+✔ entity method: shield grant of brief invulnerability prevents multiple hits consuming all shields (0.357ms)
+✔ entity method: homing piercing projectile skips targets already hit (0.571ms)
+✔ upgrade method: a signature appearing in two pools still yields three unique choices (0.7611ms)
+✔ upgrade method: exhausted skill levels disappear and injured camp can still receive repair (1.2933ms)
+✔ upgrade method: chapter recovery card grants persistent regeneration with a three-stack cap (0.7909ms)
+✔ local wave timing reports explicit sample counts and correct median/p90 (4.3049ms)
+✔ wave timing retains only the most recent 120 observations (53.1466ms)
+✔ invalid timing samples and broken storage never report fabricated observations (0.8054ms)
+✔ five shadow challenges have readable tells, finite rounds and real encounter differences (1.4888ms)
+✔ shadow records retain best time, separate tiers and reject corrupt inputs (1.6453ms)
+✔ shadow record writes that throw never claim a saved first clear or improved time (0.2925ms)
+✔ shadow record readback detects silent refusal without blocking independent wallet rewards (1.4232ms)
+✔ shadow record readback errors stay unconfirmed and saved values follow existing bounds (0.361ms)
+✔ a committed shadow write with failed readback retries the same ID without another win or faster time (0.4388ms)
+✔ shadow completion IDs deduplicate retries while a different completion increments wins normally (0.2288ms)
+✔ an unreadable shadow history is never replaced by a fresh-looking victory (0.2196ms)
+✔ broken or oversized shadow history is left intact when recording cannot establish its contents (0.2755ms)
+✔ shadow records keep eight recent IDs per tier and the maximum legal records stay below 8192 bytes (1.4982ms)
+✔ backup export and restore retain shadow deduplication IDs so a recovered result cannot count twice (2.8243ms)
+✔ backup and runtime sanitizers preserve the same eight newest legal shadow IDs (0.5231ms)
+✔ checkpoints preserve explicit modes and reject mismatched stage chapters (0.5309ms)
+✔ first clears, higher stars and capped replays pay once with role-specific mastery (14.3508ms)
+✔ fixed stage milestones unlock three characters and skills at 3, 8 and 15 (4.1319ms)
+✔ research requires distinct clears, spends exact currency and cannot be purchased twice (2.1934ms)
+✔ specializations require earned mastery and currency, then equip one with a real tradeoff (2.6045ms)
+✔ each operative earns mastery independently across distinct stages with a hard ceiling (14.609ms)
+✔ battle application modifies the real Hero field contract including workshop and selected tradeoff (0.7841ms)
+✔ all twelve specializations retain a cost or drawback and affect supported combat fields (0.9208ms)
+✔ v2 migration preserves purchased ranks and currency, marks completed stages without first-clear grants (7.4611ms)
+✔ malformed and future saves, invalid IDs and nonfinite numbers never create spendable values (4.3386ms)
+✔ a refused localStorage write grants nothing, consumes nothing, and the same completion retries safely (4.4069ms)
+✔ shadow and endless milestone rewards use durable records and capped role mastery (2.6952ms)
+✔ a failed shadow reward remains retryable without charging it to another tier (1.2129ms)
+✔ stage/profile statistics share completion IDs without double currency or false full-campaign wins (3.3554ms)
+✔ finite campaign economy funds meaningful choices without requiring repeated easy-stage farming (37.2805ms)
+✔ an endless defeat cannot obtain legacy run rewards when a caller omits the new mode field (0.4285ms)
+✔ atlas build achievements require that operative to clear every stage, and never use one-stage time (10.6747ms)
+✔ an unknown future save is left intact even if an older client tries to record a stage (0.2765ms)
+✔ paid stage receipts remain idempotent after the global recent-event window is evicted (2.7739ms)
+✔ save retry passes the original frozen completion and preserves first-clear presentation (2.1572ms)
+✔ a route-first-write failure retries the actual managers without another clear or payment (5.3502ms)
+✔ a repeated save failure restarts with the same receipt and does not invent saved progress (0.4549ms)
+✔ retry performs no stage writes for absent completion, absent result or an already saved result (0.3439ms)
+✔ an unwritten result blocks the first map exit and accepts its explicit repeat (0.6414ms)
+✔ an unwritten result blocks the first workshop exit and accepts its explicit repeat (0.2162ms)
+✔ an unwritten result blocks the first escape exit and accepts its explicit repeat (0.1251ms)
+✔ switching exits never reuses confirmation given for a different destination (0.2947ms)
+✔ a durable route with a pending wallet reward permits all exits immediately (0.4208ms)
+✔ a fully saved result and non-campaign result do not request discard confirmation (0.3418ms)
+✔ tier-five wallet recovery grants only that tier once and does not repeat the saved trial victory (1.2287ms)
+✔ tier-five trial-record recovery leaves an already paid wallet and mastery untouched (0.6283ms)
+✔ a failed habit diary is retried after the stage reward is saved without adding another run or reward (1.5423ms)
+✔ a partially saved shadow victory and an unsaved habit diary require explicit repeated departure (0.5968ms)
+✔ a committed shadow victory with failed verification is recovered without another win or wallet payment (0.4625ms)
+✔ first-run settings honor OS reduced-motion preference with restrained volume (2.5829ms)
+✔ saved settings clamp volume and reject non-boolean preferences (0.6394ms)
+✔ corrupt settings recover and blocked storage still allows session preferences (0.976ms)
+✔ explicit accessibility choice persists and returned objects cannot change stored state (0.5177ms)
+✔ choosing tier 5 first pays only tier 5, then tier 1 still earns its actual first-clear reward (17.9405ms)
+✔ all five tiers pay the same bounded total in arbitrary order and remain paid after receipt eviction (1.7044ms)
+✔ currency is shared per tier while mastery is independent per operative and exact tier (0.7845ms)
+✔ legacy highest-tier prefixes migrate as already paid without retroactive rewards or wallet changes (1.1954ms)
+✔ legacy tier 5 rewards cannot be claimed again even if the old wallet was spent (1.7741ms)
+✔ throwing storage leaves a tier retryable and a later tier never implicitly claims it (0.7226ms)
+✔ silent write refusal is not reported as a saved reward and the same completion can retry (0.3399ms)
+✔ failed migration write preserves old paid prefixes and retries only the new exact tier (0.6764ms)
+✔ future outer or reward-ledger versions stay byte-for-byte protected from mutation (0.9489ms)
+✔ unreadable storage is protected and can later recover without a phantom receipt (0.5178ms)
+✔ new exact-tier ledgers sanitize invalid entries without rebuilding a highest-tier prefix (0.5689ms)
+✔ a committed write with failed verification cannot pay again when the same completion retries (0.6223ms)
+✔ new players get a useful training companion without a saved profile (7.8989ms)
+✔ hostile or damaged profile fields never create nonfinite combat values (0.5331ms)
+✔ recorded play styles create different companion behavior with capped firepower (0.9769ms)
+✔ shadow cover blocks crossed, parallel-edge and embedded segments symmetrically (0.5247ms)
+✔ shadow targeting ignores dead, distant and covered enemies (0.4001ms)
+✔ tactician prioritizes support roles while a nearby camp threat wins priority (0.3573ms)
+✔ chapter objectives teach commands, core defense and local terrain with one-time rewards (1.1591ms)
+✔ shadow trial replaces the chapter exercise and cannot complete from ordinary kills (0.2896ms)
+✔ campaign contains five chapters of ten stable, individually named stages (6.4558ms)
+✔ all fifty stages have real encounter and route differences with valid enemies (8.4817ms)
+✔ every stage map has distinct geometry and all declared approaches fit a boss (13.196ms)
+✔ stage objectives only request terrain and enemy roles that occur in that stage (1.7365ms)
+✔ stars are earned independently and a failed stage never earns a star (0.505ms)
+✔ map and encounter getters return independent objects for scene mutations (0.5654ms)
+✔ queued encounters wait at the shared entity budget and finish only after every queued enemy dies (3.3253ms)
+✔ invalid endless levels cannot create nonfinite difficulty or an undefined chapter (0.7148ms)
+✔ an endless checkpoint beyond station one thousand preserves its route and build contract (0.7949ms)
+ℹ tests 159
+ℹ suites 0
+ℹ pass 159
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1374.5775
+
+> shadow-legion@1.3.0-rc.3 build
+> tsc && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 49 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/index.html                    9.93 kB │ gzip:   3.51 kB
+../dist/assets/index-CCEkiYla.js  1,739.98 kB │ gzip: 427.22 kB
+node.exe : 
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-m
+anualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.77s
+
+> shadow-legion@1.3.0-rc.3 check:dist
+> node scripts/check-dist.mjs
+
+Production package passed: 5 files, 4.49 MB raw, 427.2 kB gzipped JS.
+Relative assets verified; browser rendering, performance and usability require separate real-browser checks.
+
+> shadow-legion@1.3.0-rc.3 check:security
+> npm audit --audit-level=moderate
+
+found 0 vulnerabilities
+Prepared static release: D:\Code\Game\release\shadow-legion-web-1.3.0-rc.3-2026-09-12T13-40-31-787Z
+Includes 8 hashed files, deployment notes and dependency license notices. No upload performed.

@@ -3,27 +3,28 @@ import { GameMode, getShadowTrial } from '../data/modes';
 import { getOperative, OperativeId } from '../data/operatives';
 import { getStage } from '../data/stages';
 import type { CombatProfile } from '../systems/RunRecorder';
-import { CampaignProgressionManager } from '../systems/CampaignProgressionManager';
-import { MetaProgressionManager } from '../systems/MetaProgressionManager';
+import { CampaignProgressionManager, type StageCompletion, type StageResultReward } from '../systems/CampaignProgressionManager';
+import { MetaProgressionManager, type RunSummary } from '../systems/MetaProgressionManager';
 import { ScoreManager } from '../systems/ScoreManager';
-import type { ShadowTrialResult } from '../systems/ShadowTrialManager';
+import { ShadowTrialManager, type ShadowTrialResult } from '../systems/ShadowTrialManager';
 import { backdrop, button, heading, label, paperCard, portrait, shortcut, stamp, titleRule, UI } from '../ui/theme';
 
-interface StageOutcome {
-  stageId:number; stars:number; newStars:number; firstClear:boolean; nextStageId:number|null;
-  chapterCompleted:boolean; campaignCompleted:boolean; earned:number; total:number;
-  masteryXp:number; unlocks:string[]; duplicate:boolean; saved:boolean;
-}
 interface ResultData {
   score?:number; kills?:number; wave?:number; level?:number; victory?:boolean; endless?:boolean;
   durationSec?:number; profile?:CombatProfile|null; operativeId?:OperativeId; defeatReason?:string;
-  mode?:GameMode;stageId?:number;trialTier?:number;stageResult?:StageOutcome|null;trialResult?:ShadowTrialResult|null;
+  mode?:GameMode;stageId?:number;trialTier?:number;stageResult?:StageResultReward|null;trialResult?:ShadowTrialResult|null;
+  stageCompletion?:StageCompletion;
+  profileSaved?:boolean;
+  runSummary?:RunSummary; completionId?:string;
   reward?:{earned:number;total:number;masteryXp?:number;saved?:boolean}|null;
 }
 
 export class GameOverScene extends Phaser.Scene {
+  private pendingExit: string | null = null;
+  private saveNotice?: Phaser.GameObjects.Text;
   constructor(){super('GameOverScene');}
   create(data:ResultData={}){
+    this.pendingExit = null;
     const mode=data.mode??(data.endless?'endless':'campaign');
     const stageId=data.stageId??Math.max(1,((data.level??1)-1)*10+1);
     const trialTier=data.trialTier??1;
@@ -59,7 +60,7 @@ export class GameOverScene extends Phaser.Scene {
     label(this,85,602,stageResult?.unlocks.length?`新收获 · ${stageResult.unlocks.join(' / ')}`:`行囊里共有 ${total} 暖晶`,12,stageResult?.unlocks.length?UI.green:UI.muted).setWordWrapWidth(395,true);
 
     heading(this,545,234,'寄给明天的自己',27);
-    label(this,549,281,profile?`${profile.style}的影子，已经记下这次的习惯。`:'见习影子会继续陪你出发。',13,UI.green,true).setWordWrapWidth(386,true);
+    label(this,549,281,data.profileSaved===false?'这次的习惯尚未存入日记，当前页可查看。':profile?`${profile.style}的影子，已经记下这次的习惯。`:'见习影子会继续陪你出发。',13,data.profileSaved===false?UI.rose:UI.green,true).setWordWrapWidth(386,true);
     const habits=[['移动',profile?.mobility??0],['火力',profile?.firepower??0],['轻跃',profile?.reflex??0],['本领',profile?.technique??0]] as const;
     habits.forEach(([name,value],index)=>{
       const y=333+index*42;label(this,549,y,name,12,UI.muted);label(this,934,y,String(value),12,UI.green,true).setOrigin(1,0);
@@ -70,16 +71,71 @@ export class GameOverScene extends Phaser.Scene {
     label(this,549,548,suggestion,13,UI.green,true).setWordWrapWidth(386,true).setLineSpacing(8);
 
     const next=stageResult?.nextStageId;
-    const canNext=mode==='campaign'&&victory&&next&&CampaignProgressionManager.isStageUnlocked(next);
+    const canNext=mode==='campaign'&&victory&&saved&&data.profileSaved!==false&&next&&CampaignProgressionManager.isStageUnlocked(next);
+    const needsSave=(mode==='campaign'&&!saved&&Boolean(data.stageCompletion)) ||
+      (mode==='shadow'&&victory&&(!saved||!trialSaved)&&Boolean(data.completionId)) ||
+      (data.profileSaved===false&&Boolean(data.runSummary));
+    const protectedSave=needsSave&&(stageResult?.error==='future-save-version'||MetaProgressionManager.getWriteProtection()==='future-version');
     const retry={mode,stageId:mode==='campaign'?stageId:undefined,trialTier,operativeId,freshRun:true};
-    button(this,214,696,335,canNext?'下一封信，准备出发  →':victory&&mode==='campaign'?'把回信收进旅行地图':'再走一次这段路  ·  R',()=>canNext?this.scene.start('LoadoutScene',{mode:'campaign',stageId:next,operativeId}):victory&&mode==='campaign'?this.scene.start('CampaignScene',{stageId}):this.scene.start('ArenaScene',retry),{height:48,size:15});
-    button(this,540,696,280,mode==='campaign'?'打开旅行地图':mode==='shadow'?'选择另一封挑战书':'换一位旅人',()=>this.scene.start(mode==='campaign'?'CampaignScene':'LoadoutScene',mode==='campaign'?{stageId}:{mode,trialTier,operativeId}),{secondary:true,height:48,size:14});
-    button(this,840,696,275,'去工坊整理行囊',()=>this.scene.start('WorkshopScene',{operativeId}),{secondary:true,height:48,size:14});
-    const saveNotice=mode==='shadow'&&victory
-      ?`切磋纪录${trialSaved?'已保存':'暂未保存'} · 暖晶结果${saved?'已保存':'暂未保存'} · ${trialSaved&&saved?'R 重试 · ESC 返回':'请检查浏览器存储。'}`
-      :saved?'R 重试本次旅途 · ESC 返回 · 本次成长已记在本机日记里':'本次记录暂未保存，请保持页面打开后再检查浏览器存储。';
-    label(this,512,749,saveNotice,11,saved&&trialSaved?UI.muted:UI.rose).setOrigin(.5);
-    shortcut(this,'R',()=>this.scene.start('ArenaScene',retry));
-    shortcut(this,'ESC',()=>this.scene.start(mode==='campaign'?'CampaignScene':'MenuScene',mode==='campaign'?{stageId}:undefined));
+    button(this,214,696,335,protectedSave?'新版存档已保护':needsSave?'重试保存这封回信  ·  S':canNext?'下一封信，准备出发  →':victory&&mode==='campaign'?'把回信收进旅行地图':'再走一次这段路  ·  R',()=>needsSave?this.retryStageSave(data):canNext?this.scene.start('LoadoutScene',{mode:'campaign',stageId:next,operativeId}):victory&&mode==='campaign'?this.scene.start('CampaignScene',{stageId}):this.scene.start('ArenaScene',retry),{disabled:protectedSave,height:48,size:15});
+    button(this,540,696,280,mode==='campaign'?'打开旅行地图':mode==='shadow'?'选择另一封挑战书':'换一位旅人',()=>this.leaveResult(data,'map',()=>this.scene.start(mode==='campaign'?'CampaignScene':'LoadoutScene',mode==='campaign'?{stageId}:{mode,trialTier,operativeId})),{secondary:true,height:48,size:14});
+    button(this,840,696,275,'去工坊整理行囊',()=>this.leaveResult(data,'workshop',()=>this.scene.start('WorkshopScene',{operativeId})),{secondary:true,height:48,size:14});
+    const saveNotice=protectedSave?'存档来自更新版本，请使用新版继续；原有记录已保留。'
+      :stageResult&&!saved&&!stageResult.routeSaved?'本次成果只留在当前页面 · S 重试保存；刷新或离开会丢失本次成果'
+      :data.profileSaved===false?'部分记录尚未保存，包含本次习惯日记 · S 重试保存；离开会丢失未保存部分'
+      :mode==='shadow'&&victory
+      ?`切磋纪录${trialSaved?'已保存':'暂未保存'} · 暖晶结果${saved?'已保存':'暂未保存'} · ${trialSaved&&saved?'R 重试 · ESC 返回':'S 重试保存；离开会丢失未保存结果'}`
+      :saved?'R 重试本次旅途 · ESC 返回 · 本次成长已记在本机日记里'
+      :stageResult?.routeSaved?'路线已保存，奖励记录等待确认 · S 重试保存，或回营后自动核对'
+      :'本次成果只留在当前页面 · S 重试保存；刷新或离开会丢失本次成果';
+    this.saveNotice=label(this,512,749,saveNotice,11,saved&&trialSaved?UI.muted:UI.rose).setOrigin(.5);
+    shortcut(this,'S',()=>{if(needsSave&&!protectedSave)this.retryStageSave(data);});
+    shortcut(this,'R',()=>needsSave?(!protectedSave&&this.retryStageSave(data)):this.scene.start('ArenaScene',retry));
+    shortcut(this,'ESC',()=>this.leaveResult(data,'escape',()=>this.scene.start(mode==='campaign'?'CampaignScene':'MenuScene',mode==='campaign'?{stageId}:undefined)));
+  }
+
+  private retryStageSave(data: ResultData): void {
+    const needed = (data.stageCompletion && data.stageResult && !data.stageResult.saved) ||
+      (data.mode === 'shadow' && data.victory && data.completionId && (!data.trialResult?.saved || !data.reward?.saved)) ||
+      (data.profileSaved === false && data.runSummary);
+    if (!needed) return;
+    const updated = { ...data };
+    if (data.stageCompletion && data.stageResult && !data.stageResult.saved) {
+      const previous = data.stageResult;
+      const result = CampaignProgressionManager.recordStageResult(previous.stageId, data.stageCompletion);
+      updated.stageResult = { ...result,
+        firstClear: previous.firstClear || result.firstClear,
+        newStars: Math.max(previous.newStars, result.newStars),
+        earned: previous.earned + result.earned,
+        masteryXp: previous.masteryXp + result.masteryXp,
+        unlocks: [...new Set([...previous.unlocks, ...result.unlocks])],
+      };
+    }
+    if (data.mode === 'shadow' && data.victory && data.completionId) {
+      if (!data.trialResult?.saved) updated.trialResult = ShadowTrialManager.recordVictory(data.trialTier ?? 1, data.durationSec ?? 1, data.completionId);
+      if (!data.reward?.saved) {
+        const result = MetaProgressionManager.recordModeProgress({ completionId: data.completionId,
+          mode: 'shadow', tier: data.trialTier ?? 1, operativeId: data.operativeId ?? 'ranger' });
+        updated.reward = { ...result, earned: (data.reward?.earned ?? 0) + result.earned,
+          masteryXp: (data.reward?.masteryXp ?? 0) + result.masteryXp };
+      }
+    }
+    if (data.profileSaved === false && data.runSummary) {
+      MetaProgressionManager.recordRun(data.runSummary);
+      updated.profileSaved = MetaProgressionManager.getState().rewardReceipts.includes(`run:${data.runSummary.completionId}`);
+    }
+    this.scene.restart(updated);
+  }
+
+  /** Only an unwritten route needs a discard choice; durable rewards survive departure. */
+  private leaveResult(data: ResultData, destination: string, leave: () => void): void {
+    const transient = (data.stageResult && !data.stageResult.saved && !data.stageResult.routeSaved) ||
+      (data.mode === 'shadow' && data.victory && (!data.trialResult?.saved || !data.reward?.saved)) || data.profileSaved === false;
+    if (transient && this.pendingExit !== destination) {
+      this.pendingExit = destination;
+      this.saveNotice?.setText('本次成果尚未保存。再次选择同一出口将放弃本次成果；按 S 可重试保存。');
+      return;
+    }
+    leave();
   }
 }

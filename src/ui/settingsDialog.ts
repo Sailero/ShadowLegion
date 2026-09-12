@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import packageInfo from '../../package.json' with { type: 'json' };
 import { SettingsManager } from '../systems/SettingsManager';
 import { SoundManager } from '../systems/SoundManager';
 import { SaveBackupManager, MAX_BACKUP_BYTES, type BackupPreview } from '../systems/SaveBackupManager';
@@ -35,7 +36,7 @@ export function openSettingsDialog(scene: Phaser.Scene, presentDialog: PresentDi
   dialog.className = 'settings-dialog';
   dialog.setAttribute('aria-labelledby', 'settings-title');
   dialog.tabIndex = -1;
-  dialog.innerHTML = `<form method="dialog"><div class="settings-eyebrow">让旅途更合心意</div>
+  dialog.innerHTML = `<form method="dialog"><div class="settings-eyebrow">让旅途更合心意 · v${packageInfo.version}</div>
     <h2 id="settings-title">旅途设置</h2><p>随时调整，本设备会记住你的选择。</p>
     <label class="setting-volume" for="sound-volume">声音音量 <output id="sound-value"></output></label>
     <input id="sound-volume" type="range" min="0" max="100" step="5" aria-label="声音音量" autofocus>

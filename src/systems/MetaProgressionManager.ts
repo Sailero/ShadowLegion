@@ -21,6 +21,12 @@ export interface StageMetaProgress {
   rewardIds?: string[];
   migrated?: boolean;
 }
+export interface ShadowRewardLedger {
+  version: 1;
+  /** Currency was paid for these exact tiers, independently of the best tier. */
+  paidTiers: number[];
+  masteryPaidTiers: Record<OperativeId, number[]>;
+}
 export interface MetaState {
   version: 3;
   shadowCores: number;
@@ -46,6 +52,7 @@ export interface MetaState {
     endlessBestWave: number;
     shadowMasteryTiers: Record<OperativeId, number>;
     endlessMasteryMilestones: Record<OperativeId, number>;
+    shadowRewardLedger: ShadowRewardLedger;
   };
   rewardReceipts: string[];
 }
@@ -101,6 +108,10 @@ const int = (value: unknown, max = MAX_STAT, min = 0): number => typeof value ==
 const object = (value: unknown): Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
   ? value as Record<string, unknown> : {};
 const operativeRecord = <T>(value: T): Record<OperativeId, T> => ({ ranger: value, gunner: value, warden: value, engineer: value });
+const tierPrefix = (highest: number): number[] => Array.from({ length: highest }, (_, index) => index + 1);
+const paidTiers = (value: unknown, legacyHighest: number): number[] => Array.isArray(value)
+  ? [...new Set(value.filter((tier): tier is number => Number.isInteger(tier) && tier >= 1 && tier <= 5))].sort((a, b) => a - b)
+  : tierPrefix(legacyHighest);
 const validCompletion = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9:_-]{1,120}$/.test(value);
 const validStage = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= CAMPAIGN_STAGE_COUNT;
 const zeroRun = (): Omit<RunReward, 'total'> => ({ earned: 0, progressReward: 0, victoryReward: 0, newBuildReward: 0, newBuildClear: false });
@@ -111,7 +122,8 @@ export function createDefaultMetaState(): MetaState {
     totalRuns: 0, wins: 0, totalKills: 0, bestWave: 0, bestVictorySec: null, clearedBuilds: [],
     highestChapterUnlocked: 1, clearedChapters: [], unlockedOperatives: ['ranger'], unlockedSkills: ['burst'], lastProfile: null,
     research: [], masteryXp: operativeRecord(0), specializations: [], equippedSpecializations: operativeRecord(null),
-    stageProgress: {}, modeProgress: { shadowBestTier: 0, endlessBestWave: 0, shadowMasteryTiers: operativeRecord(0), endlessMasteryMilestones: operativeRecord(0) },
+    stageProgress: {}, modeProgress: { shadowBestTier: 0, endlessBestWave: 0, shadowMasteryTiers: operativeRecord(0), endlessMasteryMilestones: operativeRecord(0),
+      shadowRewardLedger: { version: 1, paidTiers: [], masteryPaidTiers: { ranger: [], gunner: [], warden: [], engineer: [] } } },
     rewardReceipts: [],
   };
 }
@@ -138,6 +150,20 @@ export function calculateRunReward(summary: CampaignSummary & Pick<RunSummary, '
 }
 
 export class MetaProgressionManager {
+  static getWriteProtection(): 'unreadable' | 'future-version' | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try {
+          const previous = object(JSON.parse(raw));
+          const ledger = object(object(previous.modeProgress).shadowRewardLedger);
+          if ((typeof previous.version === 'number' && previous.version > 3) ||
+            (typeof ledger.version === 'number' && ledger.version > 1)) return 'future-version';
+        } catch { /* A malformed older save can be replaced by valid progress. */ }
+      }
+      return null;
+    } catch { return 'unreadable'; }
+  }
   static getState(): MetaState {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -313,16 +339,16 @@ export class MetaProgressionManager {
     if (input.mode === 'shadow') {
       if (!Number.isInteger(input.tier) || input.tier! < 1 || input.tier! > 5) return none;
       const tier = input.tier!;
-      firstClear = tier > state.modeProgress.shadowBestTier;
+      const ledger = state.modeProgress.shadowRewardLedger;
+      firstClear = !ledger.paidTiers.includes(tier);
       if (firstClear) {
-        // The mode director owns tier access. A higher cleared tier also recovers
-        // preceding rewards whose separate localStorage write failed.
-        for (let value = state.modeProgress.shadowBestTier + 1; value <= tier; value++) earned += 4 + value * 2;
-        state.modeProgress.shadowBestTier = tier;
+        earned = 4 + tier * 2;
+        ledger.paidTiers.push(tier);
       }
-      const oldTier = state.modeProgress.shadowMasteryTiers[input.operativeId];
-      for (let value = oldTier + 1; value <= tier; value++) xp += 10 + value * 2;
-      state.modeProgress.shadowMasteryTiers[input.operativeId] = Math.max(oldTier, tier);
+      state.modeProgress.shadowBestTier = Math.max(state.modeProgress.shadowBestTier, tier);
+      const roleTiers = ledger.masteryPaidTiers[input.operativeId];
+      if (!roleTiers.includes(tier)) { xp = 10 + tier * 2; roleTiers.push(tier); }
+      state.modeProgress.shadowMasteryTiers[input.operativeId] = Math.max(state.modeProgress.shadowMasteryTiers[input.operativeId], tier);
     } else if (input.mode === 'endless') {
       if (!Number.isInteger(input.wave) || input.wave! < 1 || input.wave! > MAX_ENDLESS_WAVE) return none;
       const wave = input.wave!;
@@ -389,16 +415,11 @@ export class MetaProgressionManager {
     if (state.rewardReceipts.length > MAX_RECEIPTS) state.rewardReceipts.splice(0, state.rewardReceipts.length - MAX_RECEIPTS);
   }
   private static save(state: MetaState): boolean {
+    if (this.getWriteProtection()) return false;
     try {
-      const previous = localStorage.getItem(STORAGE_KEY);
-      if (previous) {
-        try {
-          const version = object(JSON.parse(previous)).version;
-          if (typeof version === 'number' && version > 3) return false;
-        } catch { /* A malformed older save can be replaced by valid progress. */ }
-      }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      return true;
+      const serialized = JSON.stringify(state);
+      localStorage.setItem(STORAGE_KEY, serialized);
+      return localStorage.getItem(STORAGE_KEY) === serialized;
     } catch { return false; }
   }
   static sanitize(value: unknown): MetaState {
@@ -456,6 +477,17 @@ export class MetaProgressionManager {
     for (const id of VALID_OPERATIVES) {
       state.modeProgress.shadowMasteryTiers[id] = int(object(modes.shadowMasteryTiers)[id], 5);
       state.modeProgress.endlessMasteryMilestones[id] = int(object(modes.endlessMasteryMilestones)[id], 20);
+    }
+    const ledger = object(modes.shadowRewardLedger);
+    // Older saves already received every tier up to their highest record.
+    // Mark that paid prefix without granting or subtracting any currency/XP.
+    // Once a v1 ledger exists, its exact tier sets are authoritative: winning
+    // tier 5 first must leave tiers 1–4 available for their own first victories.
+    const recordedTiers = ledger.version === 1 ? ledger.paidTiers : undefined;
+    const recordedMastery = ledger.version === 1 ? object(ledger.masteryPaidTiers) : {};
+    state.modeProgress.shadowRewardLedger.paidTiers = paidTiers(recordedTiers, state.modeProgress.shadowBestTier);
+    for (const id of VALID_OPERATIVES) {
+      state.modeProgress.shadowRewardLedger.masteryPaidTiers[id] = paidTiers(recordedMastery[id], state.modeProgress.shadowMasteryTiers[id]);
     }
     state.rewardReceipts = Array.isArray(src.rewardReceipts) ? [...new Set(src.rewardReceipts.filter((id): id is string =>
       typeof id === 'string' && /^(stage|mode|run):[A-Za-z0-9:_-]{1,120}$/.test(id)))].slice(-MAX_RECEIPTS) : [];

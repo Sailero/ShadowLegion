@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { OPERATIVES, getOperative, OperativeId } from '../data/operatives';
 import { MetaProgressionManager, WORKSHOP_MODULES, WORKSHOP_MAX_RANK, workshopUpgradeCost } from '../systems/MetaProgressionManager';
 import { SoundManager } from '../systems/SoundManager';
+import { CampaignProgressionManager } from '../systems/CampaignProgressionManager';
 import { openPlaytestRecords } from '../ui/playtestRecords';
 import { backdrop, button, choiceHit, heading, label, paperCard, portrait, shortcut, stamp, titleRule, UI } from '../ui/theme';
 
@@ -20,6 +21,7 @@ export class WorkshopScene extends Phaser.Scene {
   }
 
   create(){
+    CampaignProgressionManager.reconcilePendingRewards();
     const state=MetaProgressionManager.getState();
     const overview=MetaProgressionManager.getProgressionOverview(state);
     backdrop(this,'旅人行囊  /  LITTLE THINGS BECOME A JOURNEY');

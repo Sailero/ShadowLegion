@@ -1572,22 +1572,26 @@ export class ArenaScene extends Phaser.Scene {
     const durationSec = Math.round((this.elapsedBeforeChapterMs + this.activeRunMs) / 1000);
     const newHighScore = ScoreManager.isNewHighScore(this.score);
     const profile = this.runRecorder.finish(build, this.hero.maxHp);
-    const reward = MetaProgressionManager.recordRun({
+    const runSummary = {
       recordOnly: true, mode: this.mode, stageId: this.stage?.id ?? (this.mode === 'shadow' ? 0 : undefined), operativeId: this.operativeId, completionId: this.completionId,
       startLevel: this.registry.get('runStartLevel') ?? this.currentLevel,
       wave: this.waveMgr.wave, level: this.currentLevel, kills: this.kills,
       durationSec, victory: false, endless: this.endless, build, profile,
-    });
+    };
+    const reward = MetaProgressionManager.recordRun(runSummary);
+    const stageCompletion = this.stage ? {
+      completionId: this.completionId, victory: false, operativeId: this.operativeId,
+      durationSec, coreRatio: this.defenseHp / this.defenseMaxHp, ...this.stageStats,
+    } : undefined;
     const data = {
       score: this.score, kills: this.kills,
       wave: this.waveMgr.wave, level: this.currentLevel,
       endless: this.endless, durationSec, build, newHighScore, profile, reward,
       defeatReason: reason, operativeId: this.operativeId, shadowTrial: this.shadowTrial,
       mode: this.mode, stageId: this.stage?.id, trialTier: this.trialTier,
-      stageResult: this.stage ? CampaignProgressionManager.recordStageResult(this.stage.id, {
-        completionId: this.completionId, victory: false, operativeId: this.operativeId,
-        durationSec, coreRatio: this.defenseHp / this.defenseMaxHp, ...this.stageStats,
-      }) : null,
+      stageCompletion, runSummary, completionId: this.completionId,
+      profileSaved: MetaProgressionManager.getState().rewardReceipts.includes(`run:${this.completionId}`),
+      stageResult: this.stage && stageCompletion ? CampaignProgressionManager.recordStageResult(this.stage.id, stageCompletion) : null,
       startLevel: this.registry.get('runStartLevel') ?? this.currentLevel,
     };
     ScoreManager.saveScore({
@@ -1772,31 +1776,34 @@ export class ArenaScene extends Phaser.Scene {
     const build = this.upgradeMgr.getBuildPath();
     const durationSec = Math.max(1, Math.round(this.activeRunMs / 1000));
     const profile = this.runRecorder.finish(build, this.hero.maxHp);
-    const stageResult = this.stage ? CampaignProgressionManager.recordStageResult(this.stage.id, {
+    const stageCompletion = this.stage ? {
       completionId: this.completionId, victory: true, operativeId: this.operativeId,
       durationSec, coreRatio: this.defenseHp / this.defenseMaxHp, hpRatio: this.hero.hp / this.hero.maxHp, ...this.stageStats,
-    }) : null;
-    const trialResult = this.mode === 'shadow' ? ShadowTrialManager.recordVictory(this.trialTier, durationSec) : null;
+    } : undefined;
+    const stageResult = this.stage && stageCompletion ? CampaignProgressionManager.recordStageResult(this.stage.id, stageCompletion) : null;
+    const trialResult = this.mode === 'shadow' ? ShadowTrialManager.recordVictory(this.trialTier, durationSec, this.completionId) : null;
     const modeReward = this.mode === 'shadow' ? MetaProgressionManager.recordModeProgress({
       completionId: this.completionId, mode: 'shadow', tier: this.trialTier, operativeId: this.operativeId,
     }) : null;
-    const runReward = MetaProgressionManager.recordRun({
+    const runSummary = {
       recordOnly: true, mode: this.mode, stageId: this.stage?.id ?? 0, completionId: this.completionId,
       operativeId: this.operativeId, startLevel: this.currentLevel,
       wave: this.waveMgr.totalWaves, level: this.currentLevel, kills: this.kills,
       durationSec, victory: true, endless: false, build, profile,
-    });
+    };
+    const runReward = MetaProgressionManager.recordRun(runSummary);
     const earned = stageResult?.earned ?? modeReward?.earned ?? 0;
     const reward = { ...runReward, earned, total: MetaProgressionManager.getState().shadowCores, progressReward: 0, victoryReward: earned,
       masteryXp: modeReward?.masteryXp ?? stageResult?.masteryXp ?? 0, saved: modeReward?.saved ?? stageResult?.saved ?? true };
     const data = {
-      mode: this.mode, stageId: this.stage?.id, trialTier: this.trialTier, stageResult, trialResult,
+      mode: this.mode, stageId: this.stage?.id, trialTier: this.trialTier, stageResult, trialResult, stageCompletion,
+      profileSaved: MetaProgressionManager.getState().rewardReceipts.includes(`run:${this.completionId}`), runSummary, completionId: this.completionId,
       score: this.score, kills: this.kills, wave: this.waveMgr.totalWaves, level: this.currentLevel,
       victory: true, endless: false, durationSec, build, newHighScore: ScoreManager.isNewHighScore(this.score),
       profile, reward, operativeId: this.operativeId, shadowTrial: this.shadowTrial, startLevel: this.currentLevel,
     };
     ScoreManager.saveScore({ score: this.score, kills: this.kills, level: this.currentLevel, wave: this.waveMgr.totalWaves, endless: false, durationSec, build });
-    this.announce(this.stage ? `${this.stage.label} · ${this.stage.name}\n${'★'.repeat(stageResult?.stars ?? 1)}  这段风景收进日记啦` : '三轮切磋完成 · 和昨日的自己击掌', 0x598862, 1800, 3);
+    this.announce(this.stage ? `${this.stage.label} · ${this.stage.name}\n${'★'.repeat(stageResult?.stars ?? 1)}  ${stageResult?.saved ? '这段风景收进日记啦' : '旅途完成，回信等待保存'}` : '三轮切磋完成 · 和昨日的自己击掌', 0x598862, 1800, 3);
     this.slowMoFinish(true);
     this.time.delayedCall(1900, () => this.scene.start('GameOverScene', data));
   }

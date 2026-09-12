@@ -1,0 +1,92 @@
+{
+  "date": "2026-09-12",
+  "method": "Connected Microsoft Edge via CUA accessibility tree, screenshots, page clicks and key presses",
+  "origin": "http://localhost:4173/",
+  "storageScope": "A separate QA origin observed fresh at 0/50; no player progress was injected or reset",
+  "browserVersion": "not independently collected",
+  "screenshotEvidence": "Images inspected in the tool conversation; this file is an observation log, not archived PNGs or a console trace",
+  "firstStage": {
+    "build": "rc.2 production loaded before rc.3 was built",
+    "flow": [
+      "Menu keyboard selection",
+      "chapter map",
+      "ranger loadout",
+      "tutorial Enter",
+      "opening card",
+      "Escape pause",
+      "native settings",
+      "E companion command",
+      "ordinary combat",
+      "card choice",
+      "victory",
+      "workshop purchase"
+    ],
+    "settings": {
+      "initialFocus": "sound-volume",
+      "volume": 30,
+      "autoFireEnabledThroughCheckbox": true,
+      "shiftTabLoop": true,
+      "restoreDisabledDuringBattle": true,
+      "closingSettingsKeptBattlePaused": true
+    },
+    "victory": {
+      "stage": 1,
+      "durationSecShown": 48,
+      "score": 218,
+      "kills": 16,
+      "stars": 2,
+      "coresEarned": 5,
+      "masteryXpEarned": 8
+    },
+    "purchase": {
+      "module": "armor",
+      "cost": 2,
+      "rankAfter": 1,
+      "walletAfter": 3
+    },
+    "limitations": "Automatic fire enabled through normal settings; intermittent pointing/keys. Not a human blind test, controlled pacing sample, or proof of held-key/dash/skill responsiveness."
+  },
+  "finalBuild": {
+    "versionTextObserved": "让旅途更合心意 · v1.3.0-rc.3",
+    "reloadMethod": "Opened a new tab on the same origin after production build; a Ctrl+Shift+R attempt did not visibly reload and is not counted",
+    "retained": {
+      "clearedStages": 1,
+      "stars": 2,
+      "cores": 3,
+      "autoFire": true,
+      "volume": 30,
+      "armorRank": 1
+    },
+    "settings": {
+      "initialFocus": "sound-volume",
+      "shiftTabFocused": "完成设置",
+      "enterClosedDialog": true
+    },
+    "stage2": {
+      "routeUnlocked": true,
+      "openingDrafts": 2,
+      "hpBeforeCards": 125,
+      "coreBeforeBattle": 360,
+      "companionNameObserved": "爆米花影 · 守营",
+      "waveShown": "1/2",
+      "activeSecBeforePause": 12,
+      "killsBeforePause": 2,
+      "coreBeforePause": 342,
+      "pauseOpened": true,
+      "menuResumeText": "续写 1-2 的旅途"
+    },
+    "visibleFailuresObserved": [],
+    "consoleErrors": "not collected through this browser channel"
+  },
+  "notCovered": [
+    "native Windows 150% scaling",
+    "minimum specification performance",
+    "Chrome and Firefox full flows",
+    "all 50 stages at ordinary difficulty",
+    "full shadow trial and endless ordinary play",
+    "OS backup file picker/download/restore",
+    "native browser storage fault injection",
+    "final-build 20-minute graphical soak",
+    "human playability and art approval"
+  ]
+}

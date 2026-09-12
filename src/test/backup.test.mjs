@@ -21,6 +21,49 @@ const snapshot = () => [...entries.entries()].sort(([a], [b]) => a.localeCompare
 const stage = id => Campaign.recordStageResult(id, { completionId: `stage-${id}`, victory: true, operativeId: 'ranger', durationSec: 80, coreRatio: 1,
   commands: 5, dashes: 10, intercepts: 100, priorityKills: 100, terrainHits: 100, skills: 10 });
 
+test('a future shadow reward ledger is rejected on export, preview and restore without erasing it', () => {
+  const future = meta();
+  future.modeProgress.shadowRewardLedger = { version: 2, futurePayments: [5] };
+  write(BACKUP_KEYS.meta, future);
+  const original = snapshot();
+  assert.equal(Backup.exportBackup(store).ok, false);
+  assert.equal(Backup.previewBackup(envelope({ meta: future })).ok, false);
+  assert.equal(Backup.restoreBackup(envelope({ meta: meta() }), store).ok, false);
+  assert.deepEqual(snapshot(), original);
+});
+
+test('individual shadow rewards survive backup without inventing preceding tier payments', () => {
+  const reward = Meta.recordModeProgress({ completionId: 'fifth-first', mode: 'shadow', tier: 5, operativeId: 'ranger' });
+  assert.equal(reward.earned, 14);
+  const exported = Backup.exportBackup(store);
+  assert.equal(exported.ok, true);
+  entries.clear();
+  assert.equal(Backup.restoreBackup(exported.text, store).ok, true);
+  assert.deepEqual(Meta.getState().modeProgress.shadowRewardLedger.paidTiers, [5]);
+  assert.equal(Meta.recordModeProgress({ completionId: 'first-after-restore', mode: 'shadow', tier: 1, operativeId: 'ranger' }).earned, 6);
+  assert.equal(Meta.recordModeProgress({ completionId: 'fifth-repeat', mode: 'shadow', tier: 5, operativeId: 'ranger' }).earned, 0);
+});
+
+test('a durable unpaid campaign reward survives backup and is reconciled exactly once', () => {
+  globalThis.localStorage = { ...store, setItem(key, value) {
+    if (key === BACKUP_KEYS.meta) throw new Error('wallet full');
+    store.setItem(key, value);
+  } };
+  assert.equal(stage(1).saved, false);
+  const exported = Backup.exportBackup(store);
+  assert.equal(exported.ok, true);
+  assert.equal(JSON.parse(exported.text).data.campaign.pendingRewards.length, 1);
+  entries.clear();
+  globalThis.localStorage = store;
+  assert.equal(Backup.restoreBackup(exported.text, store).ok, true);
+  const restored = Campaign.reconcilePendingRewards();
+  assert.equal(restored.saved, true);
+  assert.equal(restored.earned, 6);
+  assert.equal(Campaign.reconcilePendingRewards().earned, 0);
+  assert.equal(Meta.getState().shadowCores, 6);
+  assert.equal(Campaign.getStageRecord(1).clears, 1);
+});
+
 test('export reads exactly the eight game keys and preview performs no storage access or writes', () => {
   entries.set('another-application-token', 'private-unrelated-data');
   const reads = [];

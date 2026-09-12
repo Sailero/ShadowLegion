@@ -25,6 +25,7 @@ export class LoadoutScene extends Phaser.Scene {
   }
 
   create() {
+    CampaignProgressionManager.reconcilePendingRewards();
     const state = MetaProgressionManager.getState();
     if (!state.unlockedOperatives.includes(this.selectedOperative)) this.selectedOperative = 'ranger';
     if (this.mode === 'campaign' && !CampaignProgressionManager.isStageUnlocked(this.stageId)) this.stageId = CampaignProgressionManager.getNextUnlockedStage().id;

@@ -75,8 +75,11 @@ function sanitizeShadowTrials(value: unknown): unknown[] | null {
   if (!Array.isArray(value)) return null;
   return [1, 2, 3, 4, 5].flatMap(tier => {
     const item = value.find(entry => isObject(entry) && entry.tier === tier);
+    const completionIds = isObject(item) && Array.isArray(item.completionIds)
+      ? [...new Set(item.completionIds.filter((id): id is string => typeof id === 'string' && /^[A-Za-z0-9:_-]{1,120}$/.test(id)).reverse())].slice(0, 8).reverse() : [];
     return isObject(item) && finite(item.wins, 1, 1e9, true) && finite(item.bestTimeSec, Number.MIN_VALUE, 604800)
-      ? [{ tier, wins: Math.min(1000000, item.wins), bestTimeSec: Math.min(86400, item.bestTimeSec) }] : [];
+      ? [{ tier, wins: Math.min(1000000, item.wins), bestTimeSec: Math.min(86400, item.bestTimeSec),
+        ...(completionIds.length ? { completionIds } : {}) }] : [];
   });
 }
 function sanitizeWaveSamples(value: unknown): unknown[] | null {
@@ -89,6 +92,12 @@ function sanitizeWaveSamples(value: unknown): unknown[] | null {
     }));
 }
 function versionError(section: BackupSection, value: unknown): BackupFailure | null {
+  if (section === 'meta' && isObject(value) && isObject(value.modeProgress)) {
+    const ledger = value.modeProgress.shadowRewardLedger;
+    if (isObject(ledger) && ledger.version !== 1) {
+      return fail('unsupported-domain-version', '影子奖励记录使用了当前游戏不能读取的格式，请使用对应版本的游戏。');
+    }
+  }
   if (!isObject(value) || value.version === undefined) return null;
   const current = VERSIONED[section];
   if (current === undefined || !Number.isInteger(value.version) || (value.version as number) < 1 || (value.version as number) > current) {

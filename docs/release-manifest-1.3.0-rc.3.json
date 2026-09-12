@@ -1,0 +1,47 @@
+{
+  "version": "1.3.0-rc.3",
+  "createdAt": "2026-09-12T13:40:31.807Z",
+  "node": "v24.16.0",
+  "files": [
+    {
+      "path": "art/garden-atlas.png",
+      "bytes": 1592368,
+      "sha256": "547dbb1e3570aa0834a26e4d788d37494ef3810595623fce01ef94660f2c9829"
+    },
+    {
+      "path": "art/journey-keyart.jpg",
+      "bytes": 547760,
+      "sha256": "f3a8c379e3ea216dcd249f4959c87e6de3337c767d9cac45cba8de53be6125ff"
+    },
+    {
+      "path": "art/terrain-atlas.jpg",
+      "bytes": 602082,
+      "sha256": "35abc2c1c3b5710f7c6d1df34a578c902562d228524f8c61b931f3664f0de657"
+    },
+    {
+      "path": "ARTWORK.json",
+      "bytes": 845,
+      "sha256": "33060205ff3522d42dcb43e63d2a62645458c524b6fc71f5a9c9a9989894803b"
+    },
+    {
+      "path": "assets/index-CCEkiYla.js",
+      "bytes": 1739975,
+      "sha256": "0b8edbfea75a2898f03bba0233059329c0954aeec92b46cea3270b8539314505"
+    },
+    {
+      "path": "DEPLOY.md",
+      "bytes": 969,
+      "sha256": "eea5d81f71614dbdcbfb8d0e7959bd61c341973c6163f9c46b1bd00cccd836b6"
+    },
+    {
+      "path": "index.html",
+      "bytes": 9934,
+      "sha256": "fe9e16c9f3b6d52d07500088fcef6f38c7c027ccc48d67b362abc5c656edd34a"
+    },
+    {
+      "path": "THIRD-PARTY-NOTICES.txt",
+      "bytes": 2261,
+      "sha256": "c68927860104a879f68d63671830893b1888ce8b57632fcb7123de29e0f17860"
+    }
+  ]
+}

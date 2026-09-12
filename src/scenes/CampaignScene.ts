@@ -21,6 +21,7 @@ export class CampaignScene extends Phaser.Scene {
   }
 
   create() {
+    CampaignProgressionManager.reconcilePendingRewards();
     const state = CampaignProgressionManager.getState();
     const chapter = getChapter(this.chapter);
     backdrop(this, '旅行地图  /  LETTERS FROM THE ROAD');
