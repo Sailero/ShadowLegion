@@ -1,0 +1,63 @@
+{
+  "runId": 34697574848,
+  "headSha": "28eea9b659d576ff5fc027be05fe3cb4b44aae3d",
+  "url": "https://github.com/Sailero/ShadowLegion/actions/runs/34697574848",
+  "status": "completed",
+  "conclusion": "success",
+  "createdAt": "2026-09-12T13:51:07Z",
+  "updatedAt": "2026-09-12T13:51:38Z",
+  "jobs": [
+    {
+      "id": 103563586441,
+      "status": "completed",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install locked dependencies without lifecycle scripts",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run tests, TypeScript, Vite and distribution checks",
+          "conclusion": "success"
+        },
+        {
+          "name": "Recompute theoretical campaign pacing",
+          "conclusion": "success"
+        },
+        {
+          "name": "Archive checked web build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Archive theoretical pacing report",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "scope": "GitHub workflow checks for the exact code commit; no native graphical or human playtest is run by this workflow."
+}
