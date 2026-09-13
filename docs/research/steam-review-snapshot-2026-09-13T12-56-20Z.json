@@ -1,0 +1,361 @@
+{
+  "startedAtUtc": "2026-09-13T12:56:20.774432+00:00",
+  "completedAtUtc": "2026-09-13T12:56:29.305151+00:00",
+  "method": "Steam public appreviews query_summary, same parameters for every game.",
+  "parameters": {
+    "json": 1,
+    "filter": "all",
+    "language": "all",
+    "review_type": "all",
+    "purchase_type": "steam",
+    "num_per_page": 1,
+    "filter_offtopic_activity": 1
+  },
+  "documentation": "https://partner.steamgames.com/doc/store/getreviews",
+  "interpretation": "All-language aggregate matching these parameters. Historical review counts, not sales, revenue, player counts, representative market shares or a success probability. Rounded percentages computed from returned counts, not Steam display rounding.",
+  "sample": "Purposeful 19-game contrast sample, includes prominent titles and mechanism/scale contrasts; not a random census. Differences in age, price, IP, EA history, updates, promotions and localization are uncontrolled.",
+  "apps": [
+    {
+      "group": "cozy",
+      "appId": 1055540,
+      "name": "A Short Hike",
+      "url": "https://store.steampowered.com/appreviews/1055540?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1055540/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 19030,
+        "total_negative": 166,
+        "total_reviews": 19196
+      },
+      "computedPositivePercent": 99.14,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:21.827406+00:00"
+    },
+    {
+      "group": "cozy",
+      "appId": 1586800,
+      "name": "Lil Gator Game",
+      "url": "https://store.steampowered.com/appreviews/1586800?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1586800/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 4458,
+        "total_negative": 49,
+        "total_reviews": 4507
+      },
+      "computedPositivePercent": 98.91,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:21.797129+00:00"
+    },
+    {
+      "group": "cozy",
+      "appId": 1307580,
+      "name": "TOEM",
+      "url": "https://store.steampowered.com/appreviews/1307580?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1307580/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 9571,
+        "total_negative": 81,
+        "total_reviews": 9652
+      },
+      "computedPositivePercent": 99.16,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:23.610829+00:00"
+    },
+    {
+      "group": "cozy",
+      "appId": 1607240,
+      "name": "Mail Time",
+      "url": "https://store.steampowered.com/appreviews/1607240?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1607240/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 8,
+        "review_score_desc": "Very Positive",
+        "total_positive": 951,
+        "total_negative": 146,
+        "total_reviews": 1097
+      },
+      "computedPositivePercent": 86.69,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:22.695844+00:00"
+    },
+    {
+      "group": "cozy",
+      "appId": 1549550,
+      "name": "Haven Park",
+      "url": "https://store.steampowered.com/appreviews/1549550?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1549550/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 846,
+        "total_negative": 44,
+        "total_reviews": 890
+      },
+      "computedPositivePercent": 95.06,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:24.485635+00:00"
+    },
+    {
+      "group": "cozy",
+      "appId": 1177980,
+      "name": "Little Kitty, Big City",
+      "url": "https://store.steampowered.com/appreviews/1177980?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1177980/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 10050,
+        "total_negative": 353,
+        "total_reviews": 10403
+      },
+      "computedPositivePercent": 96.61,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:24.652020+00:00"
+    },
+    {
+      "group": "cozy",
+      "appId": 2198150,
+      "name": "Tiny Glade",
+      "url": "https://store.steampowered.com/appreviews/2198150?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/2198150/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 21970,
+        "total_negative": 628,
+        "total_reviews": 22598
+      },
+      "computedPositivePercent": 97.22,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:23.610248+00:00"
+    },
+    {
+      "group": "cozy",
+      "appId": 2908050,
+      "name": "Catto's Post Office",
+      "url": "https://store.steampowered.com/appreviews/2908050?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/2908050/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 1163,
+        "total_negative": 32,
+        "total_reviews": 1195
+      },
+      "computedPositivePercent": 97.32,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:24.248100+00:00"
+    },
+    {
+      "group": "survivor",
+      "appId": 1794680,
+      "name": "Vampire Survivors",
+      "url": "https://store.steampowered.com/appreviews/1794680?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1794680/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 247398,
+        "total_negative": 4103,
+        "total_reviews": 251501
+      },
+      "computedPositivePercent": 98.37,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:24.275001+00:00"
+    },
+    {
+      "group": "survivor",
+      "appId": 1942280,
+      "name": "Brotato",
+      "url": "https://store.steampowered.com/appreviews/1942280?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1942280/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 106721,
+        "total_negative": 4442,
+        "total_reviews": 111163
+      },
+      "computedPositivePercent": 96.0,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:25.830587+00:00"
+    },
+    {
+      "group": "survivor",
+      "appId": 2218750,
+      "name": "Halls of Torment",
+      "url": "https://store.steampowered.com/appreviews/2218750?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/2218750/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 29309,
+        "total_negative": 1418,
+        "total_reviews": 30727
+      },
+      "computedPositivePercent": 95.39,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:25.475714+00:00"
+    },
+    {
+      "group": "survivor",
+      "appId": 2334730,
+      "name": "Death Must Die",
+      "url": "https://store.steampowered.com/appreviews/2334730?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/2334730/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 8,
+        "review_score_desc": "Very Positive",
+        "total_positive": 18837,
+        "total_negative": 2085,
+        "total_reviews": 20922
+      },
+      "computedPositivePercent": 90.03,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:25.407735+00:00"
+    },
+    {
+      "group": "survivor",
+      "appId": 2066020,
+      "name": "Soulstone Survivors",
+      "url": "https://store.steampowered.com/appreviews/2066020?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/2066020/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 8,
+        "review_score_desc": "Very Positive",
+        "total_positive": 23472,
+        "total_negative": 2252,
+        "total_reviews": 25724
+      },
+      "computedPositivePercent": 91.25,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:25.440634+00:00"
+    },
+    {
+      "group": "survivor",
+      "appId": 2321470,
+      "name": "Deep Rock Galactic: Survivor",
+      "url": "https://store.steampowered.com/appreviews/2321470?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/2321470/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 8,
+        "review_score_desc": "Very Positive",
+        "total_positive": 39898,
+        "total_negative": 6405,
+        "total_reviews": 46303
+      },
+      "computedPositivePercent": 86.17,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:29.305151+00:00"
+    },
+    {
+      "group": "survivor",
+      "appId": 3405340,
+      "name": "Megabonk",
+      "url": "https://store.steampowered.com/appreviews/3405340?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/3405340/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 8,
+        "review_score_desc": "Very Positive",
+        "total_positive": 94024,
+        "total_negative": 5677,
+        "total_reviews": 99701
+      },
+      "computedPositivePercent": 94.31,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:26.087612+00:00"
+    },
+    {
+      "group": "survivor",
+      "appId": 2510960,
+      "name": "Temtem: Swarm",
+      "url": "https://store.steampowered.com/appreviews/2510960?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/2510960/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 6,
+        "review_score_desc": "Mostly Positive",
+        "total_positive": 1935,
+        "total_negative": 547,
+        "total_reviews": 2482
+      },
+      "computedPositivePercent": 77.96,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:26.328974+00:00"
+    },
+    {
+      "group": "mechanism-contrast",
+      "appId": 850320,
+      "name": "PHOGS!",
+      "url": "https://store.steampowered.com/appreviews/850320?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/850320/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 6,
+        "review_score_desc": "Mostly Positive",
+        "total_positive": 913,
+        "total_negative": 256,
+        "total_reviews": 1169
+      },
+      "computedPositivePercent": 78.1,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:27.307420+00:00"
+    },
+    {
+      "group": "mechanism-contrast",
+      "appId": 1519710,
+      "name": "SCHiM",
+      "url": "https://store.steampowered.com/appreviews/1519710?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1519710/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 5,
+        "review_score_desc": "Mixed",
+        "total_positive": 149,
+        "total_negative": 78,
+        "total_reviews": 227
+      },
+      "computedPositivePercent": 65.64,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:26.965783+00:00"
+    },
+    {
+      "group": "mechanism-contrast",
+      "appId": 1634860,
+      "name": "Minishoot' Adventures",
+      "url": "https://store.steampowered.com/appreviews/1634860?json=1&filter=all&language=all&review_type=all&purchase_type=steam&num_per_page=1&filter_offtopic_activity=1",
+      "storeUrl": "https://store.steampowered.com/app/1634860/",
+      "summary": {
+        "num_reviews": 1,
+        "review_score": 9,
+        "review_score_desc": "Overwhelmingly Positive",
+        "total_positive": 7627,
+        "total_negative": 175,
+        "total_reviews": 7802
+      },
+      "computedPositivePercent": 97.76,
+      "status": "ok",
+      "retrievedAtUtc": "2026-09-13T12:56:27.029931+00:00"
+    }
+  ]
+}
